@@ -36,7 +36,19 @@ Precedencia: **variable de entorno** (en Databricks, `app.yaml`) > **`config/.en
 
 El código **no tiene valores por defecto**: todo valor `[CALIBRAR]` vive solo en `config/.env.example`. Para cambiar un umbral se edita ese archivo o se sobrescribe en `config/.env`.
 
-Variables que añadió la implementación a las de la spec (docs/12): `LLM_PROVIDER`, `EMB_PROVIDER`, `GROQ_*`, `OLLAMA_BASE_URL`, `OLLAMA_EMB_MODEL`, `OLLAMA_LLM_MODEL`, `FOUNDRY_AI_*`, `LLM_TEMPERATURE`, `LLM_TIMEOUT_S`, `CITATION_SHOW_MIN`, `COLOR_PRIMARIO` y `COLOR_FONDO`.
+Variables que añadió la implementación a las de la spec (docs/12): `LLM_PROVIDER`, `EMB_PROVIDER`, `GROQ_*`, `OLLAMA_BASE_URL`, `OLLAMA_EMB_MODEL`, `OLLAMA_LLM_MODEL`, `FOUNDRY_AI_*`, `FOUNDRY_OMIT_TEMPERATURE`, `LLM_TEMPERATURE`, `LLM_TIMEOUT_S`, `CITATION_SHOW_MIN`, `COLOR_PRIMARIO` y `COLOR_FONDO`.
+
+### Credenciales en Databricks
+
+Solo los `*_KEY` y `*_TOKEN` son secretos. El resto (endpoint, versión de la API, deployments) son parámetros normales.
+
+| Dónde corre | De dónde sale el token de Foundry |
+|---|---|
+| Local | `config/.env` (ignorado por git). En desarrollo se usa Groq + Ollama |
+| **Notebook en el entorno de la demo** | `dbutils.secrets.get(scope=..., key="foundry_ai_token")`, en una **línea comentada** de cada notebook que se descomenta allí junto con los parámetros de Foundry |
+| **Databricks Apps** (fase D) | Recurso Secret de la app, inyectado con `valueFrom: foundry_ai_token` en `app.yaml`, igual que en la v6 |
+
+El código no lee secretos por su cuenta: todo llega como variable de entorno, que gana a `config/.env`. En Databricks no hay Ollama, así que allí `EMB_PROVIDER=foundry` (docs/14 #14).
 
 ---
 
@@ -75,10 +87,10 @@ Los reintentos ante 429/5xx los hace el SDK `openai` (`max_retries=LLM_RETRIES`,
 
 | Variable | Desarrollo | Demo |
 |---|---|---|
-| `LLM_PROVIDER` | `groq` → `openai/gpt-oss-120b` (también admite `ollama` → `OLLAMA_LLM_MODEL`, sin usar por ahora) | `foundry` → `FOUNDRY_AI_DEPLOYMENT` (`AzureOpenAI`) |
+| `LLM_PROVIDER` | `groq` → `openai/gpt-oss-120b` (también admite `ollama` → `OLLAMA_LLM_MODEL`, sin usar por ahora) | `foundry` → `FOUNDRY_AI_DEPLOYMENT` (`AzureOpenAI`, solo el host del endpoint; sin `temperature` si `FOUNDRY_OMIT_TEMPERATURE=true`) |
 | `EMB_PROVIDER` | `ollama` → `bge-m3` (dim 1024) | `foundry` → `FOUNDRY_AI_EMBED_DEPLOYMENT` |
 
-La ruta de Foundry está implementada pero **sin probar**: se valida en la fase Demo, cuando haya credenciales.
+La ruta de Foundry está implementada pero **sin probar**: se valida corriendo `00_modelos.ipynb` en el entorno de la demo, descomentando la celda de Foundry.
 
 ### Mediciones (Raspberry, 1 oct 2026)
 
@@ -86,8 +98,8 @@ Salidas de la última ejecución de `notebooks/00_modelos.ipynb`:
 
 | Medida | Valor |
 |---|---|
-| Latencia de Groq `gpt-oss-120b` | 0,4–0,8 s por llamada corta (media 0,6 s); la primera, el ping, ~5,7 s |
-| Embeddings `bge-m3` en la Raspberry | 6,7 textos/s (67 textos en 10,0 s, 2 lotes) |
+| Latencia de Groq `gpt-oss-120b` | Varía con la carga del plan gratuito: media de 0,6 s en una corrida y de 3,1 s (2,7–3,6 s) en la última. El primer ping tarda más |
+| Embeddings `bge-m3` en la Raspberry | 6,7–7,3 textos/s (última corrida: 67 textos en 9,2 s, 2 lotes) |
 | Similitud con `bge-m3` | relacionado 0,753 · **no relacionado 0,499** |
 
 Observación fuera del notebook: con Ollama en frío, la primera llamada de embeddings tarda ~15 s porque carga el modelo en memoria.

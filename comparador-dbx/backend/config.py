@@ -5,6 +5,9 @@ Adaptado de `settings.py` de la v6, simplificado.
 Precedencia: variable de entorno (app.yaml en Databricks) > `config/.env` (local, con
 secretos, ignorado por git) > `config/.env.example` (valores iniciales versionados).
 El código no tiene valores por defecto: los `[CALIBRAR]` viven solo en `.env.example`.
+
+En Databricks el token de Foundry llega como variable de entorno: en Apps con `valueFrom`
+en app.yaml y en notebooks con `dbutils.secrets.get` (línea comentada en cada notebook).
 """
 import os
 import re
@@ -40,6 +43,8 @@ class Settings:
     FOUNDRY_AI_TOKEN: str = _env("FOUNDRY_AI_TOKEN")
     FOUNDRY_AI_DEPLOYMENT: str = _env("FOUNDRY_AI_DEPLOYMENT")
     FOUNDRY_AI_EMBED_DEPLOYMENT: str = _env("FOUNDRY_AI_EMBED_DEPLOYMENT")
+    # Los modelos de razonamiento (GPT-5.x) solo aceptan la temperatura de fábrica.
+    FOUNDRY_OMIT_TEMPERATURE: bool = _env("FOUNDRY_OMIT_TEMPERATURE").lower() == "true"
     LLM_TEMPERATURE: float = float(_env("LLM_TEMPERATURE"))
     LLM_TIMEOUT_S: float = float(_env("LLM_TIMEOUT_S"))
 

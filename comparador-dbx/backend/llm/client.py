@@ -10,6 +10,7 @@ mensajes técnicos del cliente, no prompts del producto: esos viven en `backend/
 import json
 import logging
 import time
+from urllib.parse import urlparse
 
 import numpy as np
 from openai import AzureOpenAI, OpenAI
@@ -46,8 +47,11 @@ def crear_cliente(proveedor: str, s: Settings, embeddings: bool = False) -> tupl
         deployment = s.FOUNDRY_AI_EMBED_DEPLOYMENT if embeddings else s.FOUNDRY_AI_DEPLOYMENT
         _exigir(FOUNDRY_AI_ENDPOINT=s.FOUNDRY_AI_ENDPOINT, FOUNDRY_AI_TOKEN=s.FOUNDRY_AI_TOKEN,
                 FOUNDRY_AI_API_VERSION=s.FOUNDRY_AI_API_VERSION, FOUNDRY_AI_DEPLOYMENT=deployment)
-        cliente = AzureOpenAI(azure_endpoint=s.FOUNDRY_AI_ENDPOINT, api_key=s.FOUNDRY_AI_TOKEN,
-                              api_version=s.FOUNDRY_AI_API_VERSION, **opciones)
+        # Solo el host: si se pega una URL con ruta (…/openai/v1/), no se duplica (como en la v6).
+        partes = urlparse(s.FOUNDRY_AI_ENDPOINT)
+        cliente = AzureOpenAI(azure_endpoint=f"{partes.scheme}://{partes.netloc}",
+                              api_key=s.FOUNDRY_AI_TOKEN, api_version=s.FOUNDRY_AI_API_VERSION,
+                              **opciones)
         return cliente, deployment
 
     raise ProviderConfigError(f"Proveedor desconocido: {proveedor!r}")
@@ -98,13 +102,11 @@ class ModelClient:
 
     def _completar(self, mensajes: list[dict]) -> str:
         cliente, modelo = self.llm()
+        parametros = {"model": modelo, "messages": mensajes, "response_format": {"type": "json_object"}}
+        if not (self.s.LLM_PROVIDER == "foundry" and self.s.FOUNDRY_OMIT_TEMPERATURE):
+            parametros["temperature"] = self.s.LLM_TEMPERATURE
         try:
-            r = cliente.chat.completions.create(
-                model=modelo,
-                messages=mensajes,
-                temperature=self.s.LLM_TEMPERATURE,
-                response_format={"type": "json_object"},
-            )
+            r = cliente.chat.completions.create(**parametros)
         except Exception as e:
             log.error("Fallo del LLM %s: %s", modelo, redact(str(e)))
             raise clasificar(e) from e
