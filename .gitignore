@@ -1,0 +1,11 @@
+.env
+*.env
+!config/.env.example
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+/tmp/
+output/
+*.xlsx
+frontend/node_modules/

@@ -1,0 +1,35 @@
+# 14 · Puntos abiertos para calibrar
+
+Estado al 1 oct 2026. **Decidido** = ya no se discute; **Calibrar** = valor inicial que se mide y ajusta.
+
+## Decisiones de producto
+
+| # | Tema | Estado | Decisión |
+|---|---|---|---|
+| 3 | Marca P | Decidido | Se respetan las marcas del banco tal como están en [09](09-motor-doble-via.md) §5: **P** = artículo `informativo` (definiciones, objeto, ámbito) |
+| 4 | Vía 2 en el papel | Decidido | Bloque **al final del anexo** (Hoja 2), sin tercera hoja |
+| 5 | Respaldo múltiple | Decidido | **1 sección** de manual como respaldo por artículo, también para **L** |
+| 6 | Literales a), b) | Decidido | **Dentro del artículo**; un literal no cubierto aparece en `elementos_faltantes` |
+| 7 | Encabezado | Decidido | Nombre de la revisión y corte quedan **en blanco** en el Excel; el auditor los llena a mano |
+| 11 | Citas no verificadas | Decidido | Si el ratio está entre `CITATION_SHOW_MIN` (0,75) y `CITATION_FUZZY_MIN` (0,90): se muestra el fragmento real más cercano **con aviso** y `requiere_revision=True`. Por debajo de 0,75: celda vacía con aviso |
+| 12 | Colores | Decidido | **Verde y blanco** como base, definidos en configuración. Se reemplazan con el brand kit del banco cuando llegue |
+
+## Entornos y proveedores
+
+| # | Tema | Estado | Decisión |
+|---|---|---|---|
+| 13 | Entornos | Decidido | **1)** Local en la Raspberry (parecida a Databricks Apps) con notebooks · **2)** Databricks **Free Edition** · **3)** Demo en workspace **Azure de pago** |
+| 14 | Modelos | Decidido | Desarrollo: LLM **Groq** (como en la v1) + embeddings **Ollama `bge-m3`** local. Demo: **Azure AI Foundry directo** (endpoint + token en secret, como en la v1), no el AI Gateway. Se cambia solo por configuración |
+| 15 | Documentos de prueba | Decidido | Manuales MOCK de la v1 y normativas cortas de `Normativa2026/`. Los documentos reales solo en la demo |
+| 16 | Tamaño del paquete | Restricción | Databricks Apps rechaza paquetes de **más de 10 MB** (visto en la v1). Los artefactos de Docling (~1,5 GB) se descargan al primer uso; no van en `models_cache/` |
+| 17 | `app.yaml` | Restricción | El `command` **no pasa por shell**: nada de `--port $PORT`. Uvicorn toma `UVICORN_HOST`/`UVICORN_PORT` del entorno (visto en la v1) |
+
+## Calibración empírica
+
+| # | Tema | Valor inicial | Cómo se mide |
+|---|---|---|---|
+| 1 | Umbral de similitud | 0,30 | Depende del modelo de embeddings: se calibra por separado para `bge-m3` (dev) y `text-embedding-3-large` (demo) con los MOCK y la Hoja 2 |
+| 2 | Tamaño de sub-chunk | ~500 tokens, 15 % solapamiento | Recall en candidatos con los MOCK |
+| 8 | Detección de escaneo | 0,6 de páginas con texto | Con las normativas de `Normativa2026/` |
+| 9 | Concurrencia | 6 | Se ajusta al **límite de tasa del plan gratuito** (Groq / Databricks Free); en la demo, al del deployment de Foundry |
+| 10 | Rendimiento Docling | — | Tiempo y RAM con 100 páginas, primero en la Raspberry y luego en Databricks. Referencia de la v1: pico de 4,2 GB |
