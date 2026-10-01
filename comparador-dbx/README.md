@@ -16,3 +16,12 @@ Este paquete contiene la especificación para que Claude Code implemente el MVP.
 | `config/.env.example` | Variables de configuración con valores iniciales |
 
 El PDF "Manual técnico de implementación" es la versión para lectura humana del mismo contenido. **La fuente de verdad es este paquete Markdown.**
+
+## Módulos reutilizados del repo de referencia
+Origen: `../../comparador-normativas-ec-v1` (clon de `basaravia/comparador-normativas-ec`), rama `feature/v6-react-fastapi`, carpeta `backend/src/`.
+
+| Módulo nuevo | Archivo de origen (v6) | Qué se cambió |
+|---|---|---|
+| `backend/config.py` | `settings.py` | Sin secret scope ni `databricks-sdk`; valores iniciales solo en `config/.env.example`, sin defaults en código; carga de prompts desde archivo |
+| `backend/core/errors.py` | `errors.py` | Sin ramas de LangChain/Vertex; código `ERR-*` y mensaje de negocio por error (`docs/05`) |
+| `backend/llm/client.py` | `providers.py` (`ProviderSpec.resuelto`, `_cliente_azure`, `_validar_azure`) | Sin LangChain: solo SDK `openai` (Groq, Ollama, `AzureOpenAI`); JSON validado con Pydantic y 1 reintento |

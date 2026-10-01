@@ -1,0 +1,6 @@
+# Dependencias de la app (docs/12-estructura-config.md). Versiones fijadas.
+# Se añaden por hito, solo cuando un módulo las usa.
+openai==3.22.1          # un SDK para Groq, Ollama y Azure AI Foundry
+pydantic==2.13.5
+python-dotenv==1.2.4
+numpy==2.4.6

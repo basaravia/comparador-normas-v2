@@ -1,0 +1,4 @@
+# Solo desarrollo local (notebooks de la fase L). No va al paquete de Databricks.
+-r requirements.txt
+ipykernel==7.4.0        # kernel de Jupyter para los notebooks
+nbconvert==7.17.1       # ejecutar notebooks desde la terminal
