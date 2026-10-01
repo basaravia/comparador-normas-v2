@@ -9,3 +9,9 @@ __pycache__/
 output/
 *.xlsx
 frontend/node_modules/
+
+# Manual técnico: solo uso local, no se publica
+*.pdf
+
+# Manual técnico en PDF: solo uso local, no se publica
+Manual_Tecnico_Comparador_Normativo_MVP.pdf
