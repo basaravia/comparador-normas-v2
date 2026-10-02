@@ -2,3 +2,5 @@
 -r requirements.txt
 ipykernel==7.4.0        # kernel de Jupyter para los notebooks
 nbconvert==7.17.1       # ejecutar notebooks desde la terminal
+bandit==1.9.4           # SAST de Python (agente appsec)
+pip-audit==2.10.1       # CVE en dependencias (agente appsec)

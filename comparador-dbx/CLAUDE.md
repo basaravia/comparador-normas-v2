@@ -22,6 +22,7 @@ Una Databricks App que compara normativas regulatorias (Superintendencia de Banc
 - Implementa por hitos en el orden de `docs/13-plan-hitos.md`. No avances de hito sin cumplir su criterio de aceptación.
 - **Backend primero, en local:** fase L (Raspberry, notebooks, Groq + Ollama), luego despliegue en Databricks Free y la UI al final. Paso a paso.
 - Commits pequeños; cita el criterio de aceptación del hito en el mensaje.
+- **Antes de cada commit con código** pasa el cambio por el agente `appsec` (seguridad) y el `product-owner` (plan). Un BLOQUEAR de `appsec` se corrige antes del commit; lo que marque como "Decisión del usuario: SÍ" se consulta con el usuario.
 - **Documenta lo implementado** en `implementacion/README.md` (fuera de `docs/`, que es solo la spec) en el mismo commit: módulos, API pública, configuración, mediciones y diferencias con la spec. El agente `product-owner` revisa que ese doc y el código coincidan.
 - Los valores marcados `[CALIBRAR]` van en configuración (`config/.env.example`), nunca hardcodeados.
 - Los prompts viven en `backend/prompts/*.md` y se cargan desde archivo. No los incrustes en el código.
