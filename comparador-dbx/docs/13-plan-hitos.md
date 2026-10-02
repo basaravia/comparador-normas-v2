@@ -8,6 +8,8 @@ Entornos y modelos: ver [14](14-puntos-abiertos.md) puntos 13–15.
 
 Cada hito trae su notebook en `notebooks/` que lo ejercita con los documentos MOCK, sin API ni UI.
 
+**Cierre de cada hito: en el stage sandbox** (Raspberry, Groq + Ollama `bge-m3`). El stage dev (MacBook con DMR) es opcional: el usuario lo prueba cuando quiera y no bloquea el avance (decisión del 2 oct 2026).
+
 | Hito | Entregable | Notebook | Criterio de aceptación |
 |---|---|---|---|
 | **L0 · Base** | Estructura de `backend/`, `config.py`, `core/errors.py`, cliente de modelos con proveedor por configuración y stages (DMR / Groq / Ollama / Foundry) | `00_modelos.ipynb` | Una llamada al LLM devuelve JSON válido y un lote de embeddings sale normalizado L2, con Groq + `bge-m3` |
