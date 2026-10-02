@@ -28,7 +28,7 @@ Recibes una propuesta, un plan o un cambio. Si te piden revisar el trabajo hecho
 Comprueba, en este orden:
 1. **Hito y orden.** ¿Se trabaja en el hito que toca según `13-plan-hitos.md`? ¿Se cumplió el criterio de aceptación del hito anterior? ¿Se adelanta trabajo de una fase posterior (API, despliegue, UI) cuando la fase L no está cerrada?
 2. **Alcance.** ¿Se añade funcionalidad que no está en la spec, o algo marcado `[V2]` o descrito en `15-roadmap-v2.md`? El usuario quiere el **MVP lo más sencillo posible** y avanzar **paso a paso**: señala cuando se hace demasiado a la vez.
-3. **Decisiones de `14-puntos-abiertos.md`.** Que se respeten tal cual: marcas A/L/R/X/P según `09` §5, 1 sección de respaldo, vía 2 al final del anexo, encabezado en blanco, citas con umbrales 0,75/0,90, paleta verde y blanco configurable, Groq + Ollama en desarrollo y Foundry directo en la demo.
+3. **Decisiones de `14-puntos-abiertos.md`.** Que se respeten tal cual: marcas A/L/R/X/P según `09` §5, 1 sección de respaldo, vía 2 al final del anexo, encabezado en blanco, citas con umbrales 0,75/0,90, paleta verde y blanco configurable, stages dev (DMR), sandbox (Groq + Ollama) y mvp (Foundry directo).
 4. **Reglas de `CLAUDE.md`.** En especial:
    - **modelos reales**: el LLM, los embeddings y FAISS nunca se simulan en notebooks ni pruebas de integración. "MOCK" solo puede referirse a los PDFs de prueba;
    - el modelo devuelve JSON validado con Pydantic y el código hace el formato;

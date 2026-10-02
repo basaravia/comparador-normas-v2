@@ -16,7 +16,7 @@ comparador-dbx/
 │   ├── retrieval/               # chunker.py (repo), embeddings.py (repo), index.py
 │   ├── engine/                  # candidates.py, pairs.py, judge.py, citations.py, aggregate.py, conclusion.py
 │   ├── output/                  # workpaper.py, annex.py, styles.py
-│   ├── llm/                     # client.py (repo): Groq | Ollama | Foundry por configuración
+│   ├── llm/                     # client.py (repo): Groq | Ollama | Docker Model Runner | Foundry por configuración
 │   ├── prompts/                 # clasificador.md, juez.md, conclusion.md
 │   └── models/schemas.py        # Documento, Seccion, SubChunk, Par, Veredicto, MetadatosLLM
 ├── frontend/
@@ -31,7 +31,7 @@ comparador-dbx/
 Los módulos marcados `(repo)` se toman del repositorio existente.
 
 ## Dependencias permitidas (backend)
-`fastapi`, `uvicorn`, `python-multipart`, `pydantic>=2`, `pymupdf`, `docling` (versión del repo: 2.55.1), `faiss-cpu`, `numpy`, `pandas`, `openpyxl`, `openai` (un solo SDK para Groq, Ollama y Foundry, que exponen API compatible con OpenAI), `python-dotenv`, `pytest`, `httpx`.
+`fastapi`, `uvicorn`, `python-multipart`, `pydantic>=2`, `pymupdf`, `docling` (versión del repo: 2.55.1), `faiss-cpu`, `numpy`, `pandas`, `openpyxl`, `openai` (un solo SDK para Groq, Ollama, Docker Model Runner y Foundry, que exponen API compatible con OpenAI), `python-dotenv`, `pytest`, `httpx`.
 Solo para desarrollo: `jupyter` (notebooks de la fase L).
 Cualquier otra requiere justificación.
 

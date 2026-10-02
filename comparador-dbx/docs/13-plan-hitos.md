@@ -4,13 +4,13 @@ Revisado el 1 oct 2026. Principio: **MVP lo más sencillo posible, mejorado por 
 
 Entornos y modelos: ver [14](14-puntos-abiertos.md) puntos 13–15.
 
-## Fase L · Backend en local (Raspberry, notebooks, Groq + Ollama)
+## Fase L · Backend en local (notebooks; stages dev y sandbox)
 
 Cada hito trae su notebook en `notebooks/` que lo ejercita con los documentos MOCK, sin API ni UI.
 
 | Hito | Entregable | Notebook | Criterio de aceptación |
 |---|---|---|---|
-| **L0 · Base** | Estructura de `backend/`, `config.py`, `core/errors.py`, cliente de modelos con proveedor por configuración (Groq / Ollama / Foundry) | `00_modelos.ipynb` | Una llamada al LLM devuelve JSON válido y un lote de embeddings sale normalizado L2, con Groq + `bge-m3` |
+| **L0 · Base** | Estructura de `backend/`, `config.py`, `core/errors.py`, cliente de modelos con proveedor por configuración y stages (DMR / Groq / Ollama / Foundry) | `00_modelos.ipynb` | Una llamada al LLM devuelve JSON válido y un lote de embeddings sale normalizado L2, con Groq + `bge-m3` |
 | **L1 · Ingesta** | Validación (límites, escaneo), metadatos nativos, clasificador LLM | `01_ingesta.ipynb` | Los 3 MOCK salen como `manual_control` y la norma LA/FT como `normativa`; un PDF fuera de límites se rechaza con su mensaje |
 | **L2 · Seccionado** | Docling (`do_ocr=False`, 1 worker) + cascada de seccionado | `02_seccionado.ipynb` | Los artículos de la norma LA/FT coinciden con el conteo manual (≥ 95 %); volver a procesar el mismo PDF usa la caché |
 | **L3 · Recuperación** | Sub-chunks, embeddings, FAISS, candidatos, pares únicos | `03_recuperacion.ipynb` | Recall en candidatos ≥ 90 % sobre el golden set; se registran los pares antes y después de deduplicar |
@@ -43,9 +43,9 @@ Cambiar por configuración a los endpoints de Foundry, recalibrar el umbral para
 - `test_aggregate`: tablas de verdad de la agregación de marcas y de los controles sin base normativa.
 - `test_citations`: cita exacta, con espacios distintos, parafraseada (debe marcarse) y truncada.
 - `test_excel`: columnas y orden, leyenda, celdas combinadas, truncado a 32.767 caracteres.
-- Humo extremo a extremo con los manuales MOCK, **LLM real (Groq) y embeddings reales (Ollama `bge-m3`) sobre FAISS real**.
+- Humo extremo a extremo con los manuales MOCK, **LLM y embeddings reales del stage** (sandbox: Groq + Ollama `bge-m3`; dev: DMR) **sobre FAISS real**.
 
-> **Sin simulaciones de modelos.** Ni el LLM ni los embeddings ni el índice vectorial se simulan en ningún hito ni prueba de integración: los notebooks y el humo E2E usan Groq, `bge-m3` y FAISS reales. Solo las pruebas unitarias de lógica determinista (seccionado, citas, agregación, Excel) corren sin modelo, porque no lo necesitan. "MOCK" se refiere únicamente a los **documentos** de prueba ficticios de la v1.
+> **Sin simulaciones de modelos.** Ni el LLM ni los embeddings ni el índice vectorial se simulan en ningún hito ni prueba de integración: los notebooks y el humo E2E usan los modelos reales del stage y FAISS real. Solo las pruebas unitarias de lógica determinista (seccionado, citas, agregación, Excel) corren sin modelo, porque no lo necesitan. "MOCK" se refiere únicamente a los **documentos** de prueba ficticios de la v1.
 
 ## Golden set (L3 y L4)
 `tests/golden_pairs.csv`, construido desde la matriz de `LEEME-MANUALES-MOCK.md` de la v1: norma LA/FT (arts. 31–48) contra MOCK-DEMO-01/02/03, con la cobertura esperada.

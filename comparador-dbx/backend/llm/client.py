@@ -1,7 +1,8 @@
 """Cliente de modelos: un solo SDK `openai` para Groq, Ollama y Azure AI Foundry.
 
 Adaptado de `providers.py` de la v6, sin LangChain. El proveedor se elige en la
-configuración (`LLM_PROVIDER`, `EMB_PROVIDER`): Groq + Ollama en desarrollo, Foundry en la demo.
+configuración (`LLM_PROVIDER`, `EMB_PROVIDER`), que fija cada stage: DMR en dev, Groq + Ollama en
+sandbox y Foundry en mvp.
 
 El SDK ya reintenta 429 y 5xx con backoff exponencial (`max_retries=LLM_RETRIES`).
 Los dos textos fijos de este archivo (el del reintento de JSON y el del ping) son
@@ -37,11 +38,15 @@ def crear_cliente(proveedor: str, s: Settings, embeddings: bool = False) -> tupl
         _exigir(GROQ_API_KEY=s.GROQ_API_KEY, GROQ_LLM_MODEL=s.GROQ_LLM_MODEL)
         return OpenAI(base_url=s.GROQ_BASE_URL, api_key=s.GROQ_API_KEY, **opciones), s.GROQ_LLM_MODEL
 
-    if proveedor == "ollama":
-        modelo = s.OLLAMA_EMB_MODEL if embeddings else s.OLLAMA_LLM_MODEL
-        _exigir(OLLAMA_MODEL=modelo)
-        # Ollama no pide clave, pero el SDK no acepta una vacía.
-        return OpenAI(base_url=s.OLLAMA_BASE_URL, api_key="ollama", **opciones), modelo
+    if proveedor in ("ollama", "dmr"):
+        # Ollama y Docker Model Runner: locales, compatibles con OpenAI y sin clave
+        # (el SDK no acepta una vacía, por eso se pasa el nombre del proveedor).
+        if proveedor == "ollama":
+            url, modelo = s.OLLAMA_BASE_URL, (s.OLLAMA_EMB_MODEL if embeddings else s.OLLAMA_LLM_MODEL)
+        else:
+            url, modelo = s.DMR_BASE_URL, (s.DMR_EMB_MODEL if embeddings else s.DMR_LLM_MODEL)
+        _exigir(**{f"{proveedor.upper()}_{'EMB' if embeddings else 'LLM'}_MODEL": modelo})
+        return OpenAI(base_url=url, api_key=proveedor, **opciones), modelo
 
     if proveedor == "foundry":
         deployment = s.FOUNDRY_AI_EMBED_DEPLOYMENT if embeddings else s.FOUNDRY_AI_DEPLOYMENT

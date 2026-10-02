@@ -9,7 +9,7 @@ Una Databricks App que compara normativas regulatorias (Superintendencia de Banc
 1. **Reutilizar antes que crear.** El repo de referencia (`../../comparador-normativas-ec-v1`, rama `feature/v6-react-fastapi`, solo su `backend/`) ya tiene módulos probados de: extracción con Docling, chunking, vectorización y cliente de modelos (Groq / Foundry). Localízalos y adáptalos. Registra en `README.md` qué archivo de origen se reutilizó en cada módulo nuevo.
 2. **No añadir dependencias** fuera de `docs/12-estructura-config.md` sin una línea de justificación en el commit.
 3. **El modelo produce campos, el código produce formato.** El LLM solo devuelve JSON validado con Pydantic. Umbrales, preselecciones, agregación de marcas y armado del Excel son Python determinista.
-4. **Modelos reales, nunca simulados.** El LLM (Groq en desarrollo), los embeddings (Ollama `bge-m3`) y el índice FAISS se usan reales en notebooks y pruebas de integración. Nada de dobles ni respuestas falsas para el LLM o la recuperación.
+4. **Modelos reales, nunca simulados.** El LLM, los embeddings (según el stage: DMR en dev, Groq + Ollama `bge-m3` en sandbox, Foundry en mvp) y el índice FAISS se usan reales en notebooks y pruebas de integración. Nada de dobles ni respuestas falsas para el LLM o la recuperación.
 5. **Texto literal siempre.** El texto de normas y manuales nunca se parafrasea ni se genera. Toda cita del juez se verifica en Python contra el texto fuente (`docs/09-motor-doble-via.md` §4).
 6. **Un solo proceso uvicorn (`--workers 1`).** El estado vive en memoria; varios workers rompen la sesión.
 7. **Extracción con Docling en cola de un solo worker**, nunca en paralelo. `do_ocr=False`. El cómputo es Medium (~6 GB RAM) y Docling ya saturó la CPU en pruebas.
@@ -20,7 +20,7 @@ Una Databricks App que compara normativas regulatorias (Superintendencia de Banc
 
 ## Cómo trabajar
 - Implementa por hitos en el orden de `docs/13-plan-hitos.md`. No avances de hito sin cumplir su criterio de aceptación.
-- **Backend primero, en local:** fase L (Raspberry, notebooks, Groq + Ollama), luego despliegue en Databricks Free y la UI al final. Paso a paso.
+- **Backend primero, en local:** fase L con notebooks en los stages locales (dev: MacBook con DMR; sandbox: Raspberry con Groq + Ollama), luego despliegue en Databricks Free y la UI al final. Paso a paso.
 - Commits pequeños; cita el criterio de aceptación del hito en el mensaje.
 - **Antes de cada commit con código** pasa el cambio por el agente `appsec` (seguridad) y el `product-owner` (plan). Un BLOQUEAR de `appsec` se corrige antes del commit; lo que marque como "Decisión del usuario: SÍ" se consulta con el usuario.
 - **Documenta lo implementado** en `implementacion/README.md` (fuera de `docs/`, que es solo la spec) en el mismo commit: módulos, API pública, configuración, mediciones y diferencias con la spec. El agente `product-owner` revisa que ese doc y el código coincidan.

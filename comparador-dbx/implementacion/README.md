@@ -21,8 +21,11 @@ Si algo de aquí contradice a la especificación, manda la especificación y la 
 ```bash
 conda activate comparador_v2                  # Python 3.11, igual que Databricks
 pip install -r comparador-dbx/requirements-dev.txt
-cp comparador-dbx/config/.env.example comparador-dbx/config/.env   # y rellenar GROQ_API_KEY
-ollama pull bge-m3                            # embeddings locales
+# config/.env (ignorado por git): solo el stage y los secretos, p. ej.
+#   STAGE=sandbox            # dev (MacBook, DMR) | sandbox (Raspberry) | mvp (Databricks)
+#   GROQ_API_KEY=gsk_...     # solo sandbox
+ollama pull bge-m3                            # sandbox: embeddings locales
+# dev: los modelos de config/stages/dev.env deben estar en Docker Desktop → Models
 
 # ejecutar un notebook de punta a punta desde la terminal
 cd comparador-dbx/notebooks
@@ -30,13 +33,23 @@ jupyter nbconvert --to notebook --execute --inplace \
   --ExecutePreprocessor.kernel_name=comparador_v2 00_modelos.ipynb
 ```
 
+## Stages
+
+| `STAGE` | Máquina | LLM | Embeddings | Archivo |
+|---|---|---|---|---|
+| `dev` | MacBook con Docker Desktop | DMR `ai/qwen3.5:9B-UD-Q4_K_XL` | DMR `ai/granite-embedding-multilingual` | `config/stages/dev.env` |
+| `sandbox` | Raspberry Pi | Groq `openai/gpt-oss-120b` | Ollama `bge-m3` | `config/stages/sandbox.env` |
+| `mvp` | Cluster Databricks | Foundry (GPT-5.6) | Foundry (`text-embedding-3-large`) | `config/stages/mvp.env` |
+
+Los archivos de stage solo tienen proveedores y modelos, **nunca secretos**: se versionan. Cada modelo de embeddings tiene su dimensión y su escala de similitud, así que `SIM_THRESHOLD` se calibra por stage y los índices FAISS no se mezclan entre stages.
+
 ## Configuración
 
-Precedencia: **variable de entorno** (en Databricks, `app.yaml`) > **`config/.env`** (local, con secretos, ignorado por git) > **`config/.env.example`** (valores iniciales, versionado).
+Precedencia: **variable de entorno** (en Databricks, `app.yaml` o la celda del notebook) > **`config/.env`** (local: `STAGE` y secretos, ignorado por git) > **`config/stages/<STAGE>.env`** > **`config/.env.example`** (valores iniciales, versionado).
 
 El código **no tiene valores por defecto**: todo valor `[CALIBRAR]` vive solo en `config/.env.example`. Para cambiar un umbral se edita ese archivo o se sobrescribe en `config/.env`.
 
-Variables que añadió la implementación a las de la spec (docs/12): `LLM_PROVIDER`, `EMB_PROVIDER`, `GROQ_*`, `OLLAMA_BASE_URL`, `OLLAMA_EMB_MODEL`, `OLLAMA_LLM_MODEL`, `FOUNDRY_AI_*`, `FOUNDRY_OMIT_TEMPERATURE`, `LLM_TEMPERATURE`, `LLM_TIMEOUT_S`, `CITATION_SHOW_MIN`, `COLOR_PRIMARIO` y `COLOR_FONDO`.
+Variables que añadió la implementación a las de la spec (docs/12): `LLM_PROVIDER`, `EMB_PROVIDER`, `GROQ_*`, `OLLAMA_BASE_URL`, `OLLAMA_EMB_MODEL`, `OLLAMA_LLM_MODEL`, `STAGE`, `FOUNDRY_AI_*`, `FOUNDRY_OMIT_TEMPERATURE`, `DMR_BASE_URL`, `DMR_LLM_MODEL`, `DMR_EMB_MODEL`, `LLM_TEMPERATURE`, `LLM_TIMEOUT_S`, `CITATION_SHOW_MIN`, `COLOR_PRIMARIO` y `COLOR_FONDO`.
 
 ### Credenciales en Databricks
 
@@ -44,7 +57,7 @@ Solo los `*_KEY` y `*_TOKEN` son secretos. El resto (endpoint, versión de la AP
 
 | Dónde corre | De dónde sale el token de Foundry |
 |---|---|
-| Local | `config/.env` (ignorado por git). En desarrollo se usa Groq + Ollama |
+| Local (dev y sandbox) | `config/.env` (ignorado por git): `GROQ_API_KEY` en sandbox; dev con DMR no necesita clave |
 | **Notebook en el entorno de la demo** | `dbutils.secrets.get(scope=..., key="foundry_ai_token")`, en una **línea comentada** de cada notebook que se descomenta allí junto con los parámetros de Foundry |
 | **Databricks Apps** (fase D) | Recurso Secret de la app, inyectado con `valueFrom: foundry_ai_token` en `app.yaml`, igual que en la v6 |
 
@@ -62,7 +75,7 @@ El código no lee secretos por su cuenta: todo llega como variable de entorno, q
 |---|---|---|
 | `backend/config.py` | Lee la configuración (`settings`), carga prompts y oculta secretos | `from backend.config import settings, cargar_prompt, redact` |
 | `backend/core/errors.py` | Errores del dominio, cada uno con código `ERR-*` y mensaje de negocio | `err.para_usuario()` → `{"codigo", "mensaje"}` para la pantalla |
-| `backend/llm/client.py` | Cliente único de modelos (SDK `openai`) para Groq, Ollama y Foundry | `ModelClient().chat_json(...)`, `.embed(...)`, `.ping()` |
+| `backend/llm/client.py` | Cliente único de modelos (SDK `openai`) para Groq, Ollama, Docker Model Runner y Foundry | `ModelClient().chat_json(...)`, `.embed(...)`, `.ping()` |
 
 ### API pública
 
@@ -85,21 +98,25 @@ Los reintentos ante 429/5xx los hace el SDK `openai` (`max_retries=LLM_RETRIES`,
 
 ### Proveedores
 
-| Variable | Desarrollo | Demo |
-|---|---|---|
-| `LLM_PROVIDER` | `groq` → `openai/gpt-oss-120b` (también admite `ollama` → `OLLAMA_LLM_MODEL`, sin usar por ahora) | `foundry` → `FOUNDRY_AI_DEPLOYMENT` (`AzureOpenAI`, solo el host del endpoint; sin `temperature` si `FOUNDRY_OMIT_TEMPERATURE=true`) |
-| `EMB_PROVIDER` | `ollama` → `bge-m3` (dim 1024) | `foundry` → `FOUNDRY_AI_EMBED_DEPLOYMENT` |
+| Variable | dev | sandbox | mvp |
+|---|---|---|---|
+| `LLM_PROVIDER` | `dmr` → `DMR_LLM_MODEL` | `groq` → `openai/gpt-oss-120b` | `foundry` → `FOUNDRY_AI_DEPLOYMENT` (`AzureOpenAI`, solo el host del endpoint; sin `temperature` si `FOUNDRY_OMIT_TEMPERATURE=true`) |
+| `EMB_PROVIDER` | `dmr` → `DMR_EMB_MODEL` | `ollama` → `bge-m3` (dim 1024) | `foundry` → `FOUNDRY_AI_EMBED_DEPLOYMENT` |
+
+También admite `LLM_PROVIDER=ollama` (`OLLAMA_LLM_MODEL`), sin usar en ningún stage por ahora.
+
+**Docker Model Runner (`dmr`)**: alternativa local a Ollama para el LLM o los embeddings (`DMR_BASE_URL`, `DMR_LLM_MODEL`, `DMR_EMB_MODEL`). Comparte el código de Ollama: la API es compatible con OpenAI y no pide clave. **Sin probar**: se valida en la MacBook (stage `dev`); DMR no está instalado en la Raspberry. Si se usa para embeddings con un modelo distinto de `bge-m3`, cambia la dimensión: los índices FAISS de proveedores distintos no se mezclan y hay que reindexar.
 
 La ruta de Foundry está implementada pero **sin probar**: se valida corriendo `00_modelos.ipynb` en el entorno de la demo, descomentando la celda de Foundry.
 
 ### Mediciones (Raspberry, 1 oct 2026)
 
-Salidas de la última ejecución de `notebooks/00_modelos.ipynb`:
+Stage sandbox. Salidas de la última ejecución de `notebooks/00_modelos.ipynb`:
 
 | Medida | Valor |
 |---|---|
-| Latencia de Groq `gpt-oss-120b` | Varía con la carga del plan gratuito: media de 0,6 s en una corrida y de 3,1 s (2,7–3,6 s) en la última. El primer ping tarda más |
-| Embeddings `bge-m3` en la Raspberry | 6,7–7,3 textos/s (última corrida: 67 textos en 9,2 s, 2 lotes) |
+| Latencia de Groq `gpt-oss-120b` | Última corrida: 0,6–0,7 s (media 0,6 s); el primer ping, ~5,7 s. Varía con la carga del plan gratuito (en una corrida anterior, media de 3,1 s) |
+| Embeddings `bge-m3` en la Raspberry | Última corrida: 8,5 textos/s (67 textos en 7,9 s, 2 lotes); entre 6,7 y 8,5 en corridas anteriores |
 | Similitud con `bge-m3` | relacionado 0,753 · **no relacionado 0,499** |
 
 Observación fuera del notebook: con Ollama en frío, la primera llamada de embeddings tarda ~15 s porque carga el modelo en memoria.

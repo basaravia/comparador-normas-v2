@@ -3,7 +3,8 @@
 Adaptado de `settings.py` de la v6, simplificado.
 
 Precedencia: variable de entorno (app.yaml en Databricks) > `config/.env` (local, con
-secretos, ignorado por git) > `config/.env.example` (valores iniciales versionados).
+secretos, ignorado por git) > `config/stages/<STAGE>.env` (proveedores de cada stage:
+dev, sandbox o mvp) > `config/.env.example` (valores iniciales versionados).
 El código no tiene valores por defecto: los `[CALIBRAR]` viven solo en `.env.example`.
 
 En Databricks el token de Foundry llega como variable de entorno: en Apps con `valueFrom`
@@ -20,6 +21,11 @@ RAIZ = Path(__file__).resolve().parent.parent  # comparador-dbx/
 PROMPTS_DIR = RAIZ / "backend" / "prompts"
 
 load_dotenv(RAIZ / "config" / ".env", override=False)
+STAGES = ("dev", "sandbox", "mvp")
+if os.environ.get("STAGE"):
+    if os.environ["STAGE"] not in STAGES:
+        raise ValueError(f"STAGE={os.environ['STAGE']!r} no existe; usa uno de {STAGES}")
+    load_dotenv(RAIZ / "config" / "stages" / f"{os.environ['STAGE']}.env", override=False)
 load_dotenv(RAIZ / "config" / ".env.example", override=False)  # solo rellena lo que falte
 
 
@@ -30,14 +36,17 @@ def _env(nombre: str) -> str:
 @dataclass(frozen=True)
 class Settings:
     # Modelos
-    LLM_PROVIDER: str = _env("LLM_PROVIDER")      # groq | foundry | ollama
-    EMB_PROVIDER: str = _env("EMB_PROVIDER")    # ollama | foundry
+    LLM_PROVIDER: str = _env("LLM_PROVIDER")      # groq | foundry | ollama | dmr
+    EMB_PROVIDER: str = _env("EMB_PROVIDER")    # ollama | foundry | dmr
     GROQ_API_KEY: str = _env("GROQ_API_KEY")
     GROQ_BASE_URL: str = _env("GROQ_BASE_URL")
     GROQ_LLM_MODEL: str = _env("GROQ_LLM_MODEL")
     OLLAMA_BASE_URL: str = _env("OLLAMA_BASE_URL")
     OLLAMA_LLM_MODEL: str = _env("OLLAMA_LLM_MODEL")
     OLLAMA_EMB_MODEL: str = _env("OLLAMA_EMB_MODEL")
+    DMR_BASE_URL: str = _env("DMR_BASE_URL")
+    DMR_LLM_MODEL: str = _env("DMR_LLM_MODEL")
+    DMR_EMB_MODEL: str = _env("DMR_EMB_MODEL")
     FOUNDRY_AI_ENDPOINT: str = _env("FOUNDRY_AI_ENDPOINT")
     FOUNDRY_AI_API_VERSION: str = _env("FOUNDRY_AI_API_VERSION")
     FOUNDRY_AI_TOKEN: str = _env("FOUNDRY_AI_TOKEN")

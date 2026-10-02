@@ -11,7 +11,7 @@ Restricciones **duras**. Condicionan toda la arquitectura del MVP.
 | Paquete de la app de **10 MB** como máximo | Solo código, `frontend/dist` y `samples/` livianos; nada de PDFs grandes ni modelos |
 | Documentos de hasta **~100 páginas** | Límite duro: 100 páginas y 20 MB por archivo; FAISS plano en memoria basta |
 | Opera un **auditor**, no el arquitecto | UI mínima, progreso visible, errores en lenguaje de negocio, ejemplos precargados |
-| Modelos en **Azure AI Foundry**, llamados directo como en la v1 | GPT-5.6 (juez, metadatos, conclusión) y text-embedding-3-large en la demo; Groq + Ollama en desarrollo. Proveedor por configuración ([14](14-puntos-abiertos.md) punto 14) |
+| Modelos en **Azure AI Foundry**, llamados directo como en la v1 | GPT-5.6 (juez, metadatos, conclusión) y text-embedding-3-large en la demo; DMR (dev) y Groq + Ollama (sandbox) en desarrollo. Proveedor por configuración ([14](14-puntos-abiertos.md) punto 14) |
 
 > **Importante — artefactos de Docling.** Docling descarga sus modelos (~1,5 GB, desde `huggingface.co`) en la primera ejecución. **No caben en el paquete de la app** (límite de 10 MB, ver [14](14-puntos-abiertos.md) punto 16), así que el contenedor necesita salida a internet. `DOCLING_ARTIFACTS` queda como opción para entornos donde sí haya un directorio local. Verificar en D1.
 

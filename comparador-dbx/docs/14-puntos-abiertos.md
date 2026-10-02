@@ -18,8 +18,8 @@ Estado al 1 oct 2026. **Decidido** = ya no se discute; **Calibrar** = valor inic
 
 | # | Tema | Estado | Decisión |
 |---|---|---|---|
-| 13 | Entornos | Decidido | **1)** Local en la Raspberry (parecida a Databricks Apps) con notebooks · **2)** Databricks **Free Edition** · **3)** Demo en workspace **Azure de pago** |
-| 14 | Modelos | Decidido | Desarrollo: LLM **Groq** (como en la v1) + embeddings **Ollama `bge-m3`** local. Demo: **Azure AI Foundry directo** (endpoint + token en secret, como en la v1), no el AI Gateway. Se cambia solo por configuración |
+| 13 | Stages | Decidido | **dev**: MacBook con Docker Desktop, LLM y embeddings en Docker Model Runner · **sandbox**: Raspberry Pi, Groq + Ollama `bge-m3`, con notebooks · **mvp**: cluster Databricks con Azure AI Foundry (pruebas en Databricks Free y demo en Azure de pago). Cada stage es un archivo `config/stages/<stage>.env` y se elige con `STAGE` |
+| 14 | Modelos | Decidido | dev: **Docker Model Runner** (`ai/qwen3.5:9B-UD-Q4_K_XL` + `ai/granite-embedding-multilingual`). sandbox: LLM **Groq** (como en la v1) + embeddings **Ollama `bge-m3`**. mvp: **Azure AI Foundry directo** (endpoint + token en secret, como en la v1), no el AI Gateway. Se cambia solo por configuración |
 | 15 | Documentos de prueba | Decidido | Manuales MOCK de la v1 y normativas cortas de `Normativa2026/`. Los documentos reales solo en la demo |
 | 16 | Tamaño del paquete | Restricción | Databricks Apps rechaza paquetes de **más de 10 MB** (visto en la v1). Los artefactos de Docling (~1,5 GB) se descargan al primer uso; no van en `models_cache/` |
 | 17 | `app.yaml` | Restricción | El `command` **no pasa por shell**: nada de `--port $PORT`. Uvicorn toma `UVICORN_HOST`/`UVICORN_PORT` del entorno (visto en la v1) |

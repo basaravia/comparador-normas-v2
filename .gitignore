@@ -22,3 +22,8 @@ frontend/node_modules/
 
 # Manual técnico en PDF: solo uso local, no se publica
 Manual_Tecnico_Comparador_Normativo_MVP.pdf
+
+# Los archivos de stage se versionan (solo proveedores, nunca secretos)
+!comparador-dbx/config/stages/dev.env
+!comparador-dbx/config/stages/sandbox.env
+!comparador-dbx/config/stages/mvp.env

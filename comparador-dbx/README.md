@@ -24,4 +24,4 @@ Origen: `../../comparador-normativas-ec-v1` (clon de `basaravia/comparador-norma
 |---|---|---|
 | `backend/config.py` | `settings.py` | Sin secret scope ni `databricks-sdk`; valores iniciales solo en `config/.env.example`, sin defaults en código; carga de prompts desde archivo |
 | `backend/core/errors.py` | `errors.py` | Sin ramas de LangChain/Vertex; código `ERR-*` y mensaje de negocio por error (`docs/05`) |
-| `backend/llm/client.py` | `providers.py` (`ProviderSpec.resuelto`, `_cliente_azure`, `_validar_azure`) | Sin LangChain: solo SDK `openai` (Groq, Ollama, `AzureOpenAI`); JSON validado con Pydantic y 1 reintento |
+| `backend/llm/client.py` | `providers.py` (`ProviderSpec.resuelto`, `_cliente_azure`, `_validar_azure`) | Sin LangChain: solo SDK `openai` (Groq, Ollama, Docker Model Runner, `AzureOpenAI`); JSON validado con Pydantic y 1 reintento |
