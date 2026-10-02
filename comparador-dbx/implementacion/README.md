@@ -110,6 +110,23 @@ Observación fuera del notebook: con Ollama en frío, la primera llamada de embe
 - Se descartó el secret scope de la v6 (`databricks-sdk`): en Databricks Apps el token llega como variable de entorno (`valueFrom`).
 - Docs/12 nombra `jupyter` para desarrollo; se instalan solo sus componentes `ipykernel` y `nbconvert` (`requirements-dev.txt`).
 
+### Seguridad (auditoría inicial del agente `appsec`)
+
+Veredicto: **OBSERVACIONES**, sin bloqueos. `bandit` y `pip-audit` sin hallazgos; sin secretos en archivos ni en el historial.
+
+Corregido en L0:
+- Prompts `juez.md` y `clasificador.md`: el texto de los documentos va entre marcas (`<texto_articulo>`, `<texto_seccion>`, `<texto_documento>`) y el SISTEMA indica que es dato, no instrucción (prompt injection, OWASP LLM01).
+- `chat_json` no envía ni registra fragmentos de la respuesta del modelo (`include_input=False`); `LLMOutputError` solo informa la longitud.
+- `ping()` ya no devuelve el detalle técnico: va solo al log (docs/05).
+- Foundry exige `https://` en el endpoint.
+
+Pendiente, por fase:
+- **L1/L4:** al rellenar los prompts, sustituir las variables en una sola pasada y quitar del texto las marcas `<texto_*>` (que un documento no pueda cerrar el delimitador). Validar `%PDF`, `MAX_MB` y `MAX_PAGES` antes de Docling y sanear el nombre del archivo en `/tmp`.
+- **L4:** chequeo de frases dirigidas al evaluador → `requiere_revision` (decisión del usuario, docs/14 #18).
+- **L5:** neutralizar formula injection en todas las celdas de texto del Excel (CWE-1236).
+- **D0:** `/api/health` sin detalle técnico y con caché corta (el ping gasta tokens); `cargar_prompt` nunca con entrada del usuario.
+- **V2:** fijar las dependencias transitivas (lock).
+
 ### Origen (repo de referencia v6)
 
 Ver la tabla de módulos reutilizados en [`README.md`](../README.md).

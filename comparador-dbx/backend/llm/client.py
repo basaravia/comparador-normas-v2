@@ -49,6 +49,8 @@ def crear_cliente(proveedor: str, s: Settings, embeddings: bool = False) -> tupl
                 FOUNDRY_AI_API_VERSION=s.FOUNDRY_AI_API_VERSION, FOUNDRY_AI_DEPLOYMENT=deployment)
         # Solo el host: si se pega una URL con ruta (…/openai/v1/), no se duplica (como en la v6).
         partes = urlparse(s.FOUNDRY_AI_ENDPOINT)
+        if partes.scheme != "https":  # el token no puede viajar en claro
+            raise ProviderConfigError("FOUNDRY_AI_ENDPOINT debe empezar por https://")
         cliente = AzureOpenAI(azure_endpoint=f"{partes.scheme}://{partes.netloc}",
                               api_key=s.FOUNDRY_AI_TOKEN, api_version=s.FOUNDRY_AI_API_VERSION,
                               **opciones)
@@ -91,14 +93,15 @@ class ModelClient:
             try:
                 return esquema.model_validate_json(respuesta)
             except ValidationError as e:
-                errores = json.dumps(e.errors(include_url=False), ensure_ascii=False, default=str)
+                # Sin `input`: no repetir al log ni al modelo fragmentos de normas o manuales.
+                errores = json.dumps(e.errors(include_url=False, include_input=False), ensure_ascii=False, default=str)
                 log.warning("JSON inválido del LLM (intento %d): %s", intento, errores[:300])
                 mensajes += [
                     {"role": "assistant", "content": respuesta},
                     {"role": "user", "content": f"Tu respuesta no cumple el esquema: {errores}\n"
                                                 "Responde de nuevo SOLO con el objeto JSON corregido."},
                 ]
-        raise LLMOutputError(f"JSON inválido tras el reintento: {respuesta[:500]}")
+        raise LLMOutputError(f"JSON inválido tras el reintento ({len(respuesta)} caracteres)")
 
     def _completar(self, mensajes: list[dict]) -> str:
         cliente, modelo = self.llm()
@@ -143,5 +146,6 @@ class ModelClient:
                 estado[nombre] = {"ok": True, "ms": round((time.perf_counter() - t0) * 1000)}
             except Exception as e:
                 err = clasificar(e)
-                estado[nombre] = {"ok": False, **err.para_usuario(), "detalle": redact(str(err))}
+                log.error("Ping de %s falló: %s", nombre, redact(str(err)))  # el detalle, solo al log
+                estado[nombre] = {"ok": False, **err.para_usuario()}
         return estado

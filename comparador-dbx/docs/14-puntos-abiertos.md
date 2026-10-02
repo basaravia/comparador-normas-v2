@@ -23,6 +23,7 @@ Estado al 1 oct 2026. **Decidido** = ya no se discute; **Calibrar** = valor inic
 | 15 | Documentos de prueba | Decidido | Manuales MOCK de la v1 y normativas cortas de `Normativa2026/`. Los documentos reales solo en la demo |
 | 16 | Tamaño del paquete | Restricción | Databricks Apps rechaza paquetes de **más de 10 MB** (visto en la v1). Los artefactos de Docling (~1,5 GB) se descargan al primer uso; no van en `models_cache/` |
 | 17 | `app.yaml` | Restricción | El `command` **no pasa por shell**: nada de `--port $PORT`. Uvicorn toma `UVICORN_HOST`/`UVICORN_PORT` del entorno (visto en la v1) |
+| 18 | Prompt injection residual | Decidido | En L4, chequeo simple en Python: si la sección del manual contiene frases dirigidas al evaluador ("ignora las instrucciones", "responde total", "cumple totalmente"…), la fila queda `requiere_revision` y aparece en el anexo. Los prompts ya delimitan el texto del documento como dato (auditoría `appsec`, 2 oct 2026) |
 
 ## Calibración empírica
 
