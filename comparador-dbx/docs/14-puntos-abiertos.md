@@ -25,6 +25,7 @@ Estado al 1 oct 2026. **Decidido** = ya no se discute; **Calibrar** = valor inic
 | 17 | `app.yaml` | Restricción | El `command` **no pasa por shell**: nada de `--port $PORT`. Uvicorn toma `UVICORN_HOST`/`UVICORN_PORT` del entorno (visto en la v1) |
 | 18 | Prompt injection residual | Decidido | En L4, chequeo simple en Python: si la sección del manual contiene frases dirigidas al evaluador ("ignora las instrucciones", "responde total", "cumple totalmente"…), la fila queda `requiere_revision` y aparece en el anexo. Los prompts ya delimitan el texto del documento como dato (auditoría `appsec`, 2 oct 2026) |
 | 19 | QA | Decidido | Agente `qa-ia` (QA de IA para auditoría financiera): valida los **RF/RNF de docs/04** y los criterios de docs/13, sin historias de usuario nuevas · coverage **≥ 80 %** de la lógica determinista al cerrar cada hito · **DeepEval** instalado solo en desarrollo, sin telemetría · Databricks CLI: lectura libre y ejecución de pruebas en el workspace Free solo con aprobación del usuario |
+| 20 | Ramas y versiones | Decidido | GitHub flow: ramas cortas desde `main`, una por tarea, con prefijo de Conventional Commits y worktree propio (también para `qa-ia`), que se borran al integrarse. Tags SemVer 0.x por hito en `main` (`v0.1.0` = L0 … `v0.7.0` = L6, parches `v0.x.y`, `v1.0.0` = demo). La rama larga `feat/fase-l-local` se integró en `main` y se retira |
 
 ## Calibración empírica
 
