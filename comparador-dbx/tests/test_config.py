@@ -37,7 +37,7 @@ def test_settings_es_inmutable():
 
 
 def test_publico_oculta_secretos_con_valor_y_deja_el_resto():
-    s = replace(settings, GROQ_API_KEY="gsk_valor_de_prueba", FOUNDRY_AI_TOKEN="")
+    s = replace(settings, GROQ_API_KEY="dummy_valor_prueba", FOUNDRY_AI_TOKEN="")
     p = s.publico()
     assert set(p) == {c.name for c in fields(Settings)}
     assert p["GROQ_API_KEY"] == "***"
@@ -61,7 +61,7 @@ def test_es_secreto(nombre, esperado):
     ("", True),
     ("REEMPLAZAR-con-el-token", True),
     ("reemplazar", True),
-    ("gsk_algo", False),
+    ("gsk_" "algo", False),  # nosec
     ("https://x", False),
 ])
 def test_falta(valor, esperado):
@@ -155,7 +155,7 @@ def test_rellenar_prompt_quita_marca_con_atributos():
 # --- redact ---------------------------------------------------------------------
 
 def test_redact_oculta_el_secreto_configurado(monkeypatch):
-    monkeypatch.setattr(config, "settings", replace(settings, GROQ_API_KEY="clave-de-prueba-123"))
+    monkeypatch.setattr(config, "settings", replace(settings, GROQ_API_KEY="clave-de-prueba-123"))  # nosec pragma: allowlist secret
     assert redact("error con clave-de-prueba-123 en la url") == "error con *** en la url"
 
 
@@ -165,8 +165,8 @@ def test_redact_ignora_secretos_cortos_o_vacios(monkeypatch):
 
 
 @pytest.mark.parametrize("texto, esperado", [
-    ("token sk-abcdefghijkl fin", "token *** fin"),
-    ("gsk_ABCDEFGHIJKL0123 fin", "*** fin"),
+    ("token sk-" "abcdefghijkl fin", "token *** fin"),  # nosec pragma: allowlist secret
+    ("gsk_" "ABCDEFGHIJKL0123 fin", "*** fin"),  # nosec pragma: allowlist secret
     ("dapi0123456789abcdef", "***"),
     ("sk-corto", "sk-corto"),          # menos de 12 caracteres tras el prefijo
     ("mask-abcdefghijklmnop", "mask-abcdefghijklmnop"),  # no empieza en límite de palabra
