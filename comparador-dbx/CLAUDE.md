@@ -22,9 +22,11 @@ Una Databricks App que compara normativas regulatorias (Superintendencia de Banc
 - Implementa por hitos en el orden de `docs/13-plan-hitos.md`. No avances de hito sin cumplir su criterio de aceptación.
 - **Backend primero, en local:** fase L con notebooks en los stages locales (dev: MacBook con DMR; sandbox: Raspberry con Groq + Ollama), luego despliegue en Databricks Free y la UI al final. Paso a paso.
 - Commits pequeños; cita el criterio de aceptación del hito en el mensaje.
-- **Antes de cada push**, el agente `product-owner` actualiza el tablero de avance (`tablero/datos.js`, se ve en `tablero/index.html`) y el cambio va en el push.
+- **Antes de cada push**, el agente `product-owner` actualiza el tablero de avance (`tablero/datos.js`, se ve en `tablero/index.html`) y el cambio va en el push. El tablero refleja **todas** las actividades, también las canceladas o desestimadas: como el PO no ve el chat, el agente principal le pasa en el prompt lo discutido con el usuario desde la última actualización (aceptado, descartado o pospuesto, con motivo). **Solo el usuario desestima, modifica o cancela tareas**: ni el agente principal ni los subagentes lo hacen por su cuenta; se le propone y él decide.
   Después de cada actualización, el agente principal comprueba con `git status --porcelain` y `git diff --name-only` que **solo** cambió `comparador-dbx/tablero/datos.js` y que el diff de ese archivo solo toca literales dentro de `window.TABLERO = {...}`. Si cambió otro archivo, lo revierte y avisa al usuario (el permiso de edición del PO no tiene control técnico de ruta; decisión del usuario, 6 oct 2026).
-- **Antes de cada commit con código** pasa el cambio por el agente `appsec` (seguridad) y el `product-owner` (plan). Un BLOQUEAR de `appsec` se corrige antes del commit; lo que marque como "Decisión del usuario: SÍ" se consulta con el usuario.
+- **Antes de cada commit con código** pasa el cambio por el agente `appsec` (seguridad) y el `product-owner` (plan).
+- **Al cerrar cada hito** (y cuando cambie código ya probado), el agente `qa-ia` escribe y corre las pruebas: coverage **≥ 80 %** de la lógica determinista (`pytest -m "not integracion" --cov`), integración con modelos reales (`-m integracion`), DeepEval desde L3, y actualiza `qa/trazabilidad.md`. Sin **APROBADO** de `qa-ia` el hito no se cierra. Después, el agente principal comprueba con git que `qa-ia` solo escribió en `tests/`, `qa/` y `pytest.ini`; si tocó otra cosa, lo revierte y avisa.
+- **DeepEval** siempre con `DEEPEVAL_TELEMETRY_OPT_OUT=YES` y nunca `deepeval login`: ningún dato sale a Confident AI. Un BLOQUEAR de `appsec` se corrige antes del commit; lo que marque como "Decisión del usuario: SÍ" se consulta con el usuario.
 - **Documenta lo implementado** en `implementacion/README.md` (fuera de `docs/`, que es solo la spec) en el mismo commit: módulos, API pública, configuración, mediciones y diferencias con la spec. El agente `product-owner` revisa que ese doc y el código coincidan.
 - Los valores marcados `[CALIBRAR]` van en configuración (`config/.env.example`), nunca hardcodeados.
 - Los prompts viven en `backend/prompts/*.md` y se cargan desde archivo. No los incrustes en el código.
@@ -42,6 +44,7 @@ uvicorn backend.main:app --reload --port 8000
 # frontend
 cd frontend && npm install && npm run dev      # desarrollo
 cd frontend && npm run build                   # genera frontend/dist para desplegar
-# pruebas
-pytest -q
+# pruebas (desde comparador-dbx/)
+pytest -m "not integracion" --cov=backend   # unitarias + coverage (umbral 80 %)
+pytest -m integracion                        # modelos reales del stage
 ```

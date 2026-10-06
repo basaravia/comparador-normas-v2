@@ -44,8 +44,9 @@
                     border-radius: 999px; padding: 4px 12px; cursor: pointer; font: inherit; font-size: 13px; }
   .filtros button.activo { background: var(--verde); border-color: var(--verde); color: #fff; }
 
-  .tablero { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
-  @media (max-width: 900px) { .tablero { grid-template-columns: 1fr; } }
+  .tablero { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  @media (max-width: 1100px) { .tablero { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 700px) { .tablero { grid-template-columns: 1fr; } }
   .columna { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 10px; }
   .columna h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--suave);
                 margin: 2px 4px 10px; display: flex; justify-content: space-between; }
@@ -54,7 +55,10 @@
   .tarjeta.seguridad { border-left-color: var(--seguridad); }
   .tarjeta.pendiente { border-left-color: var(--pendiente); }
   .tarjeta.decision { border-left-color: var(--decision); }
+  .tarjeta.actividad { border-left-color: var(--suave); }
   .tarjeta.bloqueado { outline: 2px solid var(--seguridad); }
+  .tarjeta.descartado { opacity: .7; border-left-style: dashed; }
+  .tarjeta.descartado .tit { text-decoration: line-through; }
   .tarjeta .id { font-weight: 700; font-size: 12px; color: var(--suave); }
   .tarjeta .tit { margin: 2px 0; font-weight: 600; }
   .tarjeta .nota { color: var(--suave); font-size: 13px; }
@@ -85,8 +89,9 @@
   const T = window.TABLERO;
   const COLUMNAS = [
     ["por_hacer", "Por hacer"], ["en_curso", "En curso"], ["revision", "En revisión"], ["hecho", "Hecho"],
+    ["descartado", "Descartado"],
   ];
-  const TIPOS = { hito: "Hito", seguridad: "Seguridad", pendiente: "Pendiente", decision: "Decisión" };
+  const TIPOS = { hito: "Hito", seguridad: "Seguridad", pendiente: "Pendiente", decision: "Decisión", actividad: "Actividad" };
   let filtro = "todas";
 
   // Texto siempre como textContent: los datos nunca se interpretan como HTML.
@@ -105,7 +110,7 @@
   function pintarFases() {
     const cont = document.getElementById("fases");
     T.fases.forEach(f => {
-      const hitos = T.tarjetas.filter(t => t.fase === f.id && t.tipo === "hito");
+      const hitos = T.tarjetas.filter(t => t.fase === f.id && t.tipo === "hito" && t.estado !== "descartado");
       const hechos = hitos.filter(t => t.estado === "hecho").length;
       const pct = hitos.length ? Math.round(100 * hechos / hitos.length) : 0;
       const caja = el("div", { class: "fase" });
@@ -140,7 +145,7 @@
       col.append(h);
       if (!tarjetas.length) col.append(el("div", { class: "vacio" }, "—"));
       tarjetas.forEach(t => {
-        const c = el("article", { class: `tarjeta ${t.tipo} ${t.estado === "bloqueado" ? "bloqueado" : ""}` });
+        const c = el("article", { class: `tarjeta ${t.tipo} ${["bloqueado", "descartado"].includes(t.estado) ? t.estado : ""}` });
         c.append(el("div", { class: "id" }, t.id + (t.estado === "bloqueado" ? " · BLOQUEADO" : "")));
         c.append(el("div", { class: "tit" }, t.titulo));
         if (t.nota) c.append(el("div", { class: "nota" }, t.nota));

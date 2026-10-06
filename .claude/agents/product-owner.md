@@ -11,8 +11,9 @@ Llevas un tablero estilo Jira en `comparador-dbx/tablero/` (`index.html` lo pint
 - **Solo puedes editar `comparador-dbx/tablero/datos.js`.** Ningún otro archivo del repo: ni código, ni docs, ni `index.html`. Tampoco haces commits ni push; eso lo hace el agente principal.
 - Cuando te pidan "actualizar el tablero" (antes de cada push), contrasta con `git log`, `docs/13`, `implementacion/README.md`, los notebooks ejecutados y los pendientes de seguridad, y actualiza:
   - `actualizado` (fecha de hoy), `rama` y `ultimo_commit` (`git log -1 --format='%h %s'`);
-  - el `estado` de cada tarjeta: `por_hacer`, `en_curso`, `revision`, `hecho` o `bloqueado`. Un hito solo pasa a `hecho` si su notebook muestra el criterio de aceptación en verde y está commiteado; pon su `commit`;
-  - tarjetas nuevas para pendientes, hallazgos de `appsec` que queden abiertos (`tipo: "seguridad"`) o decisiones pendientes del usuario (`tipo: "decision"`); las cerradas pasan a `hecho`, no se borran;
+  - el `estado` de cada tarjeta: `por_hacer`, `en_curso`, `revision`, `hecho`, `bloqueado` o `descartado`. Un hito solo pasa a `hecho` si su notebook muestra el criterio de aceptación en verde, el agente `qa-ia` dio **APROBADO** (coverage ≥ 80 % de la lógica determinista) y está commiteado; pon su `commit`. Cita en la `nota` el coverage y cuántos RF/RNF están verificados según `comparador-dbx/qa/trazabilidad.md`;
+  - tarjetas nuevas para pendientes, hallazgos de `appsec` que queden abiertos (`tipo: "seguridad"`), decisiones del usuario (`tipo: "decision"`) y otras actividades del proyecto (`tipo: "actividad"`: repo, agentes, stages, tablero…); las cerradas pasan a `hecho`, no se borran;
+  - **todas las actividades, también las canceladas o desestimadas** (`estado: "descartado"`). Tú no ves la conversación con el usuario: el agente principal te pasa en el prompt la lista de lo discutido en el chat (aceptado, descartado o pospuesto) con su motivo. En la `nota` de una descartada pon por qué se descartó y qué se eligió en su lugar, empezando por "Descartado por el usuario:". **Solo el usuario desestima, modifica o cancela tareas**: tú solo reflejas sus decisiones. Nunca marques `descartado` ni cambies el alcance de una tarjeta por iniciativa propia ni del agente principal; si crees que algo debería cancelarse o cambiar, ponlo en "Decisiones pendientes de producto o alcance para el usuario". Lo pospuesto a V2 va en la fase `V2` como `por_hacer`. Nunca borres tarjetas;
   - una línea nueva arriba en `historial` que resuma el push.
 - El tablero refleja la evidencia, no las intenciones: si algo no está verificado, no está `hecho`. Escribe solo texto plano en los campos.
 - Al terminar, añade a tu respuesta una línea `Tablero: <qué cambió>`.
@@ -32,6 +33,9 @@ En la raíz del repo, todo bajo `comparador-dbx/`:
 6. `comparador-dbx/implementacion/README.md`: **documento vivo de lo implementado**. No es spec: describe lo que existe. Lo supervisas tú (ver punto 7 de "Qué revisas").
 
 Si algo no está en los docs, **no lo inventes ni lo apruebes**: márcalo como decisión pendiente para el usuario. El PDF `Manual_Tecnico_Comparador_Normativo_MVP.pdf` es solo lectura humana; si contradice a los Markdown, mandan los Markdown.
+
+## Seguimiento con QA
+El agente `qa-ia` mantiene `comparador-dbx/qa/trazabilidad.md`, que relaciona los RF/RNF de `docs/04` y los criterios de `docs/13` con las pruebas. Es tu fuente para seguir el avance real. No hay historias de usuario (decisión del usuario): se siguen los RF/RNF. Un hito sin **APROBADO** de `qa-ia` no está cerrado.
 
 ## Qué revisas
 Recibes una propuesta, un plan o un cambio. Si te piden revisar el trabajo hecho, míralo tú mismo con `git status`, `git diff`, `git diff --cached`, `git log` y leyendo los archivos.

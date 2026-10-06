@@ -1,12 +1,18 @@
 // Datos del tablero. Lo actualiza el agente product-owner antes de cada push.
 // index.html solo los pinta: no hace falta tocarlo para mover tarjetas.
 //
-// estado: "por_hacer" | "en_curso" | "revision" | "hecho" | "bloqueado"
-// tipo:   "hito" | "seguridad" | "pendiente" | "decision"
+// estado: "por_hacer" | "en_curso" | "revision" | "hecho" | "bloqueado" | "descartado"
+//         ("descartado" = cancelado o desestimado; solo lo decide el usuario. La nota empieza
+//          por "Descartado por el usuario:" con el motivo y lo que se eligió)
+// tipo:   "hito" | "seguridad" | "pendiente" | "decision" | "actividad"
+//         ("actividad" = trabajo del proyecto que no es hito: repo, agentes, stages, tablero…)
+// fase:   id de una fase de la lista "fases"; lo pospuesto fuera del MVP va en "V2".
+// ids:    hitos como en docs/13; P- pendientes, S- seguridad, D- descartadas,
+//         V- pospuestas a V2, A- actividades. Nunca se borran tarjetas.
 window.TABLERO = {
   actualizado: "2026-10-06",
   rama: "feat/fase-l-local",
-  ultimo_commit: "0b4f926 feat(L1): ingesta de PDFs (validación + clasificación) con LLM real",
+  ultimo_commit: "f48c1bd chore: tablero de avance estilo Jira que el product-owner actualiza antes de cada push",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -14,6 +20,7 @@ window.TABLERO = {
     { id: "D", nombre: "Fase D · Despliegue en Databricks Free" },
     { id: "U", nombre: "Fase U · Interfaz" },
     { id: "Demo", nombre: "Demo · Azure + Foundry" },
+    { id: "V2", nombre: "V2 · Fuera del MVP" },
   ],
 
   tarjetas: [
@@ -63,10 +70,94 @@ window.TABLERO = {
       nota: "Ya existe desde L1 (clasificador). Auditoría appsec de L0." },
     { id: "S-06", fase: "L", tipo: "seguridad", estado: "hecho", titulo: "L1: validar %PDF, MAX_MB, MAX_PAGES y sanear el nombre",
       nota: "Hecho en validation.py; verificado en 01_ingesta.ipynb.", commit: "0b4f926" },
+
+    // ── Actividades del proyecto (no son hitos) ──
+    { id: "A-01", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Repo público basaravia/comparador-normas-v2",
+      nota: "Creado y sincronizado. PDF del manual retirado de todo el historial; commits con la dirección noreply de GitHub.", commit: "6dec1f6" },
+    { id: "A-02", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Worktree comparador-normas-v2-local con la rama feat/fase-l-local",
+      nota: "Toda la fase L se trabaja en esta rama." },
+    { id: "A-03", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Agente product-owner",
+      nota: "Autoridad solo sobre plan y alcance (8da0562); supervisa el doc de implementación (implementacion/README.md, f705ca3).", commit: "d7233b4" },
+    { id: "A-04", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Agente appsec (ciberseguridad aplicativa)",
+      nota: "Revisa cada commit (ad885f8, 99e5e9c). Auditoría inicial de L0 con correcciones.", commit: "a8292be" },
+    { id: "A-05", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Stages dev/sandbox/mvp y proveedor Docker Model Runner",
+      nota: "Un archivo config/stages/<stage>.env por stage, elegido con STAGE (docs/14 #13).", commit: "7c802a1" },
+    { id: "A-06", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Tablero de avance estilo Jira",
+      nota: "Creado en f48c1bd. Ampliado con las actividades descartadas y pospuestas (pendiente de commit en este push).", commit: "f48c1bd" },
+    { id: "A-07", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Agente qa-ia (QA de IA para auditoría financiera) y sus skills",
+      nota: "Agente .claude/agents/qa-ia.md con las skills qa-pruebas, qa-trazabilidad y qa-eval-ia (.claude/skills/). Escribe solo en tests/, qa/ y pytest.ini; el agente principal lo verifica con git. Sin commit todavía: en este push." },
+
+    // ── Descartadas por el usuario (y decisiones relacionadas) ──
+    { id: "D-01", fase: "L", tipo: "decision", estado: "descartado", titulo: "Vía 2 en una tercera hoja del Excel",
+      nota: "Descartado por el usuario: sin tercera hoja; se eligió un bloque al final del anexo, Hoja 2 (docs/14 #4)." },
+    { id: "D-02", fase: "L", tipo: "decision", estado: "descartado", titulo: "Respaldo de hasta 2 secciones de manual para la marca L",
+      nota: "Descartado por el usuario: se eligió 1 sección de respaldo por artículo, también para L (docs/14 #5)." },
+    { id: "D-03", fase: "U", tipo: "decision", estado: "descartado", titulo: "Capturar nombre de la revisión y corte en la UI",
+      nota: "Descartado por el usuario: quedan en blanco en el Excel y el auditor los llena a mano (docs/14 #7)." },
+    { id: "D-04", fase: "Demo", tipo: "decision", estado: "descartado", titulo: "Usar el AI Gateway de Databricks",
+      nota: "Descartado por el usuario: se eligió Azure AI Foundry directo, como en la v1 (docs/14 #14)." },
+    { id: "D-05", fase: "D", tipo: "decision", estado: "hecho", titulo: "Artefactos de Docling fuera del paquete (no en models_cache/)",
+      nota: "Restricción técnica (límite de 10 MB de Databricks Apps): los modelos de Docling se descargan al primer uso; registrado en docs/14 #16" },
+    { id: "D-06", fase: "L", tipo: "decision", estado: "descartado", titulo: "Plan comprimido para hacer todo de golpe",
+      nota: "Descartado por el usuario: se eligió ir paso a paso, backend primero con notebooks (docs/13)." },
+    { id: "D-07", fase: "L", tipo: "decision", estado: "descartado", titulo: "Simular el LLM en la prueba extremo a extremo (LLM mock)",
+      nota: "Descartado por el usuario: modelos reales siempre (CLAUDE.md regla 4)." },
+    { id: "D-08", fase: "L", tipo: "decision", estado: "descartado", titulo: "Lectura automática del secret scope de Databricks en config.py",
+      nota: "Descartado por el usuario: no portar los settings de la v6 con databricks-sdk/dbutils; se eligió una línea comentada con dbutils.secrets.get en el notebook.", commit: "23db7c8" },
+    { id: "D-09", fase: "L", tipo: "decision", estado: "descartado", titulo: "Doc de implementación dentro de docs/ como docs/16",
+      nota: "Descartado por el usuario: se eligió la carpeta aparte implementacion/README.md, separando spec y lo implementado.", commit: "f705ca3" },
+    { id: "D-10", fase: "Demo", tipo: "decision", estado: "descartado", titulo: "Embeddings con un modelo de Databricks (Foundation Model APIs)",
+      nota: "Descartado por el usuario: embeddings de Foundry en Databricks Free y en la demo." },
+    { id: "D-11", fase: "D", tipo: "decision", estado: "descartado", titulo: "App mínima con /api/health en Databricks antes de la fase D",
+      nota: "Descartado por el usuario: por ahora solo notebook; la app llega en D0/D1." },
+    { id: "D-12", fase: "D", tipo: "decision", estado: "descartado", titulo: "Desplegar la app / rama deploy al estilo v6 ahora",
+      nota: "Descartado por el usuario: no necesita despliegue todavía; queda para la fase D." },
+    { id: "D-13", fase: "L", tipo: "decision", estado: "descartado", titulo: "Cerrar los hitos de la fase L también en el stage dev",
+      nota: "Descartado por el usuario: se cierran solo en sandbox; dev es opcional (docs/13, 14bbfe6)." },
+    { id: "D-14", fase: "L", tipo: "decision", estado: "descartado", titulo: "Aceptar sin código el riesgo residual de prompt injection",
+      nota: "Descartado por el usuario: se eligió un chequeo simple en L4 (docs/14 #18); ver S-01." },
+    { id: "D-15", fase: "L", tipo: "decision", estado: "descartado", titulo: "Dejar al product-owner sin Edit, o regla deny/hook en settings.json",
+      nota: "Descartado por el usuario: Edit restringido por instrucción (solo datos.js) y verificación del agente principal con git (CLAUDE.md)." },
+    { id: "D-16", fase: "L", tipo: "decision", estado: "descartado", titulo: "Instalar Docker Model Runner en la Raspberry",
+      nota: "Descartado por el usuario: DMR se usa en la MacBook (stage dev); la Pi usa Groq + Ollama (sandbox)." },
+    { id: "D-17", fase: "L", tipo: "decision", estado: "descartado", titulo: "Publicar los commits con el correo personal del autor",
+      nota: "Descartado por el usuario: se usa la dirección noreply de GitHub en los commits publicados." },
+    { id: "D-18", fase: "L", tipo: "actividad", estado: "descartado", titulo: "Cambiar el .env.example (plantilla del .env o modelos DMR)",
+      nota: "Descartado por el usuario: lo resolvió por su cuenta." },
+    { id: "D-19", fase: "L", tipo: "decision", estado: "descartado", titulo: "Versionar el manual técnico en PDF",
+      nota: "Descartado por el usuario: ignorado y retirado de todo el historial; la fuente de verdad es el Markdown de docs/.", commit: "6dec1f6" },
+
+    // ── Decisiones del usuario sobre QA (docs/14 #19 y docs/13) ──
+    { id: "D-20", fase: "L", tipo: "decision", estado: "hecho", titulo: "Sin historias de usuario nuevas: el QA valida los RF/RNF",
+      nota: "qa-ia valida los RF/RNF de docs/04 y los criterios de docs/13; trazabilidad en qa/trazabilidad.md (docs/14 #19)." },
+    { id: "D-21", fase: "L", tipo: "decision", estado: "hecho", titulo: "Framework de evaluación de IA en desarrollo: DeepEval",
+      nota: "Elegido frente a RAGAS por menos dependencias y sin LangChain. Solo en desarrollo y sin telemetría; se usa desde L3 (docs/14 #19, docs/13)." },
+    { id: "D-22", fase: "L", tipo: "decision", estado: "hecho", titulo: "Databricks CLI para el QA",
+      nota: "Lectura libre; ejecutar pruebas en el workspace Free solo con aprobación del usuario (docs/14 #19)." },
+    { id: "D-23", fase: "L", tipo: "decision", estado: "hecho", titulo: "QA al cerrar cada hito: coverage ≥ 80 % y APROBADO de qa-ia",
+      nota: "Coverage ≥ 80 % de la lógica determinista (pytest -m \"not integracion\" --cov); sin APROBADO de qa-ia el hito no se cierra (docs/14 #19, docs/13)." },
+    { id: "D-24", fase: "L", tipo: "actividad", estado: "descartado", titulo: "Conocimiento de las NOGAI (Normas Globales de Auditoría Interna del IIA) en qa-ia",
+      nota: "Descartado por el usuario: lo pidió y luego pidió eliminarlo; el agente qa-ia quedó como estaba antes, sin las NOGAI." },
+    { id: "D-25", fase: "L", tipo: "decision", estado: "por_hacer", titulo: "Pasada base de qa-ia sobre L0 y L1",
+      nota: "Pendiente del usuario: L0 y L1 se cerraron antes de la regla de QA y hoy no tienen pruebas pytest. Decide si se hace la pasada y qué estado tienen L0/L1 mientras tanto (no se ha cambiado su estado)." },
+    { id: "D-26", fase: "L", tipo: "decision", estado: "por_hacer", titulo: "Confirmar las 18 descartadas cargadas en la actualización anterior",
+      nota: "Pendiente del usuario: revisar D-01..D-19 (salvo D-05), en particular D-16 (DMR en la Raspberry) y D-12 (desplegar ahora). No se han cambiado." },
+
+    // ── Pospuestas a V2 ──
+    { id: "V-01", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "Renombrar docs/ a specs/",
+      nota: "Pospuesto a después de la demo." },
+    { id: "V-02", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "granite-docling (extracción) y qwen3-reranker (cross-encoder) de DMR",
+      nota: "Fuera del plan del MVP (docs/15)." },
+    { id: "V-03", fase: "V2", tipo: "seguridad", estado: "por_hacer", titulo: "Fijar dependencias transitivas con un lock",
+      nota: "Pendiente de appsec (implementacion/README.md)." },
+    { id: "V-04", fase: "V2", tipo: "seguridad", estado: "por_hacer", titulo: "Validar PDFs en subproceso con límite de memoria",
+      nota: "Pendiente de appsec para V2; en D0 basta tope en streaming y timeout (S-03)." },
   ],
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-06", texto: "Agente qa-ia con sus skills y decisiones de QA; tablero con descartadas" },
+    { fecha: "2026-10-06", texto: "El tablero incluye las actividades descartadas y pospuestas discutidas en la sesión" },
     { fecha: "2026-10-06", texto: "Creación del tablero de avance; el product-owner lo actualiza antes de cada push." },
     { fecha: "2026-10-06", texto: "L1 cerrado: ingesta con validación y clasificador (Groq real)." },
     { fecha: "2026-10-02", texto: "Stages dev/sandbox/mvp, proveedor DMR y auditoría appsec de L0." },
