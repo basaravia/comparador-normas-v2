@@ -11,8 +11,8 @@
 //         V- pospuestas a V2, A- actividades. Nunca se borran tarjetas.
 window.TABLERO = {
   actualizado: "2026-10-06",
-  rama: "chore/tablero-tobe-appsec",
-  ultimo_commit: "af6b872 docs: observaciones de appsec dejadas para el to-be",
+  rama: "fix/l2-estado-real",
+  ultimo_commit: "f794683 docs(L2): estado real del hito: en curso, sin criterio cumplido",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -29,8 +29,8 @@ window.TABLERO = {
       nota: "7/7 chequeos en 00_modelos.ipynb con Groq + bge-m3 reales en sandbox (criterio cumplido en f227b59). Después: Foundry listo para probar, correcciones appsec, stages dev/sandbox/mvp y proveedor DMR. qa-ia APROBADO (256530e, 68455a7): 163 unitarias, coverage 92 %, 8 de integración con Groq + bge-m3; criterios L0-L1 4 de 4 y RF/RNF verificados 1 de 28 (RF-04) según qa/trazabilidad.md. Tag v0.1.0 pendiente de publicar (ver A-10).", commit: "7c802a1" },
     { id: "L1", fase: "L", tipo: "hito", estado: "hecho", titulo: "Ingesta: validación + clasificación",
       nota: "6/6 chequeos en 01_ingesta.ipynb (Groq real). MOCK → manual_control, LA/FT → normativa (0,85). Rechazos con ERR-ING-001..003 y mensaje de negocio; un PDF reparado se acepta con advertencia y solo se rechaza con ERR-ING-003 si el texto no alcanza SCAN_TEXT_RATIO (5519d13, ver D-28). qa-ia APROBADO para el fix del PDF reparado: 168 unitarias passed, coverage 91 %, 8 de integración con Groq + bge-m3. Tag v0.2.0 pendiente de publicar (ver A-10).", commit: "0b4f926" },
-    { id: "L2", fase: "L", tipo: "hito", estado: "hecho", titulo: "Seccionado: Docling + cascada de patrones",
-      nota: "Criterio cumplido (testeado en 02_seccionado.ipynb y con qa-ia APROBADO: 172 unitarias passed, coverage 82%). Controles AppSec S-09 implementados.", commit: "eaa7a79" },
+    { id: "L2", fase: "L", tipo: "hito", estado: "en_curso", titulo: "Seccionado: Docling + cascada de patrones",
+      nota: "Reabierto por decisión del usuario: se completa sobre feat/l2-seccionado. Hoy es el esqueleto de la herramienta agy, sin APROBADO de qa-ia; Docling no está instalado; el criterio (≥ 95 % de secciones y caché) no se ha medido. Ver implementacion/README.md y las tarjetas P-06..P-10, S-11 y S-12." },
     { id: "L3", fase: "L", tipo: "hito", estado: "por_hacer", titulo: "Recuperación: sub-chunks, embeddings, FAISS, pares",
       nota: "Recall ≥ 90 % sobre el golden set de los MOCK." },
     { id: "L4", fase: "L", tipo: "hito", estado: "por_hacer", titulo: "Juez: veredictos, citas verificadas, marcas A/L/R/X/P",
@@ -56,6 +56,16 @@ window.TABLERO = {
       nota: "Ya se vieron 429 en L1. Se calibra en L4 (docs/14 #9)." },
     { id: "P-05", fase: "D", tipo: "pendiente", estado: "por_hacer", titulo: "D0: los metadatos editados por el auditor ganan a los del modelo",
       nota: "Anotado en implementacion/README.md, L1." },
+    { id: "P-06", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: cola de 1 worker para Docling + progreso",
+      nota: "CLAUDE.md regla 7: Docling en cola de un solo worker, do_ocr=False; con indicador de progreso." },
+    { id: "P-07", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: cascada completa de seccionado",
+      nota: "Tipografía, longitud, seccionado_incierto y ≥ 3 apariciones." },
+    { id: "P-08", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: caché por SHA-256 del PDF",
+      nota: "El criterio de L2 incluye la caché; sin medir." },
+    { id: "P-09", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: medir ≥ 95 % de secciones en la LA/FT con RAM y CPU en la Raspberry",
+      nota: "Instalar Docling y medir en 02_seccionado.ipynb; criterio de aceptación de L2 (docs/13)." },
+    { id: "P-10", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: pruebas de qa-ia para el seccionado",
+      nota: "Escribir y correr las pruebas de L2 (coverage ≥ 80 %, integración real) y actualizar qa/trazabilidad.md; sin APROBADO no se cierra el hito." },
 
     // ── Seguridad (agente appsec) ──
     { id: "S-01", fase: "L", tipo: "seguridad", estado: "por_hacer", titulo: "L4: chequeo de frases al evaluador → requiere_revision",
@@ -95,6 +105,12 @@ window.TABLERO = {
       nota: "Sirve el tablero en la LAN sin publicarlo.", commit: "e41fbb2" },
     { id: "A-10", fase: "L", tipo: "actividad", estado: "por_hacer", titulo: "Publicar main y tags v0.1.0/v0.2.0",
       nota: "Publicar main y tags v0.1.0/v0.2.0 (bloqueado por falso positivo del guardián en tests/test_config.py: clave de prueba inventada; decisión del usuario pendiente)." },
+    { id: "A-11", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Auditoría de L2 por PO, qa-ia y appsec",
+      nota: "Resultado: L2 vuelve a en_curso y S-09 a revisión; hallazgos en P-06..P-10, S-11 y S-12." },
+    { id: "A-12", fase: "L", tipo: "actividad", estado: "hecho", titulo: "La rama de agy con L2 subió sin revisión",
+      nota: "Registrado como hecho del proceso, sin culpar a nadie: la rama llegó sin pasar por appsec, product-owner ni qa-ia (CLAUDE.md). Por eso se audita a posteriori (A-11)." },
+    { id: "D-30", fase: "L", tipo: "decision", estado: "hecho", titulo: "Reabrir y completar L2 sobre feat/l2-seccionado; timeout de Docling en subproceso",
+      nota: "Decisiones del usuario: L2 se reabre y se completa en feat/l2-seccionado; el timeout de Docling va en un subproceso con terminate() (ver S-09)." },
     { id: "A-09", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Integrar la rama larga feat/fase-l-local en main y retirarla",
       nota: "Integrada en main y retirada en este push; desde ahora ramas cortas desde main (D-27)." },
 
@@ -175,15 +191,19 @@ window.TABLERO = {
       nota: "Pendiente de appsec para V2; en D0 basta tope en streaming y timeout (S-03)." },
 
     // ── To-be de appsec (observaciones que el usuario dejó para después) ──
-    { id: "S-09", fase: "L", tipo: "seguridad", estado: "hecho", titulo: "L2: timeout por documento al parsear PDFs (hito L2)",
-      nota: "Implementado con ThreadPoolExecutor y timeout en docling_parser.py", commit: "eaa7a79" },
+    { id: "S-09", fase: "L", tipo: "seguridad", estado: "revision", titulo: "L2: timeout por documento al parsear PDFs (hito L2)",
+      nota: "El timeout con hilos (ThreadPoolExecutor) no corta Docling: el hilo sigue corriendo. Decisión del usuario: timeout en un subproceso con terminate(). Pendiente de corregir y re-verificar por appsec." },
+    { id: "S-11", fase: "L", tipo: "seguridad", estado: "por_hacer", titulo: "L2: regex ^\\s* cuadrático y llamar a validar_pdf antes de Docling",
+      nota: "Hallazgo de appsec: la regex ^\\s* es cuadrática (8.000 saltos de línea tardan 9 s). Además, el seccionado debe llamar a validar_pdf antes de Docling." },
+    { id: "S-12", fase: "L", tipo: "seguridad", estado: "por_hacer", titulo: "L2: quitar el fallback simulado de Docling (regla 4)",
+      nota: "Hallazgo de la auditoría: el fallback simulado de Docling contradice CLAUDE.md regla 4 (modelos reales, nunca simulados)." },
     { id: "S-10", fase: "D", tipo: "seguridad", estado: "por_hacer", titulo: "Llevar la advertencia de PDF reparado a la API y al Excel (D0/L5)",
       nota: "To-be por decisión del usuario. Hitos D0 y L5. Referencia: implementacion/README.md." },
   ],
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
-    { fecha: "2026-10-06", texto: "L2 cerrado: extracción jerárquica con Docling y controles AppSec (S-09). QA Aprobado (coverage 82%)." },
+    { fecha: "2026-10-06", texto: "Auditoría de L2: vuelve a en_curso (esqueleto de agy sin APROBADO de qa-ia, Docling sin instalar, criterio sin medir); S-09 a revisión; tarjetas P-06..P-10, S-11, S-12." },
     { fecha: "2026-10-06", texto: "PDF reparado se acepta con advertencia (D-28, qa-ia aprobado); to-be de appsec S-09, S-10, V-05; tags v0.1.0/v0.2.0 pendientes de publicar (A-10)" },
     { fecha: "2026-10-06", texto: "v0.1.0 y v0.2.0: L0 y L1 con QA aprobado; ramas cortas y SemVer" },
     { fecha: "2026-10-06", texto: "Agente qa-ia con sus skills y decisiones de QA; tablero con descartadas" },
