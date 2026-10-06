@@ -11,8 +11,8 @@
 //         V- pospuestas a V2, A- actividades. Nunca se borran tarjetas.
 window.TABLERO = {
   actualizado: "2026-10-06",
-  rama: "feat/fase-l-local",
-  ultimo_commit: "f48c1bd chore: tablero de avance estilo Jira que el product-owner actualiza antes de cada push",
+  rama: "main",
+  ultimo_commit: "7f47a1a Merge rama fix/neutralizar-marcas-pdf-truncado",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -26,9 +26,9 @@ window.TABLERO = {
   tarjetas: [
     // ── Hitos (docs/13) ──
     { id: "L0", fase: "L", tipo: "hito", estado: "hecho", titulo: "Base: config, errores y cliente de modelos",
-      nota: "7/7 chequeos en 00_modelos.ipynb con Groq + bge-m3 reales en sandbox (criterio cumplido en f227b59). Después: Foundry listo para probar, correcciones appsec, stages dev/sandbox/mvp y proveedor DMR.", commit: "7c802a1" },
+      nota: "7/7 chequeos en 00_modelos.ipynb con Groq + bge-m3 reales en sandbox (criterio cumplido en f227b59). Después: Foundry listo para probar, correcciones appsec, stages dev/sandbox/mvp y proveedor DMR. qa-ia APROBADO (256530e, 68455a7): 163 unitarias, coverage 92 %, 8 de integración con Groq + bge-m3; criterios L0-L1 4 de 4 y RF/RNF verificados 1 de 28 (RF-04) según qa/trazabilidad.md. Tag v0.1.0.", commit: "7c802a1" },
     { id: "L1", fase: "L", tipo: "hito", estado: "hecho", titulo: "Ingesta: validación + clasificación",
-      nota: "6/6 chequeos en 01_ingesta.ipynb (Groq real). MOCK → manual_control, LA/FT → normativa (0,85). Rechazos con ERR-ING-001..003 y mensaje de negocio.", commit: "0b4f926" },
+      nota: "6/6 chequeos en 01_ingesta.ipynb (Groq real). MOCK → manual_control, LA/FT → normativa (0,85). Rechazos con ERR-ING-001..003 y mensaje de negocio; todo PDF reparado se rechaza con ERR-ING-003 (eda0014). qa-ia APROBADO (256530e, 68455a7): 163 unitarias, coverage 92 %, 8 de integración con Groq + bge-m3; criterios L0-L1 4 de 4 y RF/RNF verificados 1 de 28 (RF-04) según qa/trazabilidad.md. Tag v0.2.0.", commit: "0b4f926" },
     { id: "L2", fase: "L", tipo: "hito", estado: "por_hacer", titulo: "Seccionado: Docling + cascada de patrones",
       nota: "Siguiente. Criterio: ≥ 95 % de artículos de una norma real. Medir RAM/CPU de Docling en la Pi." },
     { id: "L3", fase: "L", tipo: "hito", estado: "por_hacer", titulo: "Recuperación: sub-chunks, embeddings, FAISS, pares",
@@ -70,12 +70,16 @@ window.TABLERO = {
       nota: "Ya existe desde L1 (clasificador). Auditoría appsec de L0." },
     { id: "S-06", fase: "L", tipo: "seguridad", estado: "hecho", titulo: "L1: validar %PDF, MAX_MB, MAX_PAGES y sanear el nombre",
       nota: "Hecho en validation.py; verificado en 01_ingesta.ipynb.", commit: "0b4f926" },
+    { id: "S-07", fase: "L", tipo: "seguridad", estado: "hecho", titulo: "QA-01: rellenar_prompt con marcas anidadas o con atributos (MEDIA)",
+      nota: "La neutralización de <texto_*> se podía saltar. Corregido y re-verificado por qa-ia (test_rellenar_prompt_marca_anidada_no_reconstruye_el_cierre, test_rellenar_prompt_quita_marca_con_atributos).", commit: "eda0014" },
+    { id: "S-08", fase: "L", tipo: "seguridad", estado: "hecho", titulo: "DoS cuadrático en la neutralización de marcas (BAJA)",
+      nota: "La neutralización pasa a ser lineal; corregido junto con QA-01.", commit: "eda0014" },
 
     // ── Actividades del proyecto (no son hitos) ──
     { id: "A-01", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Repo público basaravia/comparador-normas-v2",
       nota: "Creado y sincronizado. PDF del manual retirado de todo el historial; commits con la dirección noreply de GitHub.", commit: "6dec1f6" },
     { id: "A-02", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Worktree comparador-normas-v2-local con la rama feat/fase-l-local",
-      nota: "Toda la fase L se trabaja en esta rama." },
+      nota: "Toda la fase L se trabajó en esta rama hasta L1; integrada en main y retirada (ver A-09)." },
     { id: "A-03", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Agente product-owner",
       nota: "Autoridad solo sobre plan y alcance (8da0562); supervisa el doc de implementación (implementacion/README.md, f705ca3).", commit: "d7233b4" },
     { id: "A-04", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Agente appsec (ciberseguridad aplicativa)",
@@ -83,9 +87,14 @@ window.TABLERO = {
     { id: "A-05", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Stages dev/sandbox/mvp y proveedor Docker Model Runner",
       nota: "Un archivo config/stages/<stage>.env por stage, elegido con STAGE (docs/14 #13).", commit: "7c802a1" },
     { id: "A-06", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Tablero de avance estilo Jira",
-      nota: "Creado en f48c1bd. Ampliado con las actividades descartadas y pospuestas (pendiente de commit en este push).", commit: "f48c1bd" },
+      nota: "Creado en f48c1bd. Ampliado con la columna Descartado y las actividades descartadas y pospuestas (48e6ad5).", commit: "f48c1bd" },
     { id: "A-07", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Agente qa-ia (QA de IA para auditoría financiera) y sus skills",
-      nota: "Agente .claude/agents/qa-ia.md con las skills qa-pruebas, qa-trazabilidad y qa-eval-ia (.claude/skills/). Escribe solo en tests/, qa/ y pytest.ini; el agente principal lo verifica con git. Sin commit todavía: en este push." },
+      nota: "Agente .claude/agents/qa-ia.md con las skills qa-pruebas, qa-trazabilidad y qa-eval-ia (.claude/skills/). Escribe solo en tests/, qa/ y pytest.ini; el agente principal lo verifica con git.", commit: "d9f46cf" },
+
+    { id: "A-08", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Script tablero/servir.sh para ver el tablero en la red local",
+      nota: "Sirve el tablero en la LAN sin publicarlo.", commit: "e41fbb2" },
+    { id: "A-09", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Integrar la rama larga feat/fase-l-local en main y retirarla",
+      nota: "Integrada en main y retirada en este push; desde ahora ramas cortas desde main (D-27)." },
 
     // ── Descartadas por el usuario (y decisiones relacionadas) ──
     { id: "D-01", fase: "L", tipo: "decision", estado: "descartado", titulo: "Vía 2 en una tercera hoja del Excel",
@@ -138,10 +147,18 @@ window.TABLERO = {
       nota: "Coverage ≥ 80 % de la lógica determinista (pytest -m \"not integracion\" --cov); sin APROBADO de qa-ia el hito no se cierra (docs/14 #19, docs/13)." },
     { id: "D-24", fase: "L", tipo: "actividad", estado: "descartado", titulo: "Conocimiento de las NOGAI (Normas Globales de Auditoría Interna del IIA) en qa-ia",
       nota: "Descartado por el usuario: lo pidió y luego pidió eliminarlo; el agente qa-ia quedó como estaba antes, sin las NOGAI." },
-    { id: "D-25", fase: "L", tipo: "decision", estado: "por_hacer", titulo: "Pasada base de qa-ia sobre L0 y L1",
-      nota: "Pendiente del usuario: L0 y L1 se cerraron antes de la regla de QA y hoy no tienen pruebas pytest. Decide si se hace la pasada y qué estado tienen L0/L1 mientras tanto (no se ha cambiado su estado)." },
-    { id: "D-26", fase: "L", tipo: "decision", estado: "por_hacer", titulo: "Confirmar las 18 descartadas cargadas en la actualización anterior",
-      nota: "Pendiente del usuario: revisar D-01..D-19 (salvo D-05), en particular D-16 (DMR en la Raspberry) y D-12 (desplegar ahora). No se han cambiado." },
+    { id: "D-25", fase: "L", tipo: "decision", estado: "hecho", titulo: "Pasada base de qa-ia sobre L0 y L1",
+      nota: "Aprobada por el usuario y hecha: 163 unitarias, coverage 92 %, 8 de integración; qa-ia APROBADO para L0 y L1 (qa/trazabilidad.md).", commit: "256530e" },
+    { id: "D-26", fase: "L", tipo: "decision", estado: "hecho", titulo: "Confirmar las 18 descartadas cargadas en la actualización anterior",
+      nota: "Confirmadas por el usuario: D-01..D-19 (salvo D-05) siguen descartadas tal cual." },
+
+    // ── Decisiones del usuario sobre ramas, ingesta y forma de trabajo ──
+    { id: "D-27", fase: "L", tipo: "decision", estado: "hecho", titulo: "Ramas cortas desde main con worktree propio y SemVer 0.x por hito",
+      nota: "GitHub flow con prefijos de Conventional Commits; tags v0.1.0 = L0 ... v0.7.0 = L6, v1.0.0 = demo (docs/14 #20).", commit: "ffc1b51" },
+    { id: "D-28", fase: "L", tipo: "decision", estado: "hecho", titulo: "Todo PDF reparado se rechaza con ERR-ING-003",
+      nota: "Truncado o con xref dañada: se pide el archivo correcto en vez de procesar uno posiblemente incompleto (docs/14 #21).", commit: "eda0014" },
+    { id: "D-29", fase: "L", tipo: "decision", estado: "hecho", titulo: "Reportes cortos con la salida literal de las herramientas",
+      nota: "Preferencia del usuario, recogida en los agentes.", commit: "214cc5e" },
 
     // ── Pospuestas a V2 ──
     { id: "V-01", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "Renombrar docs/ a specs/",
@@ -156,6 +173,7 @@ window.TABLERO = {
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-06", texto: "v0.1.0 y v0.2.0: L0 y L1 con QA aprobado; ramas cortas y SemVer" },
     { fecha: "2026-10-06", texto: "Agente qa-ia con sus skills y decisiones de QA; tablero con descartadas" },
     { fecha: "2026-10-06", texto: "El tablero incluye las actividades descartadas y pospuestas discutidas en la sesión" },
     { fecha: "2026-10-06", texto: "Creación del tablero de avance; el product-owner lo actualiza antes de cada push." },
