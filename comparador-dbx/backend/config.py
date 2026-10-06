@@ -116,10 +116,18 @@ def cargar_prompt(nombre: str) -> tuple[str, str]:
     return sistema.strip(), usuario.strip()
 
 
+def _sin_marcas(texto: str) -> str:
+    """Quita las marcas `<texto_*>` (con atributos o espacios) en dos pasadas lineales:
+    1) borra las marcas completas; 2) si al borrar quedó otra marca formada, su `<` pasa a `‹`
+    (no se borra nada más, así que no se puede reconstruir ninguna)."""
+    texto = re.sub(r"<\s*/?\s*texto_[^<>]*>", "", texto, flags=re.I)
+    return re.sub(r"<(?=\s*/?\s*texto_)", "‹", texto, flags=re.I)
+
+
 def rellenar_prompt(plantilla: str, **valores: str) -> str:
     """Sustituye `{variable}` en una sola pasada (un valor no puede inyectar la siguiente variable)
     y quita las marcas `<texto_*>` de los valores, para que un documento no cierre el delimitador."""
-    limpios = {k: re.sub(r"<\s*/?\s*texto_\w+\s*>", "", str(v), flags=re.I) for k, v in valores.items()}
+    limpios = {k: _sin_marcas(str(v)) for k, v in valores.items()}
     return re.sub(r"\{(\w+)\}", lambda m: limpios.get(m.group(1), m.group(0)), plantilla)
 
 

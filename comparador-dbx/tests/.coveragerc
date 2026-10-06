@@ -1,0 +1,3 @@
+# Configuración de coverage para pytest-cov (la usa pytest.ini).
+[run]
+data_file = ${TMPDIR-/tmp}/comparador-dbx.coverage
