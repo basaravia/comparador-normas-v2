@@ -116,6 +116,13 @@ def cargar_prompt(nombre: str) -> tuple[str, str]:
     return sistema.strip(), usuario.strip()
 
 
+def rellenar_prompt(plantilla: str, **valores: str) -> str:
+    """Sustituye `{variable}` en una sola pasada (un valor no puede inyectar la siguiente variable)
+    y quita las marcas `<texto_*>` de los valores, para que un documento no cierre el delimitador."""
+    limpios = {k: re.sub(r"<\s*/?\s*texto_\w+\s*>", "", str(v), flags=re.I) for k, v in valores.items()}
+    return re.sub(r"\{(\w+)\}", lambda m: limpios.get(m.group(1), m.group(0)), plantilla)
+
+
 def redact(texto: str) -> str:
     """Oculta los secretos configurados y claves con formato conocido antes de registrar."""
     for nombre, valor in settings.__dict__.items():
