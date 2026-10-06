@@ -205,4 +205,8 @@ Observación fuera del notebook (medición aparte con el mismo código): la vali
 - Pendiente (D0): la fila debe aceptar los metadatos editados por el auditor, que ganan sobre los del modelo.
 - Seguridad (`appsec`, OBSERVACIONES, corregido en L1): la neutralización de `<texto_*>` ignora mayúsculas y espacios y, desde el fix de QA-01, también quita marcas con atributos y anidadas (repite hasta que no queda ninguna), los textos que salen del modelo se acotan a 500 caracteres y `nombre_seguro("..")` devuelve `documento.pdf`. Bandit, pip-audit y secretos limpios.
 - **A vigilar en D0:** guardar la subida con un nombre generado (sha256 o uuid) y usar el del usuario solo para mostrarlo; aplicar el tope de `MAX_MB` al recibir la subida (en streaming) y ejecutar la validación con timeout, porque MuPDF parsea entrada hostil (un PDF muy comprimido puede gastar CPU o RAM). En V2, validar en un subproceso con límite de memoria.
+- **To-be (observaciones de `appsec` que el usuario dejó para después, 6 oct 2026):**
+  - **L2:** timeout por documento al parsear (ni `get_text` ni Docling lo tienen; MuPDF y Docling procesan entrada hostil).
+  - **D0 / L5:** llevar la `advertencia` de PDF reparado a la API y al Excel (hoy `ingerir()` la devuelve y nadie la muestra).
+  - **V2:** un PDF truncado que conserva texto en ≥ 60 % de las páginas se acepta con advertencia y `paginas` cuenta también las vacías.
 - **A vigilar en L5:** los metadatos y textos llegan al Excel: neutralizar el prefijo de fórmula (`=`, `+`, `-`, `@`).
