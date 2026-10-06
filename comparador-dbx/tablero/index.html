@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tablero del comparador</title>
+<!-- Tablero estilo Jira. Solo pinta los datos de datos.js, que actualiza el agente product-owner. -->
+<style>
+  :root {
+    --bg: #f6f8f7; --panel: #ffffff; --texto: #1c2b24; --suave: #5b6b63; --borde: #dde5e0;
+    --verde: #1e7b4f; --verde-claro: #e3f2ea;
+    --hito: #1e7b4f; --seguridad: #b4402e; --pendiente: #8a6d1d; --decision: #3b5ba9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101613; --panel: #18211c; --texto: #e3ece7; --suave: #9db0a6; --borde: #2a3731;
+      --verde: #4fbf86; --verde-claro: #1d3a2b;
+      --hito: #4fbf86; --seguridad: #e57a66; --pendiente: #d7b45a; --decision: #8aa7f0;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101613; --panel: #18211c; --texto: #e3ece7; --suave: #9db0a6; --borde: #2a3731;
+    --verde: #4fbf86; --verde-claro: #1d3a2b;
+    --hito: #4fbf86; --seguridad: #e57a66; --pendiente: #d7b45a; --decision: #8aa7f0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--texto);
+         font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 16px 12px; max-width: 1400px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .meta { color: var(--suave); font-size: 13px; }
+  .meta code { font-size: 12px; }
+  main { max-width: 1400px; margin: 0 auto; padding: 0 16px 32px; }
+
+  .fases { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 12px 0 20px; }
+  .fase { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 10px 12px; }
+  .fase b { font-size: 13px; }
+  .barra { height: 8px; background: var(--verde-claro); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .barra span { display: block; height: 100%; background: var(--verde); }
+  .fase small { color: var(--suave); }
+
+  .filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .filtros button { border: 1px solid var(--borde); background: var(--panel); color: var(--texto);
+                    border-radius: 999px; padding: 4px 12px; cursor: pointer; font: inherit; font-size: 13px; }
+  .filtros button.activo { background: var(--verde); border-color: var(--verde); color: #fff; }
+
+  .tablero { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  @media (max-width: 900px) { .tablero { grid-template-columns: 1fr; } }
+  .columna { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 10px; }
+  .columna h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--suave);
+                margin: 2px 4px 10px; display: flex; justify-content: space-between; }
+  .tarjeta { border: 1px solid var(--borde); border-left: 4px solid var(--hito); border-radius: 6px;
+             padding: 8px 10px; margin-bottom: 8px; background: var(--bg); }
+  .tarjeta.seguridad { border-left-color: var(--seguridad); }
+  .tarjeta.pendiente { border-left-color: var(--pendiente); }
+  .tarjeta.decision { border-left-color: var(--decision); }
+  .tarjeta.bloqueado { outline: 2px solid var(--seguridad); }
+  .tarjeta .id { font-weight: 700; font-size: 12px; color: var(--suave); }
+  .tarjeta .tit { margin: 2px 0; font-weight: 600; }
+  .tarjeta .nota { color: var(--suave); font-size: 13px; }
+  .etq { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; margin-right: 4px;
+         background: var(--verde-claro); color: var(--texto); }
+  .vacio { color: var(--suave); font-size: 13px; padding: 4px; }
+
+  .historial { margin-top: 20px; background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 10px 14px; }
+  .historial h2 { font-size: 14px; margin: 0 0 6px; }
+  .historial li { margin: 3px 0; }
+  .historial time { color: var(--suave); font-variant-numeric: tabular-nums; margin-right: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tablero · Comparador Normativo de Doble Vía (MVP)</h1>
+  <div class="meta" id="meta"></div>
+</header>
+<main>
+  <section class="fases" id="fases"></section>
+  <nav class="filtros" id="filtros"></nav>
+  <section class="tablero" id="tablero"></section>
+  <section class="historial"><h2>Historial</h2><ul id="historial"></ul></section>
+</main>
+
+<script src="datos.js"></script>
+<script>
+  const T = window.TABLERO;
+  const COLUMNAS = [
+    ["por_hacer", "Por hacer"], ["en_curso", "En curso"], ["revision", "En revisión"], ["hecho", "Hecho"],
+  ];
+  const TIPOS = { hito: "Hito", seguridad: "Seguridad", pendiente: "Pendiente", decision: "Decisión" };
+  let filtro = "todas";
+
+  // Texto siempre como textContent: los datos nunca se interpretan como HTML.
+  function el(tag, attrs = {}, texto = "") {
+    const e = document.createElement(tag);
+    Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+    if (texto) e.textContent = texto;
+    return e;
+  }
+
+  function pintarMeta() {
+    const m = document.getElementById("meta");
+    m.textContent = `Actualizado ${T.actualizado} · rama ${T.rama} · último commit: ${T.ultimo_commit} · ${T.demo}`;
+  }
+
+  function pintarFases() {
+    const cont = document.getElementById("fases");
+    T.fases.forEach(f => {
+      const hitos = T.tarjetas.filter(t => t.fase === f.id && t.tipo === "hito");
+      const hechos = hitos.filter(t => t.estado === "hecho").length;
+      const pct = hitos.length ? Math.round(100 * hechos / hitos.length) : 0;
+      const caja = el("div", { class: "fase" });
+      caja.append(el("b", {}, f.nombre));
+      const barra = el("div", { class: "barra" }); const relleno = el("span"); relleno.style.width = pct + "%";
+      barra.append(relleno); caja.append(barra);
+      caja.append(el("small", {}, `${hechos} de ${hitos.length} hitos · ${pct} %`));
+      cont.append(caja);
+    });
+  }
+
+  function pintarFiltros() {
+    const cont = document.getElementById("filtros");
+    const opciones = [["todas", "Todas"], ...T.fases.map(f => [f.id, "Fase " + f.id]), ...Object.entries(TIPOS)];
+    opciones.forEach(([valor, texto]) => {
+      const b = el("button", { type: "button" }, texto);
+      if (valor === filtro) b.classList.add("activo");
+      b.onclick = () => { filtro = valor; cont.replaceChildren(); pintarFiltros(); pintarTablero(); };
+      cont.append(b);
+    });
+  }
+
+  function pintarTablero() {
+    const cont = document.getElementById("tablero");
+    cont.replaceChildren();
+    const visibles = T.tarjetas.filter(t => filtro === "todas" || t.fase === filtro || t.tipo === filtro);
+    COLUMNAS.forEach(([estado, nombre]) => {
+      const col = el("div", { class: "columna" });
+      // Las bloqueadas se muestran en "En curso" con borde rojo.
+      const tarjetas = visibles.filter(t => t.estado === estado || (estado === "en_curso" && t.estado === "bloqueado"));
+      const h = el("h2"); h.append(el("span", {}, nombre), el("span", {}, String(tarjetas.length)));
+      col.append(h);
+      if (!tarjetas.length) col.append(el("div", { class: "vacio" }, "—"));
+      tarjetas.forEach(t => {
+        const c = el("article", { class: `tarjeta ${t.tipo} ${t.estado === "bloqueado" ? "bloqueado" : ""}` });
+        c.append(el("div", { class: "id" }, t.id + (t.estado === "bloqueado" ? " · BLOQUEADO" : "")));
+        c.append(el("div", { class: "tit" }, t.titulo));
+        if (t.nota) c.append(el("div", { class: "nota" }, t.nota));
+        const etqs = el("div");
+        etqs.append(el("span", { class: "etq" }, TIPOS[t.tipo] || t.tipo), el("span", { class: "etq" }, "Fase " + t.fase));
+        if (t.commit) etqs.append(el("span", { class: "etq" }, t.commit));
+        c.append(etqs);
+        col.append(c);
+      });
+      cont.append(col);
+    });
+  }
+
+  function pintarHistorial() {
+    const ul = document.getElementById("historial");
+    T.historial.forEach(h => { const li = el("li"); li.append(el("time", {}, h.fecha), document.createTextNode(h.texto)); ul.append(li); });
+  }
+
+  pintarMeta(); pintarFases(); pintarFiltros(); pintarTablero(); pintarHistorial();
+</script>
+</body>
+</html>

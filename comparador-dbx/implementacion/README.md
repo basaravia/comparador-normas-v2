@@ -6,6 +6,8 @@ Si algo de aquí contradice a la especificación, manda la especificación y la 
 
 ## Estado
 
+Tablero de avance estilo Jira: [`tablero/index.html`](../tablero/index.html) (abrir con doble clic). Lo actualiza el agente `product-owner` antes de cada push.
+
 | Hito | Estado | Rama · commit | Notebook |
 |---|---|---|---|
 | L0 · Base | ✅ Cumplido | `feat/fase-l-local` · `feat(L0): …` | `notebooks/00_modelos.ipynb` |
