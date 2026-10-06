@@ -86,6 +86,6 @@ def ingerir(ruta: Path, cliente: ModelClient) -> dict:
     # Prioridad: editado por el auditor (llega en la API) > LLM > nativo del PDF > vacío.
     metadatos.setdefault("titulo_oficial", nativos.get("title"))
     metadatos.setdefault("entidad_emisora", nativos.get("author"))
-    return {"archivo": nombre, "ok": True, "paginas": v.paginas, "sha256": v.sha256,
+    return {"archivo": nombre, "ok": True, "paginas": v.paginas, "sha256": v.sha256, "advertencia": v.advertencia,
             "tipo": tipo_sugerido(r), "tipo_llm": r.tipo_documento, "confianza": r.confianza_tipo,
             "evidencia": r.evidencia_tipo, "metadatos": {k: v for k, v in metadatos.items() if v}}

@@ -77,3 +77,6 @@ def test_ingerir_clasifica_segun_criterio_l1(cliente, ruta, tipo):
     assert fila["tipo"] == tipo  # preseleccionado: confianza >= TYPE_CONFIDENCE
     assert fila["paginas"] > 0 and len(fila["sha256"]) == 64
     assert fila["evidencia"]
+    assert "advertencia" in fila  # docs/14 #21: la fila siempre trae la clave
+    if ruta.parent.name == "samples":
+        assert fila["advertencia"] is None  # los MOCK están sanos: sin advertencia de reparación

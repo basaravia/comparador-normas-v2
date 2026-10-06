@@ -1,6 +1,7 @@
-"""backend/ingest/validation.py — límites, cabecera, corruptos, contraseña y nombre seguro (RF-04)."""
+"""backend/ingest/validation.py — límites, cabecera, corruptos, contraseña, PDF reparado y nombre seguro (RF-04)."""
 import hashlib
 from dataclasses import replace
+from pathlib import Path
 
 import pymupdf
 import pytest
@@ -14,6 +15,7 @@ TEXTO_49 = "x" * 49
 # Mensajes literales de docs/05 (tabla de errores).
 MSJ_ESCANEADO = "Este documento parece ser una imagen escaneada. Por ahora solo podemos leer PDFs con texto seleccionable."
 MSJ_LIMITES = "El archivo supera el máximo de 100 páginas o 20 MB. Divídelo o consulta con el equipo de soporte."
+RAIZ = Path(__file__).resolve().parent.parent  # comparador-dbx/
 
 
 def con_settings(monkeypatch, **cambios):
@@ -29,6 +31,7 @@ def test_pdf_valido_devuelve_paginas_sha256_y_metadatos(hacer_pdf):
     assert v.paginas == 2
     assert v.sha256 == hashlib.sha256(ruta.read_bytes()).hexdigest()
     assert v.metadatos["title"] == "Manual" and v.metadatos["author"] == "Banco"
+    assert v.advertencia is None  # PDF sano: sin advertencia de reparación
 
 
 def test_mismo_contenido_mismo_sha256(hacer_pdf, tmp_path):
@@ -135,8 +138,40 @@ def test_pdf_truncado_se_rechaza(hacer_pdf):
     datos = ruta.read_bytes()
     ruta.write_bytes(datos[: len(datos) // 2])
     v = validar_pdf(ruta)
-    # Decisión del usuario (docs/14 #21): todo PDF que MuPDF tuvo que reparar se rechaza como no abrible.
+    # docs/14 #21: MuPDF lo repara, pero la página quedó sin texto -> truncado, no abrible.
     assert not v.ok and v.codigo == "ERR-ING-003"
+
+
+# --- PDF reparado por MuPDF (docs/14 #21) ----------------------------------------------
+
+AVISO_REPARADO = "Revisa que estén todas las páginas."
+
+
+def test_pdf_sin_tabla_xref_se_acepta_con_advertencia(monkeypatch, hacer_pdf):
+    con_settings(monkeypatch, SCAN_TEXT_RATIO=0.6)
+    ruta = hacer_pdf(textos=[TEXTO_50 + " uno", TEXTO_50 + " dos", TEXTO_50 + " tres"])
+    datos = ruta.read_bytes()
+    ruta.write_bytes(datos[: datos.index(b"xref")])  # sin tabla de referencias ni trailer
+    v = validar_pdf(ruta)
+    assert v.ok and v.codigo is None and v.paginas == 3
+    assert v.sha256 == hashlib.sha256(ruta.read_bytes()).hexdigest()
+    assert v.advertencia and AVISO_REPARADO in v.advertencia
+
+
+def test_pdf_de_varias_paginas_truncado_a_la_mitad_es_err_ing_003_no_001(monkeypatch, hacer_pdf):
+    con_settings(monkeypatch, SCAN_TEXT_RATIO=0.6)
+    ruta = hacer_pdf(textos=[TEXTO_50] * 6)
+    datos = ruta.read_bytes()
+    ruta.write_bytes(datos[: len(datos) // 2])  # MuPDF lo repara: 3 de 6 páginas con texto (0,5 < 0,6)
+    v = validar_pdf(ruta)
+    assert not v.ok and v.codigo == "ERR-ING-003"  # no se confunde con un escaneado (ERR-ING-001)
+    assert v.advertencia is None
+
+
+@pytest.mark.parametrize("muestra", ["MOCK-DEMO-01.pdf", "MOCK-DEMO-02.pdf", "MOCK-DEMO-03.pdf"])
+def test_mock_sano_se_acepta_sin_advertencia(muestra):
+    v = validar_pdf(RAIZ / "samples" / muestra)
+    assert v.ok and v.paginas > 0 and v.advertencia is None
 
 
 # --- nombre_seguro (path traversal y nombres raros) -------------------------------------
