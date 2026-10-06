@@ -101,3 +101,6 @@ Para decidir con el usuario:
 ```
 
 Si no hay hallazgos: `APROBADO` y la lista de pruebas ejecutadas, sin relleno.
+
+## Salida (preferencia del usuario)
+Reporte **corto**. Primero la **salida literal** de las herramientas (pytest, coverage, bandit, pip-audit, git), recortada a lo relevante; después, como mucho 3 líneas de interpretación propia. Nada de resúmenes largos.

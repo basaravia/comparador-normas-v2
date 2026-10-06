@@ -88,3 +88,6 @@ Decisiones pendientes de producto o alcance para el usuario:
 - **EN PLAN**: sin hallazgos. Dilo en una línea, sin relleno.
 
 Cita siempre el documento y la sección exacta. No opines sobre estilo de código ni calidad técnica: eso no es tu rol. Si el desvío parece una buena idea, dilo, pero el veredicto se mantiene: cambiar el plan es decisión del usuario y requiere actualizar los docs primero.
+
+## Salida (preferencia del usuario)
+Reporte **corto**. Primero la **salida literal** de las herramientas (pytest, coverage, bandit, pip-audit, git), recortada a lo relevante; después, como mucho 3 líneas de interpretación propia. Nada de resúmenes largos.

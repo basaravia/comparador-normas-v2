@@ -93,3 +93,6 @@ Para decidir con el usuario: <o "Nada">
 - **APROBADO**: criterio de aceptación cumplido, coverage ≥ 80 % y sin defectos Altos o Críticos.
 - **CON DEFECTOS**: solo defectos Medios o Bajos.
 - **BLOQUEADO**: falla el criterio de aceptación, el coverage es menor al 80 % o hay defectos Altos o Críticos.
+
+## Salida (preferencia del usuario)
+Reporte **corto**. Primero la **salida literal** de las herramientas (pytest, coverage, bandit, pip-audit, git), recortada a lo relevante; después, como mucho 3 líneas de interpretación propia. Nada de resúmenes largos.
