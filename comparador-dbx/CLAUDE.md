@@ -21,6 +21,14 @@ Una Databricks App que compara normativas regulatorias (Superintendencia de Banc
 ## Cómo trabajar
 - Implementa por hitos en el orden de `docs/13-plan-hitos.md`. No avances de hito sin cumplir su criterio de aceptación.
 - **Backend primero, en local:** fase L con notebooks en los stages locales (dev: MacBook con DMR; sandbox: Raspberry con Groq + Ollama), luego despliegue en Databricks Free y la UI al final. Paso a paso.
+- **Ramas cortas desde `main`** (GitHub flow; decisión del usuario, 6 oct 2026):
+  - `main` es el tronco estable. Cada tarea va en una rama corta con prefijo de Conventional Commits: `feat/l2-seccionado`, `fix/...`, `test/...`, `docs/...`, `chore/...`.
+  - Cada rama tiene **su propio worktree** junto al repo: `git worktree add -b <rama> ../wt-<rama-con-guiones> main`. Ningún agente trabaja en el worktree de otro.
+  - Cada rama se integra en `main` cuando pasa `appsec`, `product-owner` y, si cierra un hito, `qa-ia`. Después se borran la rama (local y remota) y su worktree.
+  - El trabajo de `qa-ia` va en su propia rama `test/...` y en su worktree; nunca se mezcla con la rama de la funcionalidad.
+- **Versionado: Conventional Commits + SemVer 0.x por hito.**
+  - Al integrar en `main` el cierre de un hito, se pone un tag anotado con notas de versión: `v0.1.0` = L0, `v0.2.0` = L1, … `v0.7.0` = L6.
+  - Las correcciones posteriores van como parche `v0.x.y`. **`v1.0.0` = demo del MVP.**
 - Commits pequeños; cita el criterio de aceptación del hito en el mensaje.
 - **Antes de cada push**, el agente `product-owner` actualiza el tablero de avance (`tablero/datos.js`, se ve en `tablero/index.html`) y el cambio va en el push. El tablero refleja **todas** las actividades, también las canceladas o desestimadas: como el PO no ve el chat, el agente principal le pasa en el prompt lo discutido con el usuario desde la última actualización (aceptado, descartado o pospuesto, con motivo). **Solo el usuario desestima, modifica o cancela tareas**: ni el agente principal ni los subagentes lo hacen por su cuenta; se le propone y él decide.
   Después de cada actualización, el agente principal comprueba con `git status --porcelain` y `git diff --name-only` que **solo** cambió `comparador-dbx/tablero/datos.js` y que el diff de ese archivo solo toca literales dentro de `window.TABLERO = {...}`. Si cambió otro archivo, lo revierte y avisa al usuario (el permiso de edición del PO no tiene control técnico de ruta; decisión del usuario, 6 oct 2026).
