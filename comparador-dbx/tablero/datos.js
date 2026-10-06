@@ -11,8 +11,8 @@
 //         V- pospuestas a V2, A- actividades. Nunca se borran tarjetas.
 window.TABLERO = {
   actualizado: "2026-10-06",
-  rama: "fix/l2-estado-real",
-  ultimo_commit: "f794683 docs(L2): estado real del hito: en curso, sin criterio cumplido",
+  rama: "feat/l2-extraccion-docling",
+  ultimo_commit: "321c377 feat(L2): extracción real con Docling en subproceso, cola de 1 worker y caché SHA-256",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -30,7 +30,7 @@ window.TABLERO = {
     { id: "L1", fase: "L", tipo: "hito", estado: "hecho", titulo: "Ingesta: validación + clasificación",
       nota: "6/6 chequeos en 01_ingesta.ipynb (Groq real). MOCK → manual_control, LA/FT → normativa (0,85). Rechazos con ERR-ING-001..003 y mensaje de negocio; un PDF reparado se acepta con advertencia y solo se rechaza con ERR-ING-003 si el texto no alcanza SCAN_TEXT_RATIO (5519d13, ver D-28). qa-ia APROBADO para el fix del PDF reparado: 168 unitarias passed, coverage 91 %, 8 de integración con Groq + bge-m3. Tag v0.2.0 pendiente de publicar (ver A-10).", commit: "0b4f926" },
     { id: "L2", fase: "L", tipo: "hito", estado: "en_curso", titulo: "Seccionado: Docling + cascada de patrones",
-      nota: "Reabierto por decisión del usuario: se completa sobre feat/l2-seccionado. Hoy es el esqueleto de la herramienta agy, sin APROBADO de qa-ia; Docling no está instalado; el criterio (≥ 95 % de secciones y caché) no se ha medido. Ver implementacion/README.md y las tarjetas P-06..P-10, S-11 y S-12." },
+      nota: "Sigue en curso, sin APROBADO de qa-ia. Hecho (321c377): extracción real con Docling en subproceso, cola de 1 worker, caché SHA-256; notebook 02 ejecutado: 43 bloques en 57,8 s con 2 CPU y caché en 0,018 s. Faltan la cascada completa (P-07), el criterio ≥ 95 % de secciones en la LA/FT (P-09) y las pruebas de qa-ia (P-10). Ver implementacion/README.md." },
     { id: "L3", fase: "L", tipo: "hito", estado: "por_hacer", titulo: "Recuperación: sub-chunks, embeddings, FAISS, pares",
       nota: "Recall ≥ 90 % sobre el golden set de los MOCK." },
     { id: "L4", fase: "L", tipo: "hito", estado: "por_hacer", titulo: "Juez: veredictos, citas verificadas, marcas A/L/R/X/P",
@@ -56,14 +56,14 @@ window.TABLERO = {
       nota: "Ya se vieron 429 en L1. Se calibra en L4 (docs/14 #9)." },
     { id: "P-05", fase: "D", tipo: "pendiente", estado: "por_hacer", titulo: "D0: los metadatos editados por el auditor ganan a los del modelo",
       nota: "Anotado en implementacion/README.md, L1." },
-    { id: "P-06", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: cola de 1 worker para Docling + progreso",
-      nota: "CLAUDE.md regla 7: Docling en cola de un solo worker, do_ocr=False; con indicador de progreso." },
+    { id: "P-06", fase: "L", tipo: "pendiente", estado: "hecho", titulo: "L2: cola de 1 worker para Docling + progreso",
+      nota: "Cola de 1 worker y progreso por tanda hechos (CLAUDE.md regla 7; do_ocr=False).", commit: "321c377" },
     { id: "P-07", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: cascada completa de seccionado",
       nota: "Tipografía, longitud, seccionado_incierto y ≥ 3 apariciones." },
-    { id: "P-08", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: caché por SHA-256 del PDF",
-      nota: "El criterio de L2 incluye la caché; sin medir." },
+    { id: "P-08", fase: "L", tipo: "pendiente", estado: "hecho", titulo: "L2: caché por SHA-256 del PDF",
+      nota: "Caché SHA-256 hecha; en el notebook 02 la segunda lectura tarda 0,018 s.", commit: "321c377" },
     { id: "P-09", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: medir ≥ 95 % de secciones en la LA/FT con RAM y CPU en la Raspberry",
-      nota: "Instalar Docling y medir en 02_seccionado.ipynb; criterio de aceptación de L2 (docs/13)." },
+      nota: "Docling ya instalado. Medido: LA/FT 55 págs en 300 s y 1,9 GB con 2 CPU (implementacion/README.md). Falta medir el porcentaje de secciones (≥ 95 %), que necesita la cascada completa; criterio de aceptación de L2 (docs/13)." },
     { id: "P-10", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: pruebas de qa-ia para el seccionado",
       nota: "Escribir y correr las pruebas de L2 (coverage ≥ 80 %, integración real) y actualizar qa/trazabilidad.md; sin APROBADO no se cierra el hito." },
 
@@ -111,6 +111,12 @@ window.TABLERO = {
       nota: "Registrado como hecho del proceso, sin culpar a nadie: la rama llegó sin pasar por appsec, product-owner ni qa-ia (CLAUDE.md). Por eso se audita a posteriori (A-11)." },
     { id: "D-30", fase: "L", tipo: "decision", estado: "hecho", titulo: "Reabrir y completar L2 sobre feat/l2-seccionado; timeout de Docling en subproceso",
       nota: "Decisiones del usuario: L2 se reabre y se completa en feat/l2-seccionado; el timeout de Docling va en un subproceso con terminate() (ver S-09)." },
+    { id: "A-13", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Mediciones de Docling en la Raspberry limitada a 2 CPU",
+      nota: "3 págs: 29,5 s y 1,5 GB. LA/FT 55 págs: 300 s y 1,9 GB. Registradas en implementacion/README.md." },
+    { id: "A-14", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Entorno comparador_docling y Docling también en comparador_v2",
+      nota: "Entorno comparador_docling creado y docling instalado además en comparador_v2. Hallazgo de la Pi: /tmp es tmpfs de 4 GB y la instalación falló hasta usar TMPDIR en disco." },
+    { id: "D-31", fase: "L", tipo: "decision", estado: "hecho", titulo: "Aceptar y documentar el riesgo de 59 CVE de docling==2.55.1",
+      nota: "Decisión del usuario: se acepta el riesgo y se documenta (docs/14 #22); se revisa antes de producción (ver V-06)." },
     { id: "A-09", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Integrar la rama larga feat/fase-l-local en main y retirarla",
       nota: "Integrada en main y retirada en este push; desde ahora ramas cortas desde main (D-27)." },
 
@@ -187,22 +193,25 @@ window.TABLERO = {
       nota: "Pendiente de appsec (implementacion/README.md)." },
     { id: "V-05", fase: "V2", tipo: "seguridad", estado: "por_hacer", titulo: "PDF truncado con texto en ≥ 60 % de las páginas: aceptar con advertencia",
       nota: "To-be por decisión del usuario, fase V2: se acepta con advertencia y paginas cuenta las vacías. Referencia: implementacion/README.md." },
+    { id: "V-06", fase: "V2", tipo: "seguridad", estado: "por_hacer", titulo: "Revisar CVE de Docling antes de producción (probar versión más nueva y re-medir)",
+      nota: "Decisión del usuario (D-31): hoy docling==2.55.1 con 59 CVE aceptados; antes de producción probar una versión más nueva y volver a medir RAM y tiempos." },
     { id: "V-04", fase: "V2", tipo: "seguridad", estado: "por_hacer", titulo: "Validar PDFs en subproceso con límite de memoria",
       nota: "Pendiente de appsec para V2; en D0 basta tope en streaming y timeout (S-03)." },
 
     // ── To-be de appsec (observaciones que el usuario dejó para después) ──
-    { id: "S-09", fase: "L", tipo: "seguridad", estado: "revision", titulo: "L2: timeout por documento al parsear PDFs (hito L2)",
-      nota: "El timeout con hilos (ThreadPoolExecutor) no corta Docling: el hilo sigue corriendo. Decisión del usuario: timeout en un subproceso con terminate(). Pendiente de corregir y re-verificar por appsec." },
+    { id: "S-09", fase: "L", tipo: "seguridad", estado: "hecho", titulo: "L2: timeout por documento al parsear PDFs (hito L2)",
+      nota: "Timeout en subproceso con terminate y killpg (decisión del usuario). Verificado: corta a 2,0 s y deja 0 procesos vivos.", commit: "321c377" },
     { id: "S-11", fase: "L", tipo: "seguridad", estado: "por_hacer", titulo: "L2: regex ^\\s* cuadrático y llamar a validar_pdf antes de Docling",
-      nota: "Hallazgo de appsec: la regex ^\\s* es cuadrática (8.000 saltos de línea tardan 9 s). Además, el seccionado debe llamar a validar_pdf antes de Docling." },
-    { id: "S-12", fase: "L", tipo: "seguridad", estado: "por_hacer", titulo: "L2: quitar el fallback simulado de Docling (regla 4)",
-      nota: "Hallazgo de la auditoría: el fallback simulado de Docling contradice CLAUDE.md regla 4 (modelos reales, nunca simulados)." },
+      nota: "Hecho (321c377): el seccionado llama a validar_pdf antes de Docling. Pendiente: la regex ^\\s* es cuadrática (8.000 saltos de línea tardan 9 s)." },
+    { id: "S-12", fase: "L", tipo: "seguridad", estado: "hecho", titulo: "L2: quitar el fallback simulado de Docling (regla 4)",
+      nota: "Fallback simulado quitado; la extracción es real (CLAUDE.md regla 4).", commit: "321c377" },
     { id: "S-10", fase: "D", tipo: "seguridad", estado: "por_hacer", titulo: "Llevar la advertencia de PDF reparado a la API y al Excel (D0/L5)",
       nota: "To-be por decisión del usuario. Hitos D0 y L5. Referencia: implementacion/README.md." },
   ],
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-06", texto: "L2 sigue en curso: extracción real con Docling (321c377), cola de 1 worker, caché y timeout en subproceso; P-06, P-08, S-09, S-12 hechas; mediciones en la Pi; CVE de Docling aceptados (D-31, V-06)." },
     { fecha: "2026-10-06", texto: "Auditoría de L2: vuelve a en_curso (esqueleto de agy sin APROBADO de qa-ia, Docling sin instalar, criterio sin medir); S-09 a revisión; tarjetas P-06..P-10, S-11, S-12." },
     { fecha: "2026-10-06", texto: "PDF reparado se acepta con advertencia (D-28, qa-ia aprobado); to-be de appsec S-09, S-10, V-05; tags v0.1.0/v0.2.0 pendientes de publicar (A-10)" },
     { fecha: "2026-10-06", texto: "v0.1.0 y v0.2.0: L0 y L1 con QA aprobado; ramas cortas y SemVer" },
