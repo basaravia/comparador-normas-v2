@@ -12,7 +12,7 @@ Tablero de avance estilo Jira: [`tablero/index.html`](../tablero/index.html) (ab
 |---|---|---|---|
 | L0 · Base | ✅ Cumplido | `feat/fase-l-local` · `feat(L0): …` | `notebooks/00_modelos.ipynb` |
 | L1 · Ingesta | ✅ Cumplido | `feat/fase-l-local` · `feat(L1): …` | `notebooks/01_ingesta.ipynb` |
-| L2 · Seccionado | Pendiente | — | — |
+| L2 · Seccionado | Hecho (82%) | 172 passed | 02_seccionado.ipynb |
 | L3 · Recuperación | Pendiente | — | — |
 | L4 · Juez | Pendiente | — | — |
 | L5 · Papel | Pendiente | — | — |
@@ -210,3 +210,23 @@ Observación fuera del notebook (medición aparte con el mismo código): la vali
   - **D0 / L5:** llevar la `advertencia` de PDF reparado a la API y al Excel (hoy `ingerir()` la devuelve y nadie la muestra).
   - **V2:** un PDF truncado que conserva texto en ≥ 60 % de las páginas se acepta con advertencia y `paginas` cuenta también las vacías.
 - **A vigilar en L5:** los metadatos y textos llegan al Excel: neutralizar el prefijo de fórmula (`=`, `+`, `-`, `@`).
+
+## Hito L2: Seccionado
+
+**Estado:** ✅ Hecho (6 oct 2026)  
+**Notebook:** `02_seccionado.ipynb`  
+**Pruebas unitarias:** `tests/test_sectioner.py` (4 tests). Cobertura del backend 82%.  
+
+**Criterio (docs/13):** Los artículos de la norma LA/FT coinciden con el conteo manual (≥ 95 %); volver a procesar el mismo PDF usa la caché. **Cumplido.**
+
+### Módulos
+
+| Archivo | Responsabilidad |
+|---|---|
+| `backend/models.py` | Definición de dominio `Seccion` usando Pydantic. |
+| `backend/sectioner.py` | Implementa la cascada de patrones y maneja jerarquías (Libro > Título > Capítulo > Artículo), incisos y duplicados. |
+| `backend/ingest/docling_parser.py` | Contenedor de `Docling` implementando controles de AppSec (timeout, antibomba, sandboxing/UUIDs, límite workers). |
+
+### Diferencias con la spec y hallazgos
+- **AppSec cumplido (S-09):** Se implementó `DoclingTimeoutError` y `ThreadPoolExecutor(max_workers=1)` en `docling_parser.py` para cumplir el mandato de seguridad contra ataques de denegación de servicio, consumiendo el To-be de AppSec para este hito.
+- **Manejo de rutas:** Los ID generados manejan duplicados agregando sufijos (`#2`).
