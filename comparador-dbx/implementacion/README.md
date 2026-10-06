@@ -235,5 +235,19 @@ Observación fuera del notebook (medición aparte con el mismo código): la vali
 6. `appsec` (to-be): regex con `\s*` al inicio de línea tiene costo cuadrático (8.000 saltos de línea → 9 s por bloque); `extraer_con_docling` debe llamar a `validar_pdf` antes.
 7. `qa-ia`: pruebas del criterio, de la cascada y de integración con Docling real; coverage ≥ 80 % por módulo. Sin su APROBADO, L2 no se cierra.
 
+### Mediciones de Docling (6 oct 2026, Raspberry, entorno aparte `comparador_docling`)
+Restricciones de Databricks: `taskset -c 0,1`, `OMP_NUM_THREADS=2`, `AcceleratorOptions(num_threads=2, device="cpu")`, `do_ocr=False`, `generate_page_images=False`. Script de medición en el scratchpad (no versionado; irá al notebook 02).
+
+| Documento | Tablas | Tiempo | RAM pico | Bloques de texto |
+|---|---|---|---|---|
+| `L1-XVI-cap-III.pdf` (3 págs) | fast | 29,5 s | 1.562 MB | 40 |
+| `L1-XVI-cap-III.pdf` (3 págs) | off | 19,7 s | 1.423 MB | 97 |
+| norma LA/FT (55 págs con texto) | fast | 300,1 s | 1.887 MB | 730 |
+
+- RAM: sobra margen frente a ~6 GB. Tiempo: ~5,5 s por página, ~9 min para 100 páginas → caché SHA-256 y progreso por página son necesarios.
+- Con tablas, éstas no están en `doc.texts`: el mapeo debe incluir las tablas o los artículos con tabla perderían contenido.
+- Primera ejecución: descarga ~2,3 GB de modelos a `~/.cache/huggingface` (en Databricks, a disco, no a `/tmp`).
+- La Pi tiene `/tmp` en `tmpfs` de 4 GB (RAM): la instalación de Docling falló con "No space left" hasta usar `TMPDIR` en disco. En la Pi `torch` trae CUDA (`+cu130`, entorno de 6,3 GB); en Databricks (x86) se usa la versión CPU.
+
 ### Origen
 `models.py`, `sectioner.py` y `docling_parser.py`: sin origen declarado de la v6 (regla 1 pendiente de cumplir al integrar el extractor de Docling).
