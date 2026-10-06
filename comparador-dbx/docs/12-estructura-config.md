@@ -23,6 +23,8 @@ comparador-dbx/
 │   ├── src/pages/               # Upload.tsx, Processing.tsx, Selector.tsx, Results.tsx
 │   ├── src/components/          # DropZone.tsx, DocTable.tsx, DualTree.tsx, MarkBadge.tsx
 │   └── dist/                    # build desplegado
+├── qa/                         # trazabilidad RF/RNF ↔ pruebas y reportes de evaluación (agente qa-ia)
+├── tablero/                    # tablero de avance (lo actualiza el product-owner)
 ├── samples/                     # secciones .json + embeddings .npy precomputados
 ├── notebooks/                   # 00_modelos … 06_e2e: validación de cada hito en local (fase L)
 ├── scripts/precompute_samples.py
@@ -32,7 +34,7 @@ Los módulos marcados `(repo)` se toman del repositorio existente.
 
 ## Dependencias permitidas (backend)
 `fastapi`, `uvicorn`, `python-multipart`, `pydantic>=2`, `pymupdf`, `docling` (versión del repo: 2.55.1), `faiss-cpu`, `numpy`, `pandas`, `openpyxl`, `openai` (un solo SDK para Groq, Ollama, Docker Model Runner y Foundry, que exponen API compatible con OpenAI), `python-dotenv`, `pytest`, `httpx`.
-Solo para desarrollo: `jupyter` (notebooks de la fase L).
+Solo para desarrollo: `jupyter` (notebooks de la fase L), `pytest-cov` (coverage) y `deepeval` (evaluación de IA, sin telemetría; elegido frente a RAGAS porque no arrastra LangChain: 36 paquetes frente a 62).
 Cualquier otra requiere justificación.
 
 ## Variables de configuración

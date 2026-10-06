@@ -4,3 +4,6 @@ ipykernel==7.4.0        # kernel de Jupyter para los notebooks
 nbconvert==7.17.1       # ejecutar notebooks desde la terminal
 bandit==1.9.4           # SAST de Python (agente appsec)
 pip-audit==2.10.1       # CVE en dependencias (agente appsec)
+pytest==9.1.1           # pruebas (docs/12)
+pytest-cov==7.1.0       # coverage, umbral 80 % (agente qa-ia)
+deepeval==4.2.8         # evaluación de IA solo en dev; DEEPEVAL_TELEMETRY_OPT_OUT=YES (agente qa-ia)
