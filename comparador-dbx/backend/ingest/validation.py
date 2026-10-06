@@ -52,7 +52,7 @@ def validar_pdf(ruta: Path) -> Validacion:
 
     try:
         with pymupdf.open(ruta) as doc:
-            if doc.needs_pass or doc.page_count == 0:
+            if doc.needs_pass or doc.page_count == 0 or doc.is_repaired:  # truncado: MuPDF lo "repara"
                 return no_abre
             if doc.page_count > s.MAX_PAGES:
                 return rechazo("ERR-ING-002", f"El archivo supera el máximo de {s.MAX_PAGES} páginas o {s.MAX_MB} MB. "
