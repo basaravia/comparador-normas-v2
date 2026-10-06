@@ -2,7 +2,9 @@
 
 Correr con: pytest -m integracion   (gasta tokens)
 """
+import os
 from dataclasses import replace
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -11,6 +13,7 @@ from pydantic import BaseModel, Field
 from backend.config import RAIZ, settings
 from backend.core.errors import LLMOutputError, ProviderConfigError
 from backend.ingest.classifier import ingerir
+from backend.ingest.validation import nombre_seguro
 from backend.llm.client import ModelClient
 
 pytestmark = pytest.mark.integracion
@@ -49,12 +52,28 @@ def test_clave_invalida_es_error_de_configuracion():
         mal.chat_json('Responde {"ok": true}', "ping", Imposible)
 
 
-def test_ingerir_mock_demo_03_es_manual_control(cliente):
-    # L1: los MOCK salen como manual_control.
-    fila = ingerir(RAIZ / "samples" / "MOCK-DEMO-03.pdf", cliente)
+# L1 (docs/13): los 3 MOCK salen como manual_control y la norma LA/FT como normativa.
+# Las normas reales no se versionan: se leen del clon de la v1 o de NORMAS_DIR (skip si no están).
+NORMAS = Path(os.environ.get("NORMAS_DIR", RAIZ.parent.parent / "comparador-normativas-ec-v1" / "Normativa2026"))
+LAFT = ("Proyecto-de-Ley-Organica-Organica-para-Reprimir-y-Prevenir-el-Lavado-de-Activos-"
+        "y-la-Financiacion-del-Terrorismo.pdf")
+
+CASOS_L1 = [
+    (RAIZ / "samples" / "MOCK-DEMO-01.pdf", "manual_control"),
+    (RAIZ / "samples" / "MOCK-DEMO-02.pdf", "manual_control"),
+    (RAIZ / "samples" / "MOCK-DEMO-03.pdf", "manual_control"),
+    (NORMAS / LAFT, "normativa"),
+]
+
+
+@pytest.mark.parametrize("ruta, tipo", CASOS_L1, ids=["MOCK-DEMO-01", "MOCK-DEMO-02", "MOCK-DEMO-03", "norma-LAFT"])
+def test_ingerir_clasifica_segun_criterio_l1(cliente, ruta, tipo):
+    if not ruta.exists():
+        pytest.skip(f"no existe {ruta} (define NORMAS_DIR)")
+    fila = ingerir(ruta, cliente)
     assert fila["ok"], fila
-    assert fila["archivo"] == "MOCK-DEMO-03.pdf"
-    assert fila["tipo_llm"] == "manual_control"
-    assert fila["tipo"] == "manual_control"  # preseleccionado: confianza ≥ TYPE_CONFIDENCE
+    assert fila["archivo"] == nombre_seguro(ruta.name)  # la norma LA/FT se acorta a 100 caracteres + .pdf
+    assert fila["tipo_llm"] == tipo
+    assert fila["tipo"] == tipo  # preseleccionado: confianza >= TYPE_CONFIDENCE
     assert fila["paginas"] > 0 and len(fila["sha256"]) == 64
     assert fila["evidencia"]

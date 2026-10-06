@@ -135,7 +135,8 @@ def test_pdf_truncado_se_rechaza(hacer_pdf):
     datos = ruta.read_bytes()
     ruta.write_bytes(datos[: len(datos) // 2])
     v = validar_pdf(ruta)
-    assert not v.ok  # MuPDF lo repara sin texto y sale como ERR-ING-001 (ver observación del reporte)
+    # Decisión del usuario (docs/14 #21): todo PDF que MuPDF tuvo que reparar se rechaza como no abrible.
+    assert not v.ok and v.codigo == "ERR-ING-003"
 
 
 # --- nombre_seguro (path traversal y nombres raros) -------------------------------------
