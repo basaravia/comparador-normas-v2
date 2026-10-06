@@ -223,17 +223,25 @@ Observación fuera del notebook (medición aparte con el mismo código): la vali
 |---|---|
 | `backend/models.py` | `Seccion` (Pydantic), 100 % cubierto. |
 | `backend/sectioner.py` | Nivel 1 de la cascada (patrones). Prueba de humo de solo lectura sobre `L1-XVI-cap-III.pdf` (norma corta de la SB, texto de pymupdf): 8 artículos detectados, 8 contados con una regex independiente, 0 falsos positivos y 0 negativos. **No es la norma LA/FT ni un conteo manual.** `extraer_jerarquia` y `aplicar_cascada` están vacíos (`pass`). |
-| `backend/ingest/docling_parser.py` | **Sin extracción real**: si falta Docling devuelve 4 bloques simulados ("ARTÍCULO 1.- Mock"); con Docling instalado devuelve `[]` (el mapeo no está hecho). Docling no está instalado. 0 % de coverage. |
+| `backend/ingest/docling_parser.py` | **Extracción real** (sin fallback simulado). API: `extraer(ruta, progreso=None) -> list[dict]`, `limpiar_cache()`, `ExtraccionError`. Valida con `validar_pdf` antes; cola de 1 worker a nivel de módulo; Docling en un subproceso que se mata con `terminate()` al vencer `DOCLING_TIMEOUT_S`; caché en memoria por SHA-256. Errores: `ERR-EXT-001` (fallo de Docling), `ERR-EXT-002` (timeout), `ERR-EXT-003` (sin texto); los de validación (`ERR-ING-001..003`) se propagan. Sin pruebas pytest todavía. |
+| `backend/ingest/docling_worker.py` | Subproceso: `do_ocr=False`, `generate_page_images=False`, tablas `DOCLING_TABLES`, `num_threads=DOCLING_THREADS`, `DOCLING_ARTIFACTS`; convierte por tandas de `DOCLING_CHUNK_PAGES` páginas (acota la RAM y da el progreso); exporta las **tablas** como markdown y descarta encabezados y pies de página. Emite `{"texto","pagina","tipo"}` con el `label` de Docling. |
 | `tests/test_sectioner.py` | 4 pruebas: ART./Art./ARTÍCULO, libro/título/capítulo, literales dentro del artículo y duplicados (`#2`). No cubren SEC., romanos, 3.2.1 ni "PRIMERA.-". |
 
 ### Qué falta (decisiones del usuario, 6 oct 2026: reabrir y completar; timeout en subproceso)
-1. Docling real (`docling==2.55.1`, `do_ocr=False`, `DOCLING_ARTIFACTS`, hilos acotados) y mapear su salida; reutilizar el extractor de la v6. **Quitar el fallback simulado** (CLAUDE.md, regla 4): sin Docling, error claro `ExtractionError`.
-2. Cola de 1 worker a nivel de módulo, con progreso (RF-05) y **timeout en un subproceso que se mata con `terminate()`** (el hilo actual no corta el procesamiento).
-3. Cascada completa (docs/07 §2): tipografía con PyMuPDF, longitud (~1.200 caracteres) con `seccionado_incierto=True` y regla de "≥ 3 apariciones con numeración creciente".
-4. Caché por SHA-256: reprocesar el mismo PDF no vuelve a invocar Docling.
-5. Ejecutar `02_seccionado.ipynb` con la norma LA/FT y medir ≥ 95 % contra el conteo manual, con RAM y CPU en la Pi.
-6. `appsec` (to-be): regex con `\s*` al inicio de línea tiene costo cuadrático (8.000 saltos de línea → 9 s por bloque); `extraer_con_docling` debe llamar a `validar_pdf` antes.
-7. `qa-ia`: pruebas del criterio, de la cascada y de integración con Docling real; coverage ≥ 80 % por módulo. Sin su APROBADO, L2 no se cierra.
+Hecho en `feat/l2-extraccion-docling` (sin APROBADO todavía): Docling real, fallback simulado quitado, cola de 1 worker, timeout en subproceso, caché SHA-256, `validar_pdf` previo, progreso por tanda de páginas, `docling==2.55.1` en `requirements.txt`.
+
+Pendiente:
+1. Mapeo a la salida de docs/07 §1: `tipo` `encabezado|parrafo|tabla|lista` y `nivel` (hoy se emite el `label` crudo de Docling).
+2. Cascada completa (docs/07 §2): tipografía con PyMuPDF, longitud (~1.200 caracteres) con `seccionado_incierto=True` y regla de "≥ 3 apariciones con numeración creciente". `extraer_jerarquia` y `aplicar_cascada` siguen vacíos.
+3. `appsec` (to-be): las regex con `\s*` al inicio de línea tienen costo cuadrático (8.000 saltos de línea → 9 s por bloque).
+4. Ejecutar `02_seccionado.ipynb` con la norma LA/FT y medir ≥ 95 % contra el conteo manual.
+5. `qa-ia`: pruebas de extracción, de la cascada y de integración con Docling real; coverage ≥ 80 % por módulo. Sin su APROBADO, L2 no se cierra.
+
+### Seguridad de la extracción (`appsec`, OBSERVACIONES, corregido)
+- El subproceso recibe un **entorno mínimo** (PATH, HOME, LANG, TMPDIR, HF_*…): no le llegan `GROQ_API_KEY` ni `FOUNDRY_AI_TOKEN`. Verificado con un hijo que imprime su entorno.
+- Sesión propia y `killpg`: el timeout mata también a los procesos hijos. Caché acotada a 8 PDFs (`MAX_CACHE`).
+- `bandit`: B404 y B603 (uso de `subprocess`) justificados con `# nosec`: lista fija con `sys.executable`, sin shell y con la ruta ya validada.
+- **Riesgo aceptado (docs/14 #22):** 59 vulnerabilidades en `docling==2.55.1` y sus dependencias (`pillow<12` impide subirlas). Revisar antes de producción.
 
 ### Mediciones de Docling (6 oct 2026, Raspberry, entorno aparte `comparador_docling`)
 Restricciones de Databricks: `taskset -c 0,1`, `OMP_NUM_THREADS=2`, `AcceleratorOptions(num_threads=2, device="cpu")`, `do_ocr=False`, `generate_page_images=False`. Script de medición en el scratchpad (no versionado; irá al notebook 02).
@@ -250,4 +258,5 @@ Restricciones de Databricks: `taskset -c 0,1`, `OMP_NUM_THREADS=2`, `Accelerator
 - La Pi tiene `/tmp` en `tmpfs` de 4 GB (RAM): la instalación de Docling falló con "No space left" hasta usar `TMPDIR` en disco. En la Pi `torch` trae CUDA (`+cu130`, entorno de 6,3 GB); en Databricks (x86) se usa la versión CPU.
 
 ### Origen
-`models.py`, `sectioner.py` y `docling_parser.py`: sin origen declarado de la v6 (regla 1 pendiente de cumplir al integrar el extractor de Docling).
+- `models.py` y `sectioner.py`: módulos nuevos según docs/07 (la v6 no tiene seccionado equivalente).
+- `docling_parser.py` y `docling_worker.py`: **nuevos**. De la v6 (`backend/src/providers.py`, `_build_pdf_pipeline_options` y `build_document_converter`) se tomó solo la idea de las opciones de Docling (`do_ocr`, modo de tablas, dispositivo); se reescribió sin LangChain, con subproceso, caché y tandas de páginas, que la v6 no tiene.

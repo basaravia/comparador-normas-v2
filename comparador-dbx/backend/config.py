@@ -66,6 +66,9 @@ class Settings:
     # Extracción
     DOCLING_ARTIFACTS: str = _env("DOCLING_ARTIFACTS")
     DOCLING_THREADS: int = int(_env("DOCLING_THREADS"))
+    DOCLING_TABLES: str = _env("DOCLING_TABLES")          # fast | off | accurate
+    DOCLING_TIMEOUT_S: int = int(_env("DOCLING_TIMEOUT_S"))
+    DOCLING_CHUNK_PAGES: int = int(_env("DOCLING_CHUNK_PAGES"))
 
     # Indexación
     SUBCHUNK_TOKENS: int = int(_env("SUBCHUNK_TOKENS"))

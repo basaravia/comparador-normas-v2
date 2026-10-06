@@ -1,81 +1,137 @@
-import os
-import uuid
-import shutil
-import tempfile
+"""Extracción de texto con Docling (docs/07 §1).
+
+- Cola de **1 worker** a nivel de módulo: Docling nunca corre en paralelo (CLAUDE.md, regla 7).
+- Docling corre en un **subproceso** (`docling_worker`) que se mata con `terminate()` al vencer
+  `DOCLING_TIMEOUT_S`: un hilo no se puede cortar y seguiría gastando CPU y RAM.
+- Antes de extraer se llama a `validar_pdf` (límites, escaneo, cabecera).
+- **Caché por SHA-256** en memoria: el mismo PDF no vuelve a pasar por Docling.
+- Sin extractor de respaldo: si Docling falla, error claro (CLAUDE.md, regla 4).
+"""
+import json
 import logging
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import os
+import signal
+import subprocess  # nosec B404
+import sys
+import tempfile
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Callable
 
+from backend.config import RAIZ, redact, settings
 from backend.core.errors import ComparadorError
+from backend.ingest.validation import validar_pdf
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
-class DoclingTimeoutError(ComparadorError):
-    codigo = "ERR-ING-004"
-    mensaje_negocio = "El documento es demasiado complejo y excedió el tiempo límite de procesamiento."
 
-class PDFBombError(ComparadorError):
-    codigo = "ERR-ING-005"
-    mensaje_negocio = "El documento excede el límite de tamaño permitido por seguridad."
+class ExtraccionError(ComparadorError):
+    """No se pudo extraer el texto. Lleva su propio código y mensaje de negocio."""
 
-class ExtractionError(ComparadorError):
-    codigo = "ERR-ING-006"
-    mensaje_negocio = "Ocurrió un error al extraer el texto del documento."
+    def __init__(self, detalle: str, codigo: str = "ERR-EXT-001",
+                 mensaje: str = "No pudimos leer el texto de este documento. Intenta con otro archivo."):
+        super().__init__(detalle)
+        self.codigo = codigo
+        self.mensaje_negocio = mensaje
 
-# Simulación de importación de Docling
-try:
-    from docling.document_converter import DocumentConverter
-except ImportError:
-    DocumentConverter = None
 
-def _run_docling_extraction(safe_path: str) -> list:
-    """Ejecuta docling en el archivo. Esto ocurre dentro del thread aislado."""
-    if not DocumentConverter:
-        logger.warning("Docling no está instalado. Ejecutando extractor simulado (fallback).")
-        return [
-            {"texto": "LIBRO I", "pagina": 1, "tipo": "encabezado"},
-            {"texto": "TÍTULO II", "pagina": 1, "tipo": "encabezado"},
-            {"texto": "CAPÍTULO III", "pagina": 1, "tipo": "encabezado"},
-            {"texto": "ARTÍCULO 1.- Mock", "pagina": 1, "tipo": "párrafo"}
-        ]
-        
-    # En producción real
-    converter = DocumentConverter()
-    doc = converter.convert(safe_path)
-    
-    # Aquí iría el mapeo de doc.items a nuestro formato {"texto": x, "pagina": p}
-    # Por ahora devolvemos lista vacía en entorno real hasta completar el mapeo
-    return []
+_COLA = ThreadPoolExecutor(max_workers=1)                       # Docling nunca en paralelo
+ENTORNO_HIJO = {"PATH", "HOME", "LANG", "TMPDIR", "CONDA_PREFIX", "VIRTUAL_ENV", "PYTHONPATH", "LD_LIBRARY_PATH"}
+MAX_CACHE = 8                                                   # PDFs en memoria (RAM acotada)
+_CACHE: dict[str, list[dict]] = {}                              # sha256 → bloques
+_COMANDO = [sys.executable, "-m", "backend.ingest.docling_worker"]  # reemplazable en pruebas del control
 
-def extraer_con_docling(pdf_path: str, max_mb: int = 10, timeout_secs: int = 30) -> list:
+
+def limpiar_cache() -> None:
+    _CACHE.clear()
+
+
+def extraer(ruta: Path, progreso: Callable[[int, int], None] | None = None) -> list[dict]:
+    """Bloques `{"texto", "pagina", "tipo"}` de un PDF. Bloquea hasta terminar.
+
+    `progreso(paginas_hechas, total)` se llama tras cada tanda de páginas. Lanza `ExtraccionError`
+    si el PDF no es válido, si Docling falla, si no hay texto o si vence el timeout.
     """
-    Extrae el texto de un PDF usando Docling, implementando controles AppSec:
-    1. Anti-Bomba (límite MB).
-    2. Timeouts.
-    3. Sanitización de paths (UUID).
-    """
-    # 1. Anti-bomba (Límite de tamaño)
-    tamano_mb = os.path.getsize(pdf_path) / (1024 * 1024)
-    if tamano_mb > max_mb:
-        raise PDFBombError(f"El archivo excede el límite de {max_mb}MB (tamaño: {tamano_mb:.2f}MB).")
-        
-    # 3. Sanitización con UUID en /tmp
-    safe_id = str(uuid.uuid4())
-    safe_path = os.path.join(tempfile.gettempdir(), f"{safe_id}.pdf")
-    
+    ruta = Path(ruta)
+    v = validar_pdf(ruta)
+    if not v.ok:
+        raise ExtraccionError(v.mensaje, v.codigo, v.mensaje)
+    return list(_COLA.submit(_trabajo, ruta, v.sha256, progreso).result())
+
+
+def _trabajo(ruta: Path, sha256: str, progreso) -> list[dict]:
+    if sha256 in _CACHE:  # otro trabajo encolado antes pudo extraer el mismo PDF
+        log.info("Caché de extracción: %s", sha256[:12])
+        return _CACHE[sha256]
+    bloques = _ejecutar(ruta, progreso)
+    while len(_CACHE) >= MAX_CACHE:
+        _CACHE.pop(next(iter(_CACHE)))  # descarta el más antiguo
+    _CACHE[sha256] = bloques
+    return bloques
+
+
+def _matar(proc, senal) -> None:
+    """Envía la señal a todo el grupo del subproceso (Docling y cualquier proceso hijo)."""
     try:
-        shutil.copy2(pdf_path, safe_path)
-        
-        # 2. Timeout estricto usando ThreadPoolExecutor (1 worker para evitar saturación de RAM)
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_run_docling_extraction, safe_path)
+        os.killpg(proc.pid, senal)
+    except ProcessLookupError:
+        pass
+
+
+def _ejecutar(ruta: Path, progreso) -> list[dict]:
+    s = settings
+    comando = [*_COMANDO, str(ruta), s.DOCLING_TABLES, str(s.DOCLING_THREADS), str(s.DOCLING_CHUNK_PAGES)]
+    if s.DOCLING_ARTIFACTS:
+        comando.append(s.DOCLING_ARTIFACTS)
+    # Entorno mínimo: Docling no necesita las claves de los modelos (GROQ_API_KEY, FOUNDRY_AI_TOKEN…).
+    entorno = {k: v for k, v in os.environ.items() if k in ENTORNO_HIJO or k.startswith(("HF_", "LC_"))}
+    entorno.update(OMP_NUM_THREADS=str(s.DOCLING_THREADS), HF_HUB_DISABLE_TELEMETRY="1", DO_NOT_TRACK="1")
+
+    bloques, vencio = None, threading.Event()
+    with tempfile.TemporaryFile() as errores:
+        # cwd=RAIZ: `python -m backend...` debe encontrar el paquete aunque quien llama esté en otra carpeta.
+        # Lista fija con sys.executable, sin shell, y la ruta ya validada: por eso B404/B603 son aceptables.
+        # start_new_session: el subproceso tiene su propia sesión y se mata con sus procesos hijos.
+        proc = subprocess.Popen(comando, stdout=subprocess.PIPE, stderr=errores, text=True,  # nosec B603
+                                env=entorno, cwd=RAIZ, start_new_session=True)
+
+        def cortar():
+            vencio.set()
+            _matar(proc, signal.SIGTERM)
+
+        reloj = threading.Timer(s.DOCLING_TIMEOUT_S, cortar)
+        reloj.start()
+        try:
+            for linea in proc.stdout:
+                try:
+                    evento = json.loads(linea)
+                except ValueError:
+                    continue  # ruido que Docling imprima en stdout
+                if "progreso" in evento and progreso:
+                    progreso(*evento["progreso"])
+                elif "bloques" in evento:
+                    bloques = evento["bloques"]
             try:
-                bloques = future.result(timeout=timeout_secs)
-                return bloques
-            except TimeoutError:
-                raise DoclingTimeoutError(f"El procesamiento excedió el límite de {timeout_secs}s.")
-            except Exception as e:
-                logger.error(f"Error en extracción Docling: {e}")
-                raise ExtractionError(str(e))
-    finally:
-        if os.path.exists(safe_path):
-            os.remove(safe_path)
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                _matar(proc, signal.SIGKILL)
+                proc.wait()
+        finally:
+            reloj.cancel()
+            if proc.poll() is None:
+                _matar(proc, signal.SIGKILL)
+                proc.wait()
+
+        if vencio.is_set():
+            raise ExtraccionError(f"Docling superó {s.DOCLING_TIMEOUT_S} s y se terminó el proceso.", "ERR-EXT-002",
+                                  "El documento es demasiado largo o complejo y tardó más de lo permitido. "
+                                  "Divídelo en partes.")
+        if proc.returncode != 0 or bloques is None:
+            errores.seek(0)
+            cola = errores.read().decode("utf-8", "replace")[-500:]
+            raise ExtraccionError(f"Docling terminó con código {proc.returncode}: {redact(cola)}")
+    if not bloques:
+        raise ExtraccionError("Docling no encontró texto en el documento.", "ERR-EXT-003",
+                              "No encontramos texto en este documento.")
+    return bloques

@@ -5,3 +5,4 @@ pydantic==2.13.5
 python-dotenv==1.2.4
 numpy==2.4.6
 pymupdf==1.28.2         # PDF: validación, metadatos y detección de escaneo (L1)
+docling==2.55.1         # extracción de PDFs (L2); en Databricks (x86) torch se instala solo-CPU por dependencia
