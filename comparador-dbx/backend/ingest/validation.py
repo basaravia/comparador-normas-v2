@@ -20,6 +20,7 @@ class Validacion:
     mensaje: str | None = None      # mensaje de negocio para el auditor
     paginas: int = 0
     sha256: str = ""                # clave de caché por sesión
+    advertencia: str | None = None  # el PDF se acepta, pero el auditor debe saberlo
     metadatos: dict = field(default_factory=dict)  # metadatos nativos del PDF
 
 
@@ -52,7 +53,7 @@ def validar_pdf(ruta: Path) -> Validacion:
 
     try:
         with pymupdf.open(ruta) as doc:
-            if doc.needs_pass or doc.page_count == 0 or doc.is_repaired:  # truncado: MuPDF lo "repara"
+            if doc.needs_pass or doc.page_count == 0:
                 return no_abre
             if doc.page_count > s.MAX_PAGES:
                 return rechazo("ERR-ING-002", f"El archivo supera el máximo de {s.MAX_PAGES} páginas o {s.MAX_MB} MB. "
@@ -60,9 +61,16 @@ def validar_pdf(ruta: Path) -> Validacion:
             # Escaneo: proporción de páginas con texto útil.
             con_texto = sum(len(p.get_text("text").strip()) >= 50 for p in doc)
             if con_texto / doc.page_count < s.SCAN_TEXT_RATIO:
+                # Reparado y con poco texto: probablemente truncado, no escaneado.
+                if doc.is_repaired:
+                    return no_abre
                 return rechazo("ERR-ING-001", "Este documento parece ser una imagen escaneada. "
                                               "Por ahora solo podemos leer PDFs con texto seleccionable.")
+            # Muchos PDFs no traen su tabla interna de referencias y MuPDF los repara al abrirlos:
+            # si el texto alcanza, se aceptan con advertencia (docs/14 #21).
+            aviso = ("El PDF tenía su estructura interna incompleta y se reparó al abrirlo. "
+                     "Revisa que estén todas las páginas.") if doc.is_repaired else None
             return Validacion(ok=True, paginas=doc.page_count, sha256=hashlib.sha256(ruta.read_bytes()).hexdigest(),
-                              metadatos=dict(doc.metadata or {}))
+                              metadatos=dict(doc.metadata or {}), advertencia=aviso)
     except Exception:  # PDF corrupto o malformado: pymupdf lanza varios tipos de error
         return no_abre

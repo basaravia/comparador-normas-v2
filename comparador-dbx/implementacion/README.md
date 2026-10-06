@@ -169,9 +169,9 @@ Ver la tabla de módulos reutilizados en [`README.md`](../README.md).
 
 ### Cómo funciona
 
-`validar_pdf` comprueba, en este orden: tamaño (`MAX_MB`) → cabecera `%PDF-` → que abra, no tenga contraseña y no esté truncado (si MuPDF tiene que repararlo, `ERR-ING-003`) → páginas (`MAX_PAGES`) → escaneo (proporción de páginas con ≥ 50 caracteres de texto frente a `SCAN_TEXT_RATIO`). Un archivo hostil se descarta sin abrirlo (tamaño y cabecera) o antes de procesarlo (páginas).
+`validar_pdf` comprueba, en este orden: tamaño (`MAX_MB`) → cabecera `%PDF-` → que abra y no tenga contraseña → (si MuPDF tuvo que repararlo: con poco texto, `ERR-ING-003`; si el texto alcanza, se acepta con `advertencia`, docs/14 #21) → páginas (`MAX_PAGES`) → escaneo (proporción de páginas con ≥ 50 caracteres de texto frente a `SCAN_TEXT_RATIO`). Un archivo hostil se descarta sin abrirlo (tamaño y cabecera) o antes de procesarlo (páginas).
 
-`ingerir` devuelve una fila con `archivo`, `paginas`, `sha256` (clave de caché por sesión), `tipo` (preselección del código; `None` si el modelo no llega a `TYPE_CONFIDENCE`), `tipo_llm`, `confianza`, `evidencia` y `metadatos` (fechas como texto ISO, listas para la API). Si el archivo no pasa la validación, devuelve `ok: False` con `codigo` y `mensaje`.
+`ingerir` devuelve una fila con `archivo`, `paginas`, `sha256` (clave de caché por sesión), `advertencia` (p. ej. PDF reparado; `None` si no hay), `tipo` (preselección del código; `None` si el modelo no llega a `TYPE_CONFIDENCE`), `tipo_llm`, `confianza`, `evidencia` y `metadatos` (fechas como texto ISO, listas para la API). Si el archivo no pasa la validación, devuelve `ok: False` con `codigo` y `mensaje`.
 
 | Código (convención de la implementación) | Mensaje al auditor (literal de docs/05) |
 |---|---|
