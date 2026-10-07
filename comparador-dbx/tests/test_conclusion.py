@@ -4,7 +4,8 @@ from pydantic import ValidationError
 
 from backend.core.errors import LLMOutputError
 from backend.output import conclusion
-from backend.output.conclusion import BorradorConclusion, cifras_no_entregadas, generar_borrador, resumen_conclusion
+from backend.output.conclusion import (BorradorConclusion, cifras_no_entregadas, generar_borrador, resumen_conclusion,
+                                       validar_borrador)
 from backend.output.workpaper import FilaPapel
 from datos_papel import entrada, seccion
 
@@ -61,6 +62,63 @@ def test_cifras_inventadas_se_detectan(texto, extra):
 
 def test_limites_de_palabras_de_docs_10():
     assert (conclusion.MIN_PALABRAS, conclusion.MAX_PALABRAS) == (120, 220)
+
+
+def test_resumen_porcentajes_salen_de_los_conteos():
+    r = resumen_conclusion(entrada())                # A=2 L=1 R=1 X=1 P=1 sobre 6; evaluables 4
+    assert r["articulos_evaluables_A_L_R"] == 4
+    assert r["porcentaje_por_marca_sobre_total"] == {"A": 33.3, "L": 16.7, "R": 16.7, "X": 16.7, "P": 16.7}
+    assert (r["porcentaje_cumple_sobre_evaluables"], r["porcentaje_parcial_sobre_evaluables"],
+            r["porcentaje_no_cumple_sobre_evaluables"]) == (50.0, 25.0, 25.0)
+    assert (r["porcentaje_cumple_sobre_evaluables"] + r["porcentaje_parcial_sobre_evaluables"]
+            + r["porcentaje_no_cumple_sobre_evaluables"]) == 100.0
+    assert abs(sum(r["porcentaje_por_marca_sobre_total"].values()) - 100) < 0.5    # redondeo a 1 decimal
+
+
+def test_resumen_sin_articulos_da_ceros():
+    e = entrada()
+    e.filas = []
+    r = resumen_conclusion(e)
+    assert r["total_articulos"] == 0 and set(r["porcentaje_por_marca_sobre_total"].values()) == {0}
+    assert r["porcentaje_no_cumple_sobre_evaluables"] == 0 and r["porcentaje_parcial_sobre_evaluables"] == 0
+
+
+def _texto(n_palabras, extra=""):
+    return " ".join(["palabra"] * (n_palabras - len(extra.split()))) + (" " + extra if extra else "")
+
+
+@pytest.mark.parametrize("n", [119, 221, 0, 500])
+def test_validar_borrador_fuera_de_limites(n):
+    with pytest.raises(LLMOutputError, match="palabras"):
+        validar_borrador(_texto(n), resumen_conclusion(entrada()))
+
+
+@pytest.mark.parametrize("n", [120, 121, 219, 220])
+def test_validar_borrador_en_limites(n):
+    texto = _texto(n)
+    assert len(texto.split()) == n
+    validar_borrador(texto, resumen_conclusion(entrada()))            # no lanza
+
+
+def test_validar_borrador_cifra_ajena():
+    with pytest.raises(LLMOutputError, match="cifras") as e:
+        validar_borrador(_texto(150, "El 37 por ciento"), resumen_conclusion(entrada()))
+    assert "37" in str(e.value)
+
+
+@pytest.mark.parametrize("cifra", ["16,7", "16.7", "16.7%", "16,7%", "(16.7)", "16.7."])
+def test_validar_borrador_formatos_de_cifra_del_resumen(cifra):
+    validar_borrador(_texto(150, f"cumple {cifra} ok"), resumen_conclusion(entrada()))
+
+
+@pytest.mark.parametrize("cifra", ["16,8", "16.71", "83.3%", "1.234"])
+def test_validar_borrador_formatos_de_cifra_ajena(cifra):
+    with pytest.raises(LLMOutputError, match="cifras"):
+        validar_borrador(_texto(150, f"cumple {cifra} ok"), resumen_conclusion(entrada()))
+
+
+def test_validar_borrador_sin_cifras_es_valido():
+    validar_borrador(_texto(130), resumen_conclusion(entrada()))
 
 
 @pytest.mark.integracion

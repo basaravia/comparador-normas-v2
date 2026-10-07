@@ -22,8 +22,8 @@ Pasada base sobre L0 y L1 (cerrados antes de existir la regla de QA) y re-verifi
 | RF-10 | Ejecución de la doble vía con progreso de pares | DEBE | L4 | — | pendiente |
 | RF-11 | Por par: marca, citas literales, comentario y confianza | DEBE | L4 | — (`test_citations`) | pendiente |
 | RF-12 | Resultados filtrables por marca, por artículo o por sección | DEBERÍA | U0 | — | pendiente |
-| RF-13 | Borrador de conclusión editable, rotulado como propuesta | DEBE | L5 | `tests/test_conclusion.py` (resumen, cifras, `BorradorConclusion`); `tests/test_papel.py::test_conclusion_con_prefijo_de_borrador`; `tests/test_conclusion.py::test_generar_borrador_con_llm_real` (integración) | **falla**: con el LLM real `generar_borrador` falló 3 de 3 veces (cifras `16.7` / `33.3` fuera del resumen, QA-03); la validación de 120–220 palabras de `generar_borrador` no se puede probar sin cliente (sin doble permitido); la edición en pantalla es de U0 |
-| RF-14 | Descarga del .xlsx con Hoja 1 y Hoja 2 | DEBE | L5 | `tests/test_papel.py` (todas: columnas y orden de Hoja 1 y Hoja 2, leyenda, combinadas, paneles, col. 3, 'Elegido', vía 2, encabezado, colores, truncado, NaN/inf, fórmulas hostiles, conteos Hoja 1 = Hoja 2). Marcas de entrada de un guion (`tests/datos_papel.py`) hasta L4. | verificado el generador del .xlsx; la descarga (endpoint) es de D0; no se abrió en Excel real ("sin advertencias de reparación" no verificado: solo se relee con openpyxl y se inspecciona el XML) |
+| RF-13 | Borrador de conclusión editable, rotulado como propuesta | DEBE | L5 | `tests/test_conclusion.py` (resumen y porcentajes desde los conteos, `validar_borrador`: límites 119/120/220/221, cifras ajenas, formatos `16,7`/`16.7`/`16.7%`, sin cifras; `BorradorConclusion`); `tests/test_papel.py::test_conclusion_con_prefijo_de_borrador`; `tests/test_conclusion.py::test_generar_borrador_con_llm_real` (integración) | verificado: con el LLM real (Groq, sandbox) el borrador fue válido 5 de 5 (QA-03 corregido); la edición en pantalla es de U0 |
+| RF-14 | Descarga del .xlsx con Hoja 1 y Hoja 2 | DEBE | L5 | `tests/test_papel.py` (todas: columnas y orden de Hoja 1 y Hoja 2, leyenda, combinadas, paneles, col. 3, 'Elegido', vía 2, encabezado, colores, truncado, NaN/inf, fórmulas hostiles, conteos Hoja 1 = Hoja 2). Marcas de entrada de un guion (`tests/datos_papel.py`) hasta L4. | verificado el generador del .xlsx (origen `ambas` y similitud máxima sin NaN/inf, QA-02, con prueba); la descarga (endpoint) es de D0; no se abrió en Excel real ("sin advertencias de reparación" no verificado: solo se relee con openpyxl y se inspecciona el XML) |
 | RF-15 | "Cargar ejemplo" sin ejecutar Docling | DEBE | D2 | — | pendiente |
 | RF-16 | "Nueva sesión" con confirmación | DEBERÍA | U0 | — | pendiente |
 | RNF-01 | Estado en memoria y `/tmp`, sin volúmenes ni tablas | — | D0 | — | pendiente |
@@ -53,7 +53,7 @@ Pasada base sobre L0 y L1 (cerrados antes de existir la regla de QA) y re-verifi
 | L5 · Papel | Excel sin advertencias | `tests/test_papel.py::test_papel_con_texto_hostil_no_tiene_formulas[*]` (sin `<f>` en el XML), `::test_generar_papel_acepta_archivo_en_memoria`; no se abrió en Excel real | parcial: sin fórmulas ni caracteres ilegales; "sin advertencias de reparación" requiere abrirlo en Excel (`05_papel.ipynb` / revisión manual) |
 | L5 · Papel | Hoja 1 cuadra con Hoja 2 | `tests/test_papel.py::test_conteos_hoja1_igual_a_derivados_de_hoja2` (reglas de docs/09 §5 aplicadas a la Hoja 2). Marcas de entrada de un guion (`tests/datos_papel.py`) hasta L4. | verificado con marcas de guion; se repite con L4 real |
 | L5 · Papel | Cero llamadas al modelo al generarlo | `tests/test_papel.py::test_modulos_de_papel_no_importan_backend_llm`, `::test_importar_el_papel_no_carga_backend_llm`, `::test_generar_papel_no_abre_conexiones` | verificado |
-| L5 · Papel | Borrador de conclusión (docs/10) con el LLM real | `tests/test_conclusion.py::test_generar_borrador_con_llm_real` (3 corridas, 3 fallos: QA-03) | falla |
+| L5 · Papel | Borrador de conclusión (docs/10) con el LLM real | `tests/test_conclusion.py::test_generar_borrador_con_llm_real` (5 corridas, 5 válidas) + `validar_borrador` unitaria | verificado |
 | L6 · Extremo a extremo | PDFs → Excel en una celda, con tiempos y RAM | — | pendiente |
 | D0 · API | El E2E de L6 corre por la API en local | — | pendiente |
 | D1 · App Free | La App arranca en Databricks Free, health OK, Docling dentro del contenedor | — | pendiente |
@@ -62,11 +62,13 @@ Pasada base sobre L0 y L1 (cerrados antes de existir la regla de QA) y re-verifi
 
 ## Resumen
 
-### L5 · Papel de trabajo (rama `test/l5-papel`, sobre el commit `60e524b`)
-- RF-14 verificado; RF-13 **falla** (QA-03); RNF-06 y RNF-08 parciales (lado L5 verificado). Criterios de L5: 2 de 4 verificados, 1 parcial (Excel real), 1 falla.
-- **Las marcas de entrada vienen de un guion** (`tests/datos_papel.py`) hasta L4: L5 no calcula marcas; los conteos se comparan contra las reglas de docs/09 §5 aplicadas a la Hoja 2.
-- **Coverage** (`pytest -m "not integracion" --cov=backend/output`): annex 99 %, styles 99 %, workpaper 99 %, **conclusion 75 %** (< 80 %: `generar_borrador`, líneas 68-77, solo se ejerce con el LLM real). Unitarias: `242 passed, 9 deselected`.
-- **Defectos abiertos:** QA-02 (Baja: NaN/inf en un score tapa el máximo), QA-03 (Alta: el borrador real incluye porcentajes calculados por el modelo y el código lo rechaza), observaciones en el reporte de QA (docs/10 pide `ambas` y colores de marca configurables; el código usa `v1+v2` y una constante).
+### L5 · Papel de trabajo (rama `test/l5-papel`, re-verificación tras la corrección de QA-02 y QA-03)
+- RF-13 y RF-14 verificados; RNF-06 y RNF-08 parciales (lado L5 verificado). Criterios de L5: 3 de 4 verificados, 1 parcial (Excel real).
+- **Las marcas de entrada vienen de un guion** (`tests/datos_papel.py`) hasta L4: L5 no calcula marcas.
+- **Coverage** (`pytest -m "not integracion" --cov=backend/output`): annex 99 %, styles 99 %, workpaper 99 %, conclusion 86 % (solo `generar_borrador`, líneas 82-87, requiere el LLM real). Unitarias: `265 passed, 9 deselected`.
+- **Integración** (Groq, sandbox): `pytest -m integracion -k conclusion` 5 de 5 válidas.
+- **Defectos:** QA-02 (Baja) y QA-03 (Alta) corregidos y re-verificados; sin defectos abiertos.
+- **Observaciones (no bloquean):** Excel real sin abrir; colores de marca fijos (constante, docs/10 los pide configurables); la validación de cifras compara floats (`16.7` y `16,7` son iguales, y `50` coincide con `50.0`).
 
 ### Pasada L0 · L1 (previa)
 - **RF/RNF verificados: 1 de 28** (RF-04). Parciales: RF-03, RNF-02, RNF-03, RNF-05, RNF-12 (partes de hitos futuros o sin aserción, ver cada fila). Falla: ninguno. Pendientes (su hito no llega): 22.

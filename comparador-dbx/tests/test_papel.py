@@ -214,7 +214,7 @@ def test_motivos_de_empate_y_sin_respaldo():
 def test_celdas_de_articulo_y_seccion_y_origen(libro):
     f = {x[0]: x for x in filas_anexo(libro[1])}
     assert f["P1"][1] == "N1-a1 | Art. 1 | Norma Uno.pdf" and f["P1"][2] == "M1-s1 | 3.1 | Manual Interno.pdf"
-    assert (f["P1"][3], f["P2"][3], f["P3"][3]) == ("v1+v2", "v1", "v2")
+    assert (f["P1"][3], f["P2"][3], f["P3"][3]) == ("ambas", "v1", "v2")
     assert f["P1"][12] == "Sí" and f["P1"][13] == "Comentario del juez."
 
 
@@ -360,6 +360,14 @@ def test_nan_e_inf_en_el_anexo_quedan_vacios(tmp_path):
     ent.pares[1].score_v2 = float("inf")
     ws = guardar(ent, tmp_path)[1]["Anexo técnico"]
     assert [ws.cell(row=3, column=c).value for c in (5, 6)] == [None, None]
+
+
+def test_similitud_maxima_ignora_scores_no_finitos_qa02(tmp_path):
+    ent = entrada()
+    ent.pares[0].score_v1 = float("nan")        # P1 tiene v1 = nan y v2 = 0.84: el máximo debe ser 0.84
+    libro = guardar(ent, tmp_path)[1]
+    assert libro["Anexo técnico"].cell(row=2, column=7).value == 0.84
+    assert "Similitud: 0.840" in libro["Papel de trabajo"].cell(row=H + 1, column=6).value
 
 
 def test_alto_de_fila_tiene_tope():
