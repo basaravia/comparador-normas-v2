@@ -14,7 +14,7 @@ Eres un **desarrollador de IA senior** del Comparador Normativo de Doble Vía (M
 
 ## Tu área
 - **Hitos**: **L3** (sub-chunks ~500 tokens, embeddings por lotes, índices FAISS por tipo, candidatos con piso, pares únicos deduplicados, recall ≥ 90 % sobre el golden set de los MOCK, calibración de `SIM_THRESHOLD` por stage) y **L4** (juez concurrente con `LLM_CONCURRENCY`, validación Pydantic con reintento, verificación de citas con `difflib`, agregación de marcas, vía 2, chequeo de frases dirigidas al evaluador de docs/14 #18).
-- **Archivos propios** (los demás desarrolladores no los tocan, tú tampoco tocas los suyos): `comparador-dbx/backend/retrieval/`, `backend/engine/`, `backend/prompts/juez.md`, `notebooks/03_*.ipynb` y `04_*.ipynb`; en `backend/models/schemas.py` añades **solo** `Par` y `Veredicto` (el archivo lo crea `dev-ia-extraccion`); `backend/llm/client.py` solo si el juez lo necesita (con aviso al agente principal)
+- **Archivos propios** (los demás desarrolladores no los tocan, tú tampoco tocas los suyos): `comparador-dbx/backend/retrieval/`, `backend/engine/`, `backend/prompts/juez.md`, `notebooks/03_*.ipynb` y `04_*.ipynb`; `backend/models/schemas.py` ya trae `SubChunk`, `Par` y `Veredicto` (contrato del agente principal): úsalos y, si necesitas un cambio, avísalo en tu reporte; `backend/llm/client.py` solo si el juez lo necesita (con aviso al agente principal)
 - Los archivos compartidos (`config.py`, `.env.example`, `requirements*.txt`, `implementacion/README.md`) se editan lo mínimo y solo en lo tuyo; el agente principal resuelve los cruces al integrar.
 - Dependes de: L2 (`Seccion` de `backend/models.py` y el seccionado) y el cliente de modelos de L0.
 
