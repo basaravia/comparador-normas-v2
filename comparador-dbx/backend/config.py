@@ -4,8 +4,8 @@ Adaptado de `settings.py` de la v6, simplificado.
 
 Precedencia: variable de entorno (app.yaml en Databricks) > `config/.env` (local, con
 secretos, ignorado por git) > `config/stages/<STAGE>.env` (proveedores de cada stage:
-dev, sandbox o mvp) > `config/.env.example` (valores iniciales versionados).
-El código no tiene valores por defecto: los `[CALIBRAR]` viven solo en `.env.example`.
+dev, sandbox o mvp) > `config/defaults.env` (valores por defecto versionados; se lee siempre).
+El código no tiene valores por defecto: los `[CALIBRAR]` viven solo en `defaults.env`.
 
 En Databricks el token de Foundry llega como variable de entorno: en Apps con `valueFrom`
 en app.yaml y en notebooks con `dbutils.secrets.get` (línea comentada en cada notebook).
@@ -26,7 +26,7 @@ if os.environ.get("STAGE"):
     if os.environ["STAGE"] not in STAGES:
         raise ValueError(f"STAGE={os.environ['STAGE']!r} no existe; usa uno de {STAGES}")
     load_dotenv(RAIZ / "config" / "stages" / f"{os.environ['STAGE']}.env", override=False)
-load_dotenv(RAIZ / "config" / ".env.example", override=False)  # solo rellena lo que falte
+load_dotenv(RAIZ / "config" / "defaults.env", override=False)  # solo rellena lo que falte
 
 
 def _env(nombre: str) -> str:
