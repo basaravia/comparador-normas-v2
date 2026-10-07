@@ -30,7 +30,8 @@ load_dotenv(RAIZ / "config" / "defaults.env", override=False)  # solo rellena lo
 
 
 def _env(nombre: str) -> str:
-    return os.environ.get(nombre, "").strip()
+    valor = os.environ.get(nombre, "").strip()
+    return "" if valor.startswith("#") else valor   # un comentario de .env leído como valor (según la versión de python-dotenv)
 
 
 @dataclass(frozen=True)
