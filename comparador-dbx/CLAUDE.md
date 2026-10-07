@@ -37,7 +37,7 @@ Una Databricks App que compara normativas regulatorias (Superintendencia de Banc
 - **Al cerrar cada hito** (y cuando cambie código ya probado), el agente `qa-ia` escribe y corre las pruebas: coverage **≥ 80 %** de la lógica determinista (`pytest -m "not integracion" --cov`), integración con modelos reales (`-m integracion`), RAGAS desde L3 (entorno propio `comparador_eval`), y actualiza `qa/trazabilidad.md`. Sin **APROBADO** de `qa-ia` el hito no se cierra. Después, el agente principal comprueba con git que `qa-ia` solo escribió en `tests/`, `qa/` y `pytest.ini`; si tocó otra cosa, lo revierte y avisa.
 - **RAGAS** (evaluación de IA, `requirements-eval.txt`, entorno propio `comparador_eval` porque exige `openai<2`) siempre con `RAGAS_DO_NOT_TRACK=true`: ningún dato sale a servicios externos. No se usa Langfuse: necesita un servidor y no pueden salir documentos del banco. Un BLOQUEAR de `appsec` se corrige antes del commit; lo que marque como "Decisión del usuario: SÍ" se consulta con el usuario.
 - **Documenta lo implementado** en `implementacion/README.md` (fuera de `docs/`, que es solo la spec) en el mismo commit: módulos, API pública, configuración, mediciones y diferencias con la spec. El agente `product-owner` revisa que ese doc y el código coincidan.
-- Los valores marcados `[CALIBRAR]` van en configuración (`config/.env.example`), nunca hardcodeados.
+- Los valores marcados `[CALIBRAR]` van en configuración (`config/defaults.env`), nunca hardcodeados.
 - Los prompts viven en `backend/prompts/*.md` y se cargan desde archivo. No los incrustes en el código.
 - Si una decisión no está en `docs/`, pregunta antes de inventarla. Las decisiones abiertas están en `docs/14-puntos-abiertos.md`.
 

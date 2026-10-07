@@ -18,6 +18,6 @@
 | 14 | [Puntos abiertos](14-puntos-abiertos.md) | Decisiones a calibrar |
 | 15 | [Hoja de ruta V2](15-roadmap-v2.md) | Fuera del MVP |
 
-Prompts: [`backend/prompts/`](../backend/prompts/). Configuración: [`config/.env.example`](../config/.env.example).
+Prompts: [`backend/prompts/`](../backend/prompts/). Configuración: [`config/defaults.env`](../config/defaults.env).
 
 Esta carpeta es la **especificación** (qué construir). Lo **implementado** (qué existe, cómo se usa y mediciones) vive aparte, en [`implementacion/`](../implementacion/README.md).

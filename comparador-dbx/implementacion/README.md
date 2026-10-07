@@ -47,9 +47,9 @@ Los archivos de stage solo tienen proveedores y modelos, **nunca secretos**: se 
 
 ## Configuración
 
-Precedencia: **variable de entorno** (en Databricks, `app.yaml` o la celda del notebook) > **`config/.env`** (local: `STAGE` y secretos, ignorado por git) > **`config/stages/<STAGE>.env`** > **`config/.env.example`** (valores iniciales, versionado).
+Precedencia: **variable de entorno** (en Databricks, `app.yaml` o la celda del notebook) > **`config/.env`** (local: `STAGE` y secretos, ignorado por git) > **`config/stages/<STAGE>.env`** > **`config/defaults.env`** (valores iniciales, versionado).
 
-El código **no tiene valores por defecto**: todo valor `[CALIBRAR]` vive solo en `config/.env.example`. Para cambiar un umbral se edita ese archivo o se sobrescribe en `config/.env`.
+El código **no tiene valores por defecto**: todo valor `[CALIBRAR]` vive solo en `config/defaults.env`. Para cambiar un umbral se edita ese archivo o se sobrescribe en `config/.env`.
 
 Variables que añadió la implementación a las de la spec (docs/12): `LLM_PROVIDER`, `EMB_PROVIDER`, `GROQ_*`, `OLLAMA_BASE_URL`, `OLLAMA_EMB_MODEL`, `OLLAMA_LLM_MODEL`, `STAGE`, `FOUNDRY_AI_*`, `FOUNDRY_OMIT_TEMPERATURE`, `DMR_BASE_URL`, `DMR_LLM_MODEL`, `DMR_EMB_MODEL`, `LLM_TEMPERATURE`, `LLM_TIMEOUT_S`, `CITATION_SHOW_MIN`, `COLOR_PRIMARIO` y `COLOR_FONDO`.
 
@@ -81,7 +81,7 @@ El código no lee secretos por su cuenta: todo llega como variable de entorno, q
 
 ### API pública
 
-- **`settings`**: objeto inmutable con todas las variables de `config/.env.example`, salvo `OMP_NUM_THREADS`, que lee directamente el runtime (torch/Docling). `settings.publico()` devuelve la configuración con los secretos como `***`.
+- **`settings`**: objeto inmutable con todas las variables de `config/defaults.env`, salvo `OMP_NUM_THREADS`, que lee directamente el runtime (torch/Docling). `settings.publico()` devuelve la configuración con los secretos como `***`.
 - **`cargar_prompt(nombre) -> (sistema, usuario)`**: lee `backend/prompts/<nombre>.md` y lo separa por `# SISTEMA` / `# USUARIO`.
 - **`redact(texto)`**: reemplaza los secretos configurados y las claves con formato conocido (`sk-`, `gsk_`, `dapi`) por `***`. Se usa antes de escribir en los logs.
 - **`ModelClient.chat_json(sistema, usuario, esquema)`**: pide JSON (`response_format=json_object`) y lo valida con el modelo Pydantic `esquema`. Si no valida, reintenta **una vez** adjuntando los errores. Si vuelve a fallar, lanza `LLMOutputError`.
@@ -283,7 +283,7 @@ El nivel lo fija siempre el patrón (`rango`); la regla ≥ 3 apariciones (o enc
 - Los manuales son entrada no confiable (LLM04): el seccionado no ejecuta ni interpreta el texto, solo lo parte.
 - `bandit -q -r backend`: sin hallazgos. Sin dependencias nuevas.
 
-### Configuración nueva (`config/.env.example`, leída en `backend/config.py`)
+### Configuración nueva (`config/defaults.env`, leída en `backend/config.py`)
 `SECCION_CHARS=1200` [CALIBRAR] y `SECCION_BLOQUE_MAX=200000`.
 
 ### Diferencias con la spec (docs/07) y decisiones técnicas
@@ -352,7 +352,7 @@ La primera ejecución descargó modelos nuevos (+0,5 GB, 103 s). La versión nue
 Uso: `i_norma = construir_indice(articulos, cliente, {"N1": "Nombre del PDF"})`, igual con el manual, y `pares, stats = construir_pares(i_norma, i_manual, {ids de artículos}, {ids de secciones})`. Entra `list[Seccion]`; solo se indexan las hojas con texto. `Par.origen` es `{"v1"}`, `{"v2"}` o ambas; `stats` trae `n_pares_ingenuo`, `n_pares_unicos`, `solo_v1`, `solo_v2`, `ambas` (también va al log). El score de una sección es el mejor de sus sub-chunks; los umbrales (`K_SUBCHUNKS`, `SIM_THRESHOLD`, `MIN_FLOOR`, `MAX_CANDIDATES`) se leen de `settings`, nada fijo en el código.
 
 ### Configuración
-Sin variables nuevas. `SIM_THRESHOLD` se calibra **por stage** (docs/14 #1): `config/.env.example` conserva el valor por defecto 0,30 y `config/stages/sandbox.env` fija **0,50** (con `bge-m3`: recall@candidatos 93,3 % a 0,50, 96,7 % a 0,30, 86,7 % a 0,55). `dev` y `mvp` se recalibran con sus modelos. El notebook lee el valor efectivo de `settings` y comprueba que coincide con el del stage. **Ojo:** un `SIM_THRESHOLD` en `config/.env` local (el del repo principal trae uno) pisa al del stage por la precedencia de `config.py`; hay que borrar esa línea. Para la ejecución del notebook se pasó `SIM_THRESHOLD` como variable de entorno con el valor de `sandbox.env`.
+Sin variables nuevas. `SIM_THRESHOLD` se calibra **por stage** (docs/14 #1): `config/defaults.env` conserva el valor por defecto 0,30 y `config/stages/sandbox.env` fija **0,50** (con `bge-m3`: recall@candidatos 93,3 % a 0,50, 96,7 % a 0,30, 86,7 % a 0,55). `dev` y `mvp` se recalibran con sus modelos. El notebook lee el valor efectivo de `settings` y comprueba que coincide con el del stage. **Ojo:** un `SIM_THRESHOLD` en `config/.env` local (el del repo principal trae uno) pisa al del stage por la precedencia de `config.py`; hay que borrar esa línea. Para la ejecución del notebook se pasó `SIM_THRESHOLD` como variable de entorno con el valor de `sandbox.env`.
 
 ### Mediciones (sandbox, `taskset -c 2,3`, `OMP_NUM_THREADS=2`, Ollama y CPU compartidos con L2)
 Notebook completo: 9 min 57 s de reloj (`taskset -c 2,3`); RAM pico del notebook 138 MB, de Docling (subproceso) 1.915 MB.
@@ -463,7 +463,7 @@ Salida literal de la última ejecución del notebook:
 - **PENDIENTE de decisión del usuario: combinar la columna 2 a nivel sección.** No he encontrado una disposición que cumpla a la vez «col. 2 combinada por sección» y «el texto literal de cada artículo en su celda, una fila por artículo», porque una celda combinada guarda un solo texto. Hoy: la columna 1 se combina por normativa y libro/título, y la columna 2 lleva la ruta completa y el texto literal en cada fila (nada se pierde). Alternativas:
   1. **Fila de sección:** una fila extra por sección con `Capítulo III › Sección I` combinada en la columna 2 y, debajo, una fila por artículo con `Art. N` y su texto literal. Efecto: el árbol se ve como pide docs/10 y el texto es literal, pero la matriz deja de ser «una fila por artículo» (hay filas sin marca) y hay que filtrar con cuidado.
   2. **Dejar la ruta en cada fila (lo actual)** y combinar solo la columna 1. Efecto: una fila por artículo y filtros limpios, sin árbol visual en la columna 2.
-- **Colores de marca fijos:** docs/10 los llama «configurables», pero están en `styles.COLOR_MARCA` (constante); solo `COLOR_PRIMARIO` y `COLOR_FONDO` vienen de la configuración. Decisión del usuario: ¿pasarlos a `.env.example`?
+- **Colores de marca fijos:** docs/10 los llama «configurables», pero están en `styles.COLOR_MARCA` (constante); solo `COLOR_PRIMARIO` y `COLOR_FONDO` vienen de la configuración. Decisión del usuario: ¿pasarlos a `defaults.env`?
 - QA-03: con el resumen original, el LLM calculaba porcentajes que no estaban en él y la validación descartaba el borrador. Ahora el resumen trae los porcentajes ya calculados y el prompt prohíbe calcular; 5 de 5 corridas reales válidas (sin relajar la validación).
 - La columna `Origen` de la Hoja 2 dice `ambas` cuando el par viene de v1 y v2 (docs/10); la similitud máxima ignora scores no finitos.
 - Se editó `backend/prompts/conclusion.md` (mío): resumen entre `<texto_resumen>` como dato (LLM01) y leyenda de las marcas (sin ella el modelo llamó «pendientes» a la P).

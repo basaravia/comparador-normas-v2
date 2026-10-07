@@ -13,7 +13,7 @@ Este paquete contiene la especificación para que Claude Code implemente el MVP.
 | `CLAUDE.md` | Reglas de trabajo para el agente (se carga en cada sesión) |
 | `docs/` | Especificación completa por capítulos, diagramas en Mermaid |
 | `backend/prompts/` | Prompts del clasificador, el juez y la conclusión, listos para cargar |
-| `config/.env.example` | Variables de configuración con valores iniciales |
+| `config/defaults.env` | Variables de configuración con valores iniciales |
 
 El PDF "Manual técnico de implementación" es la versión para lectura humana del mismo contenido. **La fuente de verdad es este paquete Markdown.**
 
@@ -22,7 +22,7 @@ Origen: `../../comparador-normativas-ec-v1` (clon de `basaravia/comparador-norma
 
 | Módulo nuevo | Archivo de origen (v6) | Qué se cambió |
 |---|---|---|
-| `backend/config.py` | `settings.py` | Sin secret scope ni `databricks-sdk`; valores iniciales solo en `config/.env.example`, sin defaults en código; carga de prompts desde archivo |
+| `backend/config.py` | `settings.py` | Sin secret scope ni `databricks-sdk`; valores iniciales solo en `config/defaults.env`, sin defaults en código; carga de prompts desde archivo |
 | `backend/core/errors.py` | `errors.py` | Sin ramas de LangChain/Vertex; código `ERR-*` y mensaje de negocio por error (`docs/05`) |
 | `backend/extraction/docling_extractor.py`, `docling_worker.py` | `providers.py` (`_build_pdf_pipeline_options`, `build_document_converter`) | Solo las opciones de Docling (`do_ocr`, tablas, dispositivo). Nuevo: subproceso con timeout, cola de 1 worker, caché SHA-256, tandas de páginas y mapeo a los tipos de docs/07 |
 | `backend/extraction/sectioner.py`, `patterns.py` | — (módulos nuevos, docs/07; la v6 no tiene seccionado equivalente) | Cascada patrones → tipografía (PyMuPDF) → longitud, con el catálogo de regex de docs/07 reescrito sin costo cuadrático |

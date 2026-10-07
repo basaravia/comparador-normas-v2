@@ -5,7 +5,7 @@ comparador-dbx/
 ├── CLAUDE.md
 ├── app.yaml                     # command: [uvicorn, backend.main:app, --workers, "1"]  (sin --host/--port: ver 14 #17)
 ├── requirements.txt             # versiones fijadas
-├── config/.env.example
+├── config/defaults.env
 ├── backend/
 │   ├── main.py                  # FastAPI, monta /api y estáticos de frontend/dist
 │   ├── config.py                # lee variables de entorno (pydantic-settings o os.environ)
@@ -38,4 +38,4 @@ Solo para desarrollo: `jupyter` (notebooks de la fase L), `pytest-cov` (coverage
 Cualquier otra requiere justificación.
 
 ## Variables de configuración
-Ver [`config/.env.example`](../config/.env.example).
+Ver [`config/defaults.env`](../config/defaults.env).
