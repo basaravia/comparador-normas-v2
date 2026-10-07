@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from backend.engine.candidatos import candidatos
+from backend.retrieval.index import IndiceError
 from l3_ayudas import cfg, indice_a_mano
 
 Q = np.array([[1, 0]], dtype=np.float32)       # consulta; con vectores (x, 0) el score es exactamente x
@@ -72,17 +73,13 @@ def test_k_subchunks_limita_cuantos_subchunks_se_miran():
     assert ids(res) == ["S1", "S2"]
 
 
-@pytest.mark.xfail(strict=True, reason="BAJA (diseño): K_SUBCHUNKS cuenta sub-chunks, no secciones; una sección larga con muchos "
-                   "sub-chunks parecidos ocupa los K y deja menos de MIN_FLOOR secciones (candidatos.py)")
 def test_min_floor_se_cumple_aunque_una_seccion_larga_ocupe_los_k_subchunks():
     destino = indice_a_mano({"LARGA": [[1, 0], [0.99, 0], [0.98, 0], [0.97, 0]], "S2": [[0.5, 0]], "S3": [[0.25, 0]]})
     res = candidatos(Q, destino, cfg(K_SUBCHUNKS=4, SIM_THRESHOLD=0.99, MIN_FLOOR=3, MAX_CANDIDATES=10))
     assert len(res) >= 3
 
 
-@pytest.mark.xfail(strict=True, reason="BAJA conocida (efecto de Indice.buscar sin validar NaN): una consulta con NaN devuelve "
-                   "[] en silencio (FAISS da indice -1) en vez de abortar con ERR-IDX-001")
 def test_consulta_con_nan_no_deberia_dar_cero_candidatos_en_silencio():
     consulta = np.array([[np.nan, 0]], dtype=np.float32)
-    res = candidatos(consulta, indice_a_mano(DESTINO), cfg(K_SUBCHUNKS=10, SIM_THRESHOLD=0.0, MIN_FLOOR=3, MAX_CANDIDATES=10))
-    assert len(res) >= 3
+    with pytest.raises(IndiceError):
+        candidatos(consulta, indice_a_mano(DESTINO), cfg(K_SUBCHUNKS=10, SIM_THRESHOLD=0.0, MIN_FLOOR=3, MAX_CANDIDATES=10))

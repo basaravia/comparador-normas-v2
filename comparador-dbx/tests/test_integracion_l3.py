@@ -33,7 +33,7 @@ from backend.engine.candidatos import candidatos
 from backend.engine.pares import construir_pares
 from backend.models import Seccion
 from backend.retrieval.index import construir_indice, limpiar_cache
-from backend.sectioner import parsear_bloques
+from backend.extraction.sectioner import parsear_bloques
 
 pytestmark = pytest.mark.integracion
 
@@ -82,7 +82,7 @@ def l3():
         f"SIM_THRESHOLD efectivo {sim}, el del stage es {efectivo}: config/.env lo pisa; correr con SIM_THRESHOLD=0.50")
     assert settings.EMB_BATCH == 8, "correr con EMB_BATCH=8 (con 64 la Pi agota el tiempo)"
 
-    lafit = parsear_bloques(dividir_bloques(json.load(open(BLOQUES / "lafit.json"))), "N1", "normativa")
+    lafit = parsear_bloques(json.load(open(BLOQUES / "lafit.json")), "N1", "normativa")
     manual = [x for n in (1, 2, 3) for x in secciones_provisionales(RAIZ / "samples" / f"MOCK-DEMO-0{n}.pdf", f"M{n}")]
     cuenta = {d: sum(x.doc_id == d for x in manual) for d in ("M1", "M2", "M3")}
 

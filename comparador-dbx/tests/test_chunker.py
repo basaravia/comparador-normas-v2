@@ -66,8 +66,6 @@ def test_primer_subchunk_cerca_de_500_tokens():
     assert 0.9 * S.SUBCHUNK_TOKENS <= estimar_tokens(subs[0].texto) <= S.SUBCHUNK_TOKENS
 
 
-@pytest.mark.xfail(strict=True, reason="BAJA conocida: el solape se suma sobre el presupuesto cuando una pieza lo llena "
-                   "(chunker.py `_empaquetar`, rama que reabre `actual` sin comprobar): sub-chunks de ~562 tokens > 500")
 def test_ningun_subchunk_pasa_de_subchunk_tokens():
     subs = subchunkear(seccion(texto=palabras(1500)), "Ley", S)
     assert max(estimar_tokens(c.texto) for c in subs) <= S.SUBCHUNK_TOKENS

@@ -12,7 +12,7 @@ en app.yaml y en notebooks con `dbutils.secrets.get` (línea comentada en cada n
 """
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -38,7 +38,7 @@ class Settings:
     # Modelos
     LLM_PROVIDER: str = _env("LLM_PROVIDER")      # groq | foundry | ollama | dmr
     EMB_PROVIDER: str = _env("EMB_PROVIDER")    # ollama | foundry | dmr
-    GROQ_API_KEY: str = _env("GROQ_API_KEY")
+    GROQ_API_KEY: str = field(default=_env("GROQ_API_KEY"), repr=False)
     GROQ_BASE_URL: str = _env("GROQ_BASE_URL")
     GROQ_LLM_MODEL: str = _env("GROQ_LLM_MODEL")
     OLLAMA_BASE_URL: str = _env("OLLAMA_BASE_URL")
@@ -49,7 +49,7 @@ class Settings:
     DMR_EMB_MODEL: str = _env("DMR_EMB_MODEL")
     FOUNDRY_AI_ENDPOINT: str = _env("FOUNDRY_AI_ENDPOINT")
     FOUNDRY_AI_API_VERSION: str = _env("FOUNDRY_AI_API_VERSION")
-    FOUNDRY_AI_TOKEN: str = _env("FOUNDRY_AI_TOKEN")
+    FOUNDRY_AI_TOKEN: str = field(default=_env("FOUNDRY_AI_TOKEN"), repr=False)
     FOUNDRY_AI_DEPLOYMENT: str = _env("FOUNDRY_AI_DEPLOYMENT")
     FOUNDRY_AI_EMBED_DEPLOYMENT: str = _env("FOUNDRY_AI_EMBED_DEPLOYMENT")
     # Los modelos de razonamiento (GPT-5.x) solo aceptan la temperatura de fábrica.

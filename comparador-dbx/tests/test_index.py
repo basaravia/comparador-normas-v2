@@ -156,8 +156,6 @@ def test_consulta_de_dimension_distinta_o_vacia_es_err_idx_001(consulta):
     assert e.value.codigo == "ERR-IDX-001"
 
 
-@pytest.mark.xfail(strict=True, reason="BAJA conocida: Indice.buscar no valida NaN/inf en la consulta (solo la dimensión); "
-                   "FAISS devuelve resultados sin sentido en vez de ERR-IDX-001 (index.py `buscar`)")
 @pytest.mark.parametrize("malo", [np.nan, np.inf])
 def test_consulta_con_nan_o_inf_deberia_ser_err_idx_001(malo):
     ind = indice_a_mano({"S1": [[1, 0]], "S2": [[0, 1]]})

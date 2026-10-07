@@ -101,6 +101,8 @@ class Indice:
         consulta = np.asarray(consulta, dtype=np.float32)
         if consulta.ndim != 2 or consulta.shape[1] != self.vectores.shape[1] or len(consulta) == 0:
             raise IndiceError(f"Consulta {consulta.shape} incompatible con índice de dimensión {self.vectores.shape[1]}")
+        if not np.isfinite(consulta).all():
+            raise IndiceError("La consulta contiene valores no finitos (NaN o inf)")
         return self.faiss.search(consulta, min(k, len(self)))
 
 

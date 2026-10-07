@@ -47,16 +47,20 @@ def _unidades(texto: str) -> list[str]:
     return [u for u in salida if u]
 
 
-def _partir_largo(unidad: str, presupuesto: int) -> list[str]:
-    """Una unidad que no cabe se parte por frases y, si aún no cabe, por palabras."""
+def _partir_largo(unidad: str, presupuesto: int, solape: int = 0) -> list[tuple[str, bool]]:
+    """Una unidad que no cabe se parte por frases y, si aún no cabe, por palabras con ventana deslizante.
+
+    Devuelve `(pieza, ya_solapada)`: las ventanas de palabras posteriores a la primera ya traen su solape."""
     piezas = []
     por_pieza = max(1, int(presupuesto / TOKENS_POR_PALABRA))
+    paso = max(1, por_pieza - int(solape / TOKENS_POR_PALABRA))   # ventana deslizante: el solape va dentro de las piezas
     for frase in _FRASE.split(unidad):
         if estimar_tokens(frase) <= presupuesto:
-            piezas.append(frase)
+            piezas.append((frase, False))
         else:
             palabras = frase.split()
-            piezas += [" ".join(palabras[i:i + por_pieza]) for i in range(0, len(palabras), por_pieza)]
+            piezas += [(" ".join(palabras[i:i + por_pieza]), i > 0)
+                       for i in range(0, max(1, len(palabras) - por_pieza + paso), paso)]
     return piezas
 
 
@@ -64,12 +68,15 @@ def _empaquetar(unidades: list[str], presupuesto: int, solape: int) -> list[str]
     """Agrupa unidades hasta `presupuesto` tokens; cada chunk repite las últimas `solape` tokens del anterior."""
     chunks, actual, palabras = [], [], 0       # `palabras` acumuladas: evita re-unir `actual` en cada pieza
     for unidad in unidades:
-        for pieza in ([unidad] if estimar_tokens(unidad) <= presupuesto else _partir_largo(unidad, presupuesto)):
+        for pieza, solapada in ([(unidad, False)] if estimar_tokens(unidad) <= presupuesto
+                                else _partir_largo(unidad, presupuesto, solape)):
             n = len(pieza.split())
             if actual and math.ceil((palabras + n) * TOKENS_POR_PALABRA) > presupuesto:
                 cerrado = " ".join(actual)
                 chunks.append(cerrado)
                 cola = " ".join(cerrado.split()[-max(1, int(solape / TOKENS_POR_PALABRA)):]) if solape > 0 else ""
+                cabe = int(presupuesto / TOKENS_POR_PALABRA) - n     # palabras de solape que caben junto a la pieza
+                cola = " ".join(cola.split()[-cabe:]) if cabe > 0 and not solapada else ""   # sin salirse del presupuesto
                 actual, palabras = ([cola, pieza], len(cola.split()) + n) if cola else ([pieza], n)
             else:
                 actual.append(pieza)
