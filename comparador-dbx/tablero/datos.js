@@ -11,8 +11,8 @@
 //         V- pospuestas a V2, A- actividades. Nunca se borran tarjetas.
 window.TABLERO = {
   actualizado: "2026-10-06",
-  rama: "feat/l2-extraccion-docling",
-  ultimo_commit: "321c377 feat(L2): extracción real con Docling en subproceso, cola de 1 worker y caché SHA-256",
+  rama: "fix/docling-cve",
+  ultimo_commit: "1285037 fix(deps): RAGAS en entorno propio (reemplaza DeepEval) y docs de las CVE resueltas",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -30,7 +30,7 @@ window.TABLERO = {
     { id: "L1", fase: "L", tipo: "hito", estado: "hecho", titulo: "Ingesta: validación + clasificación",
       nota: "6/6 chequeos en 01_ingesta.ipynb (Groq real). MOCK → manual_control, LA/FT → normativa (0,85). Rechazos con ERR-ING-001..003 y mensaje de negocio; un PDF reparado se acepta con advertencia y solo se rechaza con ERR-ING-003 si el texto no alcanza SCAN_TEXT_RATIO (5519d13, ver D-28). qa-ia APROBADO para el fix del PDF reparado: 168 unitarias passed, coverage 91 %, 8 de integración con Groq + bge-m3. Tag v0.2.0 pendiente de publicar (ver A-10).", commit: "0b4f926" },
     { id: "L2", fase: "L", tipo: "hito", estado: "en_curso", titulo: "Seccionado: Docling + cascada de patrones",
-      nota: "Sigue en curso, sin APROBADO de qa-ia. Hecho (321c377): extracción real con Docling en subproceso, cola de 1 worker, caché SHA-256; notebook 02 ejecutado: 43 bloques en 57,8 s con 2 CPU y caché en 0,018 s. Faltan la cascada completa (P-07), el criterio ≥ 95 % de secciones en la LA/FT (P-09) y las pruebas de qa-ia (P-10). Ver implementacion/README.md." },
+      nota: "Sigue en curso, sin APROBADO de qa-ia. Hecho (321c377): extracción real con Docling en subproceso, cola de 1 worker, caché SHA-256; notebook 02 re-ejecutado con docling 2.134.0: 43 bloques en 48,2 s, 8 artículos y caché en 0,017 s. Coverage actual 70 % global porque docling_parser y docling_worker aún no tienen pruebas. Faltan la cascada completa (P-07), el criterio ≥ 95 % de secciones en la LA/FT (P-09) y las pruebas de qa-ia (P-10). Ver implementacion/README.md." },
     { id: "L3", fase: "L", tipo: "hito", estado: "por_hacer", titulo: "Recuperación: sub-chunks, embeddings, FAISS, pares",
       nota: "Recall ≥ 90 % sobre el golden set de los MOCK." },
     { id: "L4", fase: "L", tipo: "hito", estado: "por_hacer", titulo: "Juez: veredictos, citas verificadas, marcas A/L/R/X/P",
@@ -63,7 +63,9 @@ window.TABLERO = {
     { id: "P-08", fase: "L", tipo: "pendiente", estado: "hecho", titulo: "L2: caché por SHA-256 del PDF",
       nota: "Caché SHA-256 hecha; en el notebook 02 la segunda lectura tarda 0,018 s.", commit: "321c377" },
     { id: "P-09", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: medir ≥ 95 % de secciones en la LA/FT con RAM y CPU en la Raspberry",
-      nota: "Docling ya instalado. Medido: LA/FT 55 págs en 300 s y 1,9 GB con 2 CPU (implementacion/README.md). Falta medir el porcentaje de secciones (≥ 95 %), que necesita la cascada completa; criterio de aceptación de L2 (docs/13)." },
+      nota: "Docling 2.134.0 instalado. Medido: LA/FT 55 págs en 511 s y 2,97 GB con 2 CPU (antes 300 s y 1,89 GB con 2.55.1; DOCLING_TIMEOUT_S a 1500; implementacion/README.md). Falta medir el porcentaje de secciones (≥ 95 %), que necesita la cascada completa; criterio de aceptación de L2 (docs/13)." },
+    { id: "P-11", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L3: crear el entorno comparador_eval e instalar requirements-eval.txt",
+      nota: "Entorno propio para RAGAS (exige openai<2); se usa desde L3 con RAGAS_DO_NOT_TRACK=true (docs/14 #19)." },
     { id: "P-10", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "L2: pruebas de qa-ia para el seccionado",
       nota: "Escribir y correr las pruebas de L2 (coverage ≥ 80 %, integración real) y actualizar qa/trazabilidad.md; sin APROBADO no se cierra el hito." },
 
@@ -116,7 +118,11 @@ window.TABLERO = {
     { id: "A-14", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Entorno comparador_docling y Docling también en comparador_v2",
       nota: "Entorno comparador_docling creado y docling instalado además en comparador_v2. Hallazgo de la Pi: /tmp es tmpfs de 4 GB y la instalación falló hasta usar TMPDIR en disco." },
     { id: "D-31", fase: "L", tipo: "decision", estado: "hecho", titulo: "Aceptar y documentar el riesgo de 59 CVE de docling==2.55.1",
-      nota: "Decisión del usuario: se acepta el riesgo y se documenta (docs/14 #22); se revisa antes de producción (ver V-06)." },
+      nota: "Descartado por el usuario: aceptar el riesgo de 59 CVE; el usuario decidió actualizar ahora; docs/14 #22" },
+    { id: "D-32", fase: "L", tipo: "decision", estado: "hecho", titulo: "Actualizar Docling a 2.134.0 con pila sin CVE (docs/14 #22)",
+      nota: "Decisión del usuario ('Actualizar ahora'): docling 2.134.0 + pillow 12.3.0 + lxml 6.1.3 + transformers 5.19.0; pip-audit 0 vulnerabilidades en requirements.txt y en el entorno recreado. Costo: LA/FT 511 s y 2,97 GB; DOCLING_TIMEOUT_S a 1500.", commit: "1285037" },
+    { id: "A-15", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Entorno comparador_v2 recreado desde cero con requirements-dev.txt",
+      nota: "Valida la instalación limpia; pip-audit 0 vulnerabilidades. Trabajo en la rama fix/docling-cve (sale de feat/l2-extraccion-docling)." },
     { id: "A-09", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Integrar la rama larga feat/fase-l-local en main y retirarla",
       nota: "Integrada en main y retirada en este push; desde ahora ramas cortas desde main (D-27)." },
 
@@ -163,8 +169,12 @@ window.TABLERO = {
     // ── Decisiones del usuario sobre QA (docs/14 #19 y docs/13) ──
     { id: "D-20", fase: "L", tipo: "decision", estado: "hecho", titulo: "Sin historias de usuario nuevas: el QA valida los RF/RNF",
       nota: "qa-ia valida los RF/RNF de docs/04 y los criterios de docs/13; trazabilidad en qa/trazabilidad.md (docs/14 #19)." },
-    { id: "D-21", fase: "L", tipo: "decision", estado: "hecho", titulo: "Framework de evaluación de IA en desarrollo: DeepEval",
-      nota: "Elegido frente a RAGAS por menos dependencias y sin LangChain. Solo en desarrollo y sin telemetría; se usa desde L3 (docs/14 #19, docs/13)." },
+    { id: "D-21", fase: "L", tipo: "decision", estado: "descartado", titulo: "Framework de evaluación de IA en desarrollo: DeepEval",
+      nota: "Descartado por el usuario: DeepEval; se eligió RAGAS (docs/14 #19). Motivo: deepeval 4.2.8 choca con transformers 5.x." },
+    { id: "D-33", fase: "L", tipo: "decision", estado: "hecho", titulo: "RAGAS en entorno propio comparador_eval",
+      nota: "Decisión del usuario ('usa otro framework, ragas o langfuse'): RAGAS con requirements-eval.txt y RAGAS_DO_NOT_TRACK=true, en entorno propio por incompatibilidad de dependencias (docs/14 #19).", commit: "1285037" },
+    { id: "D-34", fase: "L", tipo: "decision", estado: "descartado", titulo: "Langfuse como framework de evaluación",
+      nota: "Descartado por el usuario: Langfuse, porque necesita un servidor y no pueden salir documentos del banco; se eligió RAGAS (docs/14 #19)." },
     { id: "D-22", fase: "L", tipo: "decision", estado: "hecho", titulo: "Databricks CLI para el QA",
       nota: "Lectura libre; ejecutar pruebas en el workspace Free solo con aprobación del usuario (docs/14 #19)." },
     { id: "D-23", fase: "L", tipo: "decision", estado: "hecho", titulo: "QA al cerrar cada hito: coverage ≥ 80 % y APROBADO de qa-ia",
@@ -193,8 +203,8 @@ window.TABLERO = {
       nota: "Pendiente de appsec (implementacion/README.md)." },
     { id: "V-05", fase: "V2", tipo: "seguridad", estado: "por_hacer", titulo: "PDF truncado con texto en ≥ 60 % de las páginas: aceptar con advertencia",
       nota: "To-be por decisión del usuario, fase V2: se acepta con advertencia y paginas cuenta las vacías. Referencia: implementacion/README.md." },
-    { id: "V-06", fase: "V2", tipo: "seguridad", estado: "por_hacer", titulo: "Revisar CVE de Docling antes de producción (probar versión más nueva y re-medir)",
-      nota: "Decisión del usuario (D-31): hoy docling==2.55.1 con 59 CVE aceptados; antes de producción probar una versión más nueva y volver a medir RAM y tiempos." },
+    { id: "V-06", fase: "V2", tipo: "seguridad", estado: "hecho", titulo: "Revisar CVE de Docling antes de producción (probar versión más nueva y re-medir)",
+      nota: "Resuelto ahora por decisión del usuario (D-32): docling 2.134.0, pip-audit 0 vulnerabilidades; re-medido: LA/FT 511 s y 2,97 GB (docs/14 #22).", commit: "1285037" },
     { id: "V-04", fase: "V2", tipo: "seguridad", estado: "por_hacer", titulo: "Validar PDFs en subproceso con límite de memoria",
       nota: "Pendiente de appsec para V2; en D0 basta tope en streaming y timeout (S-03)." },
 
@@ -211,6 +221,7 @@ window.TABLERO = {
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-06", texto: "Rama fix/docling-cve: Docling 2.134.0 con pila sin CVE (D-32, V-06 hecha; D-31 descartada); RAGAS reemplaza a DeepEval (D-21 descartada, D-33, D-34); L2 sigue en curso." },
     { fecha: "2026-10-06", texto: "L2 sigue en curso: extracción real con Docling (321c377), cola de 1 worker, caché y timeout en subproceso; P-06, P-08, S-09, S-12 hechas; mediciones en la Pi; CVE de Docling aceptados (D-31, V-06)." },
     { fecha: "2026-10-06", texto: "Auditoría de L2: vuelve a en_curso (esqueleto de agy sin APROBADO de qa-ia, Docling sin instalar, criterio sin medir); S-09 a revisión; tarjetas P-06..P-10, S-11, S-12." },
     { fecha: "2026-10-06", texto: "PDF reparado se acepta con advertencia (D-28, qa-ia aprobado); to-be de appsec S-09, S-10, V-05; tags v0.1.0/v0.2.0 pendientes de publicar (A-10)" },
