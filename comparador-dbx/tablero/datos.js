@@ -11,8 +11,8 @@
 //         V- pospuestas a V2, A- actividades. Nunca se borran tarjetas.
 window.TABLERO = {
   actualizado: "2026-10-06",
-  rama: "chore/tablero-tobe-appsec",
-  ultimo_commit: "af6b872 docs: observaciones de appsec dejadas para el to-be",
+  rama: "chore/pool-dev-ia",
+  ultimo_commit: "4189379 chore(agentes): pool de 3 desarrolladores de IA senior con skills de protocolo y seguridad OWASP",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -98,6 +98,11 @@ window.TABLERO = {
     { id: "A-09", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Integrar la rama larga feat/fase-l-local en main y retirarla",
       nota: "Integrada en main y retirada en este push; desde ahora ramas cortas desde main (D-27)." },
 
+    { id: "A-11", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Pool de 3 desarrolladores de IA",
+      nota: "dev-ia-extraccion (L1-L2), dev-ia-motor (L3-L4) y dev-ia-entrega (L5-L6, D0-D2, U0), con las skills dev-protocolo y dev-seguridad-ia (OWASP LLM 2025 y agéntico 2026, documentación oficial). Ejecutan hitos, los pasan a qa-ia y reportan al PO; appsec revisa.", commit: "4189379" },
+    { id: "A-12", fase: "L", tipo: "actividad", estado: "por_hacer", titulo: "Primera asignación de hitos al pool: dev-ia-extraccion completa L2",
+      nota: "Cascada de seccionado; mover sectioner.py y models.py a backend/extraction/ y backend/models/schemas.py según docs/12. L2 sigue por_hacer hasta notebook en verde, APROBADO de qa-ia y revisión de appsec." },
+
     // ── Descartadas por el usuario (y decisiones relacionadas) ──
     { id: "D-01", fase: "L", tipo: "decision", estado: "descartado", titulo: "Vía 2 en una tercera hoja del Excel",
       nota: "Descartado por el usuario: sin tercera hoja; se eligió un bloque al final del anexo, Hoja 2 (docs/14 #4)." },
@@ -162,6 +167,16 @@ window.TABLERO = {
     { id: "D-29", fase: "L", tipo: "decision", estado: "hecho", titulo: "Reportes cortos con la salida literal de las herramientas",
       nota: "Preferencia del usuario, recogida en los agentes.", commit: "214cc5e" },
 
+    // ── Decisiones del usuario sobre el pool de desarrollo ──
+    { id: "D-30", fase: "L", tipo: "decision", estado: "hecho", titulo: "Pool de desarrollo (docs/14 #23)",
+      nota: "El usuario pidió un pool de 3 subagentes dev de IA senior (frameworks del proyecto, DevOps, OWASP, documentación oficial) que ejecutan hitos, los pasan a qa-ia y reportan al PO.", commit: "4189379" },
+    { id: "D-31", fase: "L", tipo: "decision", estado: "descartado", titulo: "Reglas deny en settings.json para el pool",
+      nota: "Descartado por el usuario: reglas deny en settings.json para limitar a los devs; se eligió la verificación con git (comandos en CLAUDE.md y dev-protocolo)." },
+    { id: "D-32", fase: "L", tipo: "decision", estado: "hecho", titulo: "Acceso web (WebFetch/WebSearch) del pool conservado con reglas",
+      nota: "Dominios oficiales acotados, consultas genéricas y campo 'URLs consultadas' en el reporte.", commit: "4189379" },
+    { id: "D-33", fase: "L", tipo: "decision", estado: "descartado", titulo: "Quitar el acceso web a los desarrolladores del pool",
+      nota: "Descartado por el usuario: quitarles WebFetch/WebSearch; se eligió conservarlo con reglas (D-32)." },
+
     // ── Pospuestas a V2 ──
     { id: "V-01", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "Renombrar docs/ a specs/",
       nota: "Pospuesto a después de la demo." },
@@ -177,12 +192,15 @@ window.TABLERO = {
     // ── To-be de appsec (observaciones que el usuario dejó para después) ──
     { id: "S-09", fase: "L", tipo: "seguridad", estado: "por_hacer", titulo: "L2: timeout por documento al parsear PDFs (hito L2)",
       nota: "To-be por decisión del usuario. Hito L2. Referencia: implementacion/README.md." },
+    { id: "S-11", fase: "L", tipo: "seguridad", estado: "hecho", titulo: "Revisión de appsec del diseño del pool de desarrollo",
+      nota: "2 hallazgos ALTOS resueltos con las decisiones D-31 (verificación con git) y D-32 (web con reglas); MEDIOS aplicados en la documentación.", commit: "4189379" },
     { id: "S-10", fase: "D", tipo: "seguridad", estado: "por_hacer", titulo: "Llevar la advertencia de PDF reparado a la API y al Excel (D0/L5)",
       nota: "To-be por decisión del usuario. Hitos D0 y L5. Referencia: implementacion/README.md." },
   ],
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-06", texto: "Pool de 3 desarrolladores de IA con skills (A-11); verificación con git en vez de deny, web conservado (D-30..D-33); revisión appsec (S-11); primera asignación pendiente (A-12)" },
     { fecha: "2026-10-06", texto: "PDF reparado se acepta con advertencia (D-28, qa-ia aprobado); to-be de appsec S-09, S-10, V-05; tags v0.1.0/v0.2.0 pendientes de publicar (A-10)" },
     { fecha: "2026-10-06", texto: "v0.1.0 y v0.2.0: L0 y L1 con QA aprobado; ramas cortas y SemVer" },
     { fecha: "2026-10-06", texto: "Agente qa-ia con sus skills y decisiones de QA; tablero con descartadas" },
