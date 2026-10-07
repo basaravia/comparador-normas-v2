@@ -382,7 +382,7 @@ Notebook completo: 9 min 57 s de reloj (`taskset -c 2,3`); RAM pico del notebook
 - Validación de la capa (`IndiceError`, `ERR-IDX-001`, aborta): forma `(n, dim)`, `np.isfinite` y norma > 0 antes de caché y FAISS, dimensión constante por modelo, sección o consulta inexistente. `client.embed` (L0) con un vector cero devuelve NaN al normalizar (división por 0): se detecta aquí; no se cambió `client.py`.
 - Chunker lineal: `_es_frontera` mira solo los caracteres anteriores y `_empaquetar` lleva un contador de palabras (400 KB de `1. 1. 1. …`: de 8 s a 0,26 s).
 
-### Seguridad (`dev-seguridad-ia`)
+### Seguridad (`appsec-owasp`)
 LLM08: un índice por tipo de documento, en memoria, sin persistir; no se mezclan modelos de embeddings (el stage fija uno). LLM10: caché acotada, lotes de `EMB_BATCH`, sin reintentos propios (los del SDK). LLM02: los textos solo van al proveedor del stage; no se registran. ASI04: `faiss-cpu==1.15.1` fijado, `pip-audit` sin hallazgos. `bandit -r backend/retrieval backend/engine`: sin hallazgos.
 
 ### Origen (repo de referencia v6)
@@ -471,7 +471,7 @@ Salida literal de la última ejecución del notebook:
 - **No probado con Microsoft Excel** (no disponible aquí): «sin advertencias de reparación en Excel» queda por confirmar a mano. Sí con openpyxl y LibreOffice.
 - `.gitignore` raíz: el agente principal acotó `/output/` y `/comparador-dbx/output/` para que `backend/output/` se versione (yo no lo toqué).
 
-### Seguridad (checklist `dev-seguridad-ia`)
+### Seguridad (checklist `appsec-owasp`)
 
 LLM01 (resumen entre marcas y `rellenar_prompt`; identificadores y faltantes acotados), LLM05 (neutralización de fórmulas y texto siempre del fuente), LLM09 (cifras verificadas en Python, rótulo de borrador), LLM10 (una llamada, lista y tamaños acotados), ASI08 (fallo de contenido del borrador → `LLMOutputError` que degrada, no aborta). `bandit` sin hallazgos en `backend/output` y `scripts`; `pip-audit -r requirements.txt`: *No known vulnerabilities found*.
 
