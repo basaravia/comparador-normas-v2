@@ -42,7 +42,7 @@ Cambiar por configuración a los endpoints de Foundry, recalibrar el umbral para
 
 ## Pruebas mínimas (pytest)
 
-Las escribe y ejecuta el agente `qa-ia` al cerrar cada hito. **Un hito no se cierra sin coverage ≥ 80 % en la lógica determinista** (`pytest -m "not integracion" --cov`) y sin **APROBADO** de `qa-ia` (decisión del usuario, 6 oct 2026). Las pruebas con modelos reales llevan la marca `integracion` y no cuentan para el porcentaje. Desde L3 se evalúan recuperación y juez con **DeepEval** (solo desarrollo, sin telemetría). Trazabilidad RF/RNF ↔ pruebas en `qa/trazabilidad.md`; no hay historias de usuario.
+Las escribe y ejecuta el agente `qa-ia` al cerrar cada hito. **Un hito no se cierra sin coverage ≥ 80 % en la lógica determinista** (`pytest -m "not integracion" --cov`) y sin **APROBADO** de `qa-ia` (decisión del usuario, 6 oct 2026). Las pruebas con modelos reales llevan la marca `integracion` y no cuentan para el porcentaje. Desde L3 se evalúan recuperación y juez con **RAGAS** (solo desarrollo, sin telemetría). Trazabilidad RF/RNF ↔ pruebas en `qa/trazabilidad.md`; no hay historias de usuario.
 
 - `test_sectioner`: fixtures con Artículo, ART., SEC., romanos, letras, numeración 3.2.1 y un `ARTÍCULO` duplicado.
 - `test_aggregate`: tablas de verdad de la agregación de marcas y de los controles sin base normativa.

@@ -1,0 +1,7 @@
+# Evaluación de IA (L3 en adelante). Entorno PROPIO (comparador_eval): RAGAS exige openai<2 y la app usa
+# openai 3.x, así que no pueden convivir. Solo desarrollo; no va al paquete de la app.
+# Siempre con RAGAS_DO_NOT_TRACK=true: ningún dato sale a servicios externos.
+ragas==0.4.3            # métricas de recuperación y del juez (reemplaza a deepeval; docs/14 #19)
+pymupdf==1.28.2         # las pruebas de evaluación leen los PDF
+python-dotenv==1.2.4    # config del proyecto
+pytest==9.1.1

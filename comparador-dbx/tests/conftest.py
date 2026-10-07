@@ -1,13 +1,13 @@
 """Configuración común de las pruebas.
 
-- DeepEval sin telemetría: nada sale a Confident AI (va antes de cualquier import).
+- RAGAS sin telemetría: nada sale a servicios externos (va antes de cualquier import).
 - `comparador-dbx/` en el sys.path para importar `backend`.
 - `cliente`: el ModelClient REAL del stage, solo para las pruebas de integración.
 - `hacer_pdf`: genera PDFs pequeños en tmp_path con pymupdf (como notebooks/01_ingesta.ipynb).
 """
 import os
 
-os.environ["DEEPEVAL_TELEMETRY_OPT_OUT"] = "YES"
+os.environ["RAGAS_DO_NOT_TRACK"] = "true"
 
 import sys
 from pathlib import Path

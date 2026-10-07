@@ -241,7 +241,7 @@ Pendiente:
 - El subproceso recibe un **entorno mínimo** (PATH, HOME, LANG, TMPDIR, HF_*…): no le llegan `GROQ_API_KEY` ni `FOUNDRY_AI_TOKEN`. Verificado con un hijo que imprime su entorno.
 - Sesión propia y `killpg`: el timeout mata también a los procesos hijos. Caché acotada a 8 PDFs (`MAX_CACHE`).
 - `bandit`: B404 y B603 (uso de `subprocess`) justificados con `# nosec`: lista fija con `sys.executable`, sin shell y con la ruta ya validada.
-- **Riesgo aceptado (docs/14 #22):** 59 vulnerabilidades en `docling==2.55.1` y sus dependencias (`pillow<12` impide subirlas). Revisar antes de producción.
+- **CVE resueltas (docs/14 #22):** `docling==2.134.0` + `pillow==12.3.0` + `lxml==6.1.3` + `transformers==5.19.0`; `pip-audit` sobre `requirements.txt` y sobre el entorno instalado: *No known vulnerabilities found* (antes 59). Se instaló en un entorno recreado desde cero con `requirements-dev.txt`.
 
 ### Mediciones de Docling (6 oct 2026, Raspberry, entorno aparte `comparador_docling`)
 Restricciones de Databricks: `taskset -c 0,1`, `OMP_NUM_THREADS=2`, `AcceleratorOptions(num_threads=2, device="cpu")`, `do_ocr=False`, `generate_page_images=False`. Script de medición en el scratchpad (no versionado; irá al notebook 02).
@@ -251,6 +251,15 @@ Restricciones de Databricks: `taskset -c 0,1`, `OMP_NUM_THREADS=2`, `Accelerator
 | `L1-XVI-cap-III.pdf` (3 págs) | fast | 29,5 s | 1.562 MB | 40 |
 | `L1-XVI-cap-III.pdf` (3 págs) | off | 19,7 s | 1.423 MB | 97 |
 | norma LA/FT (55 págs con texto) | fast | 300,1 s | 1.887 MB | 730 |
+
+Con `docling==2.134.0` (pila sin CVE), mismas condiciones:
+
+| Documento | Tablas | Tiempo | RAM pico | Bloques de texto |
+|---|---|---|---|---|
+| `L1-XVI-cap-III.pdf` (3 págs, en caliente) | fast | 32,8 s | 1.563 MB | 40 |
+| norma LA/FT (55 págs con texto) | fast | 511,5 s | 2.968 MB | 596 |
+
+La primera ejecución descargó modelos nuevos (+0,5 GB, 103 s). La versión nueva es ~70 % más lenta y usa ~57 % más RAM en el documento largo; el texto sale mejor espaciado. Un PDF de 100 páginas tardaría ~15 min: `DOCLING_TIMEOUT_S=1500`. `torch` no cambió (2.14.1).
 
 - RAM: sobra margen frente a ~6 GB. Tiempo: ~5,5 s por página, ~9 min para 100 páginas → caché SHA-256 y progreso por página son necesarios.
 - Con tablas, éstas no están en `doc.texts`: el mapeo debe incluir las tablas o los artículos con tabla perderían contenido.
