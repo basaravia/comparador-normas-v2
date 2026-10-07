@@ -54,15 +54,15 @@ def test_clave_invalida_es_error_de_configuracion():
 
 # L1 (docs/13): los 3 MOCK salen como manual_control y la norma LA/FT como normativa.
 # Las normas reales no se versionan: se leen de NORMAS_DIR, por defecto documentos/normas/ (skip si no están).
-from backend.config import carpeta_normas
+from backend.config import carpeta_manuales, carpeta_normas
 NORMAS = carpeta_normas()
 LAFT = ("Proyecto-de-Ley-Organica-Organica-para-Reprimir-y-Prevenir-el-Lavado-de-Activos-"
         "y-la-Financiacion-del-Terrorismo.pdf")
 
 CASOS_L1 = [
-    (RAIZ / "samples" / "MOCK-DEMO-01.pdf", "manual_control"),
-    (RAIZ / "samples" / "MOCK-DEMO-02.pdf", "manual_control"),
-    (RAIZ / "samples" / "MOCK-DEMO-03.pdf", "manual_control"),
+    (carpeta_manuales() / "MOCK-DEMO-01.pdf", "manual_control"),
+    (carpeta_manuales() / "MOCK-DEMO-02.pdf", "manual_control"),
+    (carpeta_manuales() / "MOCK-DEMO-03.pdf", "manual_control"),
     (NORMAS / LAFT, "normativa"),
 ]
 
@@ -79,5 +79,5 @@ def test_ingerir_clasifica_segun_criterio_l1(cliente, ruta, tipo):
     assert fila["paginas"] > 0 and len(fila["sha256"]) == 64
     assert fila["evidencia"]
     assert "advertencia" in fila  # docs/14 #21: la fila siempre trae la clave
-    if ruta.parent.name == "samples":
+    if ruta.parent.name == "manuales":
         assert fila["advertencia"] is None  # los MOCK están sanos: sin advertencia de reparación

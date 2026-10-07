@@ -10,6 +10,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
+from backend.config import carpeta_manuales
 from backend.output.workpaper import generar_papel  # noqa: E402
 from scripts.datos_papel import armar_entrada, cargar_manual, cargar_norma, documento  # noqa: E402
 
@@ -23,7 +24,7 @@ def pico_mb() -> float:
 
 
 NORMAS = Path(sys.argv[1])
-MANUAL = RAIZ / "samples" / "MOCK-DEMO-01.pdf"
+MANUAL = carpeta_manuales() / "MOCK-DEMO-01.pdf"
 N_ART = int(sys.argv[2]) if len(sys.argv) > 2 else 100
 SALIDA = RAIZ / "output" / "papel_100.xlsx"
 SALIDA.parent.mkdir(exist_ok=True)

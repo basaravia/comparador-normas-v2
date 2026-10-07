@@ -165,7 +165,7 @@ Ver la tabla de módulos reutilizados en [`README.md`](../README.md).
 | `backend/ingest/pdf_metadata.py` | Texto de las 2 primeras páginas (máx. 6.000 caracteres) y metadatos nativos limpios | `texto_primeras_paginas(ruta)`, `metadatos_limpios(dict)` |
 | `backend/ingest/classifier.py` | Clasifica con el LLM y arma la fila del auditor | `ingerir(ruta, cliente) -> dict`, `clasificar(...)`, `tipo_sugerido(...)`, `MetadatosLLM` |
 | `backend/config.py` | Nuevo: `rellenar_prompt(plantilla, **valores)` | Sustituye `{variable}` en una sola pasada y quita las marcas `<texto_*>` de los valores |
-| `samples/MOCK-DEMO-0{1,2,3}.pdf` | Manuales ficticios de la v1 (copiados), para los notebooks | — |
+| `documentos/manuales/MOCK-DEMO-0{1,2,3}.pdf` | Manuales ficticios de la v1 (copiados), versionados, para los notebooks | — |
 
 ### Cómo funciona
 

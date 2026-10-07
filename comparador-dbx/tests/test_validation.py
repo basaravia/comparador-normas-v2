@@ -6,6 +6,7 @@ from pathlib import Path
 import pymupdf
 import pytest
 
+from backend.config import carpeta_manuales
 from backend.config import settings
 from backend.ingest import validation
 from backend.ingest.validation import nombre_seguro, validar_pdf
@@ -170,7 +171,7 @@ def test_pdf_de_varias_paginas_truncado_a_la_mitad_es_err_ing_003_no_001(monkeyp
 
 @pytest.mark.parametrize("muestra", ["MOCK-DEMO-01.pdf", "MOCK-DEMO-02.pdf", "MOCK-DEMO-03.pdf"])
 def test_mock_sano_se_acepta_sin_advertencia(muestra):
-    v = validar_pdf(RAIZ / "samples" / muestra)
+    v = validar_pdf(carpeta_manuales() / muestra)
     assert v.ok and v.paginas > 0 and v.advertencia is None
 
 

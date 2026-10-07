@@ -33,3 +33,4 @@ Manual_Tecnico_Comparador_Normativo_MVP.pdf
 # Carpeta de PDFs de normas (se leen de aquí, no se versionan)
 /comparador-dbx/documentos/*
 !/comparador-dbx/documentos/LEEME.md
+!/comparador-dbx/documentos/manuales/
