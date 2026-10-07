@@ -37,7 +37,11 @@ class ExtraccionError(ComparadorError):
 
 
 _COLA = ThreadPoolExecutor(max_workers=1)                       # Docling nunca en paralelo
-ENTORNO_HIJO = {"PATH", "HOME", "LANG", "TMPDIR", "CONDA_PREFIX", "VIRTUAL_ENV", "PYTHONPATH", "LD_LIBRARY_PATH"}
+ENTORNO_HIJO = {"PATH", "HOME", "LANG", "TMPDIR", "CONDA_PREFIX", "VIRTUAL_ENV", "PYTHONPATH", "LD_LIBRARY_PATH",
+                # Red corporativa: proxy y certificados propios, para que el hijo pueda descargar los modelos de Docling.
+                "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
+                "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE"}
+_RED_BLOQUEADA = ("SSLError", "MaxRetryError", "ConnectionError", "LocalEntryNotFoundError", "offline mode")  # fallo al bajar modelos
 MAX_CACHE = 8                                                   # PDFs en memoria (RAM acotada)
 _CACHE: dict[str, list[dict]] = {}                              # sha256 → bloques
 _COMANDO = [sys.executable, "-m", "backend.extraction.docling_worker"]  # reemplazable en pruebas del control
@@ -131,7 +135,12 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
                                   "Divídelo en partes.")
         if proc.returncode != 0 or bloques is None:
             errores.seek(0)
-            cola = errores.read().decode("utf-8", "replace")[-500:]
+            texto_error = errores.read().decode("utf-8", "replace")
+            cola = texto_error[-500:]
+            if any(marca in texto_error for marca in _RED_BLOQUEADA):
+                raise ExtraccionError(f"Docling no pudo descargar sus modelos: {redact(cola)}", "ERR-EXT-004",
+                                      "No pudimos preparar el lector de documentos porque la red bloquea la descarga de sus modelos. "
+                                      "Pide a TI que los habilite o copia los modelos al equipo (ver documentos/LEEME.md).")
             raise ExtraccionError(f"Docling terminó con código {proc.returncode}: {redact(cola)}")
     if not bloques:
         raise ExtraccionError("Docling no encontró texto en el documento.", "ERR-EXT-003",
