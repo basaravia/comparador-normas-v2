@@ -65,6 +65,7 @@ class Settings:
 
     # Extracción
     DOCLING_ARTIFACTS: str = _env("DOCLING_ARTIFACTS")
+    NORMAS_DIR: str = _env("NORMAS_DIR")          # carpeta de PDFs de normas (no se versiona); relativa a comparador-dbx/
     DOCLING_THREADS: int = int(_env("DOCLING_THREADS"))
     DOCLING_TABLES: str = _env("DOCLING_TABLES")          # fast | off | accurate
     DOCLING_TIMEOUT_S: int = int(_env("DOCLING_TIMEOUT_S"))
@@ -104,6 +105,12 @@ class Settings:
 
 
 settings = Settings()
+
+
+def carpeta_normas() -> Path:
+    """Carpeta donde se leen los PDF de las normas (`NORMAS_DIR`; si es relativa, desde `comparador-dbx/`)."""
+    ruta = Path(settings.NORMAS_DIR)
+    return ruta if ruta.is_absolute() else RAIZ / ruta
 
 
 def es_secreto(nombre: str) -> bool:

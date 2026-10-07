@@ -7,6 +7,8 @@ from pathlib import Path
 import pymupdf
 import pytest
 
+from backend.config import carpeta_normas
+
 RAIZ = Path(__file__).resolve().parent
 CSV = RAIZ / "golden_pairs.csv"
 SAMPLES = RAIZ.parent / "samples"
@@ -17,8 +19,7 @@ ARTICULOS = [31, 32, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]
 # Matriz: cobertura esperada por manual (A = MOCK-DEMO-03, B = MOCK-DEMO-01, C = MOCK-DEMO-02).
 OMISION_B = {32, 43, 45, 48}
 MANUALES = ["MOCK-DEMO-01", "MOCK-DEMO-02", "MOCK-DEMO-03"]
-NORMA_PDF = (RAIZ.parents[2] / "comparador-normativas-ec-v1" / "Normativa2026" /
-             "Proyecto-de-Ley-Organica-Organica-para-Reprimir-y-Prevenir-el-Lavado-de-Activos-y-la-Financiacion-del-Terrorismo.pdf")
+NORMA_PDF = carpeta_normas() / "Proyecto-de-Ley-Organica-Organica-para-Reprimir-y-Prevenir-el-Lavado-de-Activos-y-la-Financiacion-del-Terrorismo.pdf"
 
 
 def _filas():
