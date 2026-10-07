@@ -65,6 +65,7 @@ class Settings:
 
     # Extracción
     DOCLING_ARTIFACTS: str = _env("DOCLING_ARTIFACTS")
+    MANUALES_DIR: str = _env("MANUALES_DIR")      # carpeta de manuales de control (los MOCK, versionados); relativa a comparador-dbx/
     NORMAS_DIR: str = _env("NORMAS_DIR")          # carpeta de PDFs de normas (no se versiona); relativa a comparador-dbx/
     DOCLING_THREADS: int = int(_env("DOCLING_THREADS"))
     DOCLING_TABLES: str = _env("DOCLING_TABLES")          # fast | off | accurate
@@ -107,10 +108,19 @@ class Settings:
 settings = Settings()
 
 
+def _carpeta(valor: str) -> Path:
+    ruta = Path(valor)
+    return ruta if ruta.is_absolute() else RAIZ / ruta
+
+
 def carpeta_normas() -> Path:
     """Carpeta donde se leen los PDF de las normas (`NORMAS_DIR`; si es relativa, desde `comparador-dbx/`)."""
-    ruta = Path(settings.NORMAS_DIR)
-    return ruta if ruta.is_absolute() else RAIZ / ruta
+    return _carpeta(settings.NORMAS_DIR)
+
+
+def carpeta_manuales() -> Path:
+    """Carpeta donde se leen los manuales de control (`MANUALES_DIR`; los MOCK ficticios están versionados)."""
+    return _carpeta(settings.MANUALES_DIR)
 
 
 def es_secreto(nombre: str) -> bool:

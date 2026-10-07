@@ -10,7 +10,7 @@ Secciones de entrada (así se arman):
   /tmp/claude-1000/motor-l3/lafit.json = LA/FT págs. 19-24), pasados por `parsear_bloques` de ESTA rama
   (el seccionador de L1; la cascada de L2 aún no está aquí) tras partir los "Artículo N.-" pegados en un
   bloque. PROVISIONAL, igual que el notebook 03.
-- Manuales: los 3 MOCK de samples/ con las secciones PROVISIONALES de notebooks/03_recuperacion.ipynb:
+- Manuales: los 3 MOCK de documentos/manuales/ con las secciones PROVISIONALES de notebooks/03_recuperacion.ipynb:
   una Seccion por encabezado romano (`V.`) o numeral (`5.3`), texto hasta el siguiente encabezado,
   se descarta el índice del PDF, seccionado_incierto=True.
 Métricas propias (sustituyen a RAGAS hasta que exista `comparador_eval`; ver qa/eval-l3.md).
@@ -28,6 +28,7 @@ import pymupdf
 import pytest
 from dotenv import dotenv_values
 
+from backend.config import carpeta_manuales
 from backend.config import RAIZ, settings
 from backend.engine.candidatos import candidatos
 from backend.engine.pares import construir_pares
@@ -83,7 +84,7 @@ def l3():
     assert settings.EMB_BATCH == 8, "correr con EMB_BATCH=8 (con 64 la Pi agota el tiempo)"
 
     lafit = parsear_bloques(json.load(open(BLOQUES / "lafit.json")), "N1", "normativa")
-    manual = [x for n in (1, 2, 3) for x in secciones_provisionales(RAIZ / "samples" / f"MOCK-DEMO-0{n}.pdf", f"M{n}")]
+    manual = [x for n in (1, 2, 3) for x in secciones_provisionales(carpeta_manuales() / f"MOCK-DEMO-0{n}.pdf", f"M{n}")]
     cuenta = {d: sum(x.doc_id == d for x in manual) for d in ("M1", "M2", "M3")}
 
     from backend.llm.client import ModelClient

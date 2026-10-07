@@ -7,11 +7,11 @@ from pathlib import Path
 import pymupdf
 import pytest
 
-from backend.config import carpeta_normas
+from backend.config import carpeta_manuales, carpeta_normas
 
 RAIZ = Path(__file__).resolve().parent
 CSV = RAIZ / "golden_pairs.csv"
-SAMPLES = RAIZ.parent / "samples"
+SAMPLES = carpeta_manuales()
 COLUMNAS = ["articulo_identificador", "documento_norma", "seccion_identificador",
             "documento_manual", "cobertura_esperada"]
 # Artículos de la matriz de LEEME-MANUALES-MOCK.md dentro de 31-48 (el 33 no está en la matriz).
@@ -78,7 +78,7 @@ def test_articulos_existen_en_la_norma():
         assert re.search(rf"^{f['articulo_identificador']}\.-", texto, re.M), f["articulo_identificador"]
 
 
-def test_secciones_existen_en_los_pdf_de_samples():
+def test_secciones_existen_en_los_pdf_de_manuales():
     textos = {m: _texto(SAMPLES / f"{m}.pdf") for m in MANUALES}
     for f in _filas():
         sec = f["seccion_identificador"]
