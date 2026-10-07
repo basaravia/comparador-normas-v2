@@ -15,7 +15,7 @@ Tablero de avance estilo Jira: [`tablero/index.html`](../tablero/index.html) (ab
 | L2 · Seccionado | 🚧 En curso (esqueleto, sin evidencia) | `fix/l2-estado-real` | `notebooks/02_seccionado.ipynb` (sin ejecutar) |
 | L3 · Recuperación | Pendiente | — | — |
 | L4 · Juez | Pendiente | — | — |
-| L5 · Papel | Pendiente | — | — |
+| L5 · Papel | 🔎 Entregado a `qa-ia` y `appsec` (sin cerrar) | `feat/l5-papel` | `notebooks/05_papel.ipynb` |
 | L6 · Extremo a extremo | Pendiente | — | — |
 
 ## Cómo correrlo en local
@@ -269,3 +269,100 @@ La primera ejecución descargó modelos nuevos (+0,5 GB, 103 s). La versión nue
 ### Origen
 - `models.py` y `sectioner.py`: módulos nuevos según docs/07 (la v6 no tiene seccionado equivalente).
 - `docling_parser.py` y `docling_worker.py`: **nuevos**. De la v6 (`backend/src/providers.py`, `_build_pdf_pipeline_options` y `build_document_converter`) se tomó solo la idea de las opciones de Docling (`do_ocr`, modo de tablas, dispositivo); se reescribió sin LangChain, con subproceso, caché y tandas de páginas, que la v6 no tiene.
+
+---
+
+## L5 · Papel de trabajo (entregado, pendiente de `qa-ia` y `appsec`)
+
+**Criterio (docs/13):** el Excel abre sin advertencias; los conteos de la Hoja 1 cuadran con la Hoja 2; cero llamadas al modelo al generarlo. **Cumplido en sandbox** (`05_papel.ipynb`, Groq real para el borrador), con la entrada de prueba de abajo. Falta que L4 entregue la marca real.
+
+### Módulos
+
+| Archivo | Responsabilidad | Uso |
+|---|---|---|
+| `backend/output/workpaper.py` | Modelos de entrada (`FilaPapel`, `EntradaPapel`) y la Hoja 1 | `generar_papel(entrada, destino) -> dict` (conteos por marca) |
+| `backend/output/annex.py` | Hoja 2 con TODOS los pares y el bloque de la vía 2 (pandas) | `tabla_pares(entrada)`, `conteos_anexo(tabla)` |
+| `backend/output/styles.py` | Colores, anchos y la **única** puerta de texto a las celdas | `escribir(ws, fila, col, valor, pagina)`, `PREFIJOS_FORMULA`, `MAX_CELDA` |
+| `backend/output/conclusion.py` | Borrador de conclusión: 1 llamada al LLM | `generar_borrador(entrada, cliente) -> str`, `resumen_conclusion(entrada)` |
+| `backend/prompts/conclusion.md` | Prompt (texto del resumen entre `<texto_resumen>`; leyenda de marcas) | `cargar_prompt("conclusion")` + `rellenar_prompt` |
+| `scripts/datos_papel.py`, `scripts/medir_papel.py` | Entrada de prueba determinista con textos reales y medición | Solo notebook 05 |
+
+Solo `pandas==3.0.6` y `openpyxl==3.1.5` (docs/12; añadidas a `requirements.txt`). `workpaper.py`, `annex.py` y `styles.py` no importan `backend.llm`.
+
+### Estructura de entrada (lo que L4/L6 deben entregar)
+
+```python
+class FilaPapel(BaseModel):          # una por artículo evaluado
+    articulo: Seccion                # el artículo (ruta, identificador, texto_literal, páginas)
+    marca: Literal["A","L","R","X","P"]   # YA calculada (docs/09 §5)
+    par: Optional[Par]               # el par de respaldo (1); None si X o P
+    respaldo: Optional[Seccion]      # la sección del manual de ese par (1)
+    comentario: str                  # veredicto.comentario del par elegido (o de la moda para X/P)
+    elementos_faltantes: list[str]   # veredicto.elementos_faltantes
+
+class EntradaPapel(BaseModel):
+    manual: Documento; normativas: list[Documento]
+    filas: list[FilaPapel]           # cualquier orden: el papel ordena por documento y página
+    pares: list[Par]                 # TODOS los pares evaluados (anexo)
+    secciones: dict[str, Seccion]    # id -> Seccion (artículos y secciones del manual)
+    controles_sin_base: list[Seccion]    # vía 2
+    conclusion: str = ""; conclusion_editada: bool = False
+    fecha_ejecucion: Optional[date] = None
+```
+
+### Qué escribe
+
+- **Hoja 1 «Papel de trabajo»:** 10 filas de encabezado (etiquetas fijas; *Nombre de la revisión*, *Corte o periodo*, *Elaborado por* y *Revisado por* en blanco; leyenda `A = Sí cumple · L = Parcialmente · R = No cumple · X = No aplica · P = Información obtenida de la normativa`), fila en blanco y matriz desde la fila 12 con las 6 columnas del docs/10 en su orden, anchos 18/45/45/10/40/28, `wrap_text`, alineación superior, paneles congelados en `A13`, encabezado `COLOR_PRIMARIO` con texto `COLOR_FONDO`, color suave por marca, columna 1 combinada verticalmente por fuente, ruta con `›` y texto literal tras un salto de línea. Columna 1 = nombre del archivo + `ruta[:2]` (libro, título); columna 2 = `ruta[2:]` + identificador y el texto del artículo. Columna 3 solo en A y L (sección + cita del veredicto); **vacía en R, X y P** (decisión del usuario, docs/10). Columna 6 sin manual ni similitud en R, X y P. Columna 6: norma y página, manual y sección y página, similitud máxima del par elegido y avisos (cita no verificada, requiere revisión, límite incierto).
+- **Hoja 2 «Anexo técnico»:** las 15 columnas de docs/10, sin extras (`ID par`, `Artículo` y `Sección manual` como `id | identificador | documento` en una celda, `Origen`, similitudes, rangos, naturaleza, cobertura, confianza, `Elegido para el papel` = `Sí` o `No: <motivo>`, comentario, banderas), filtro y paneles. Solo los artículos A y L tienen un par `Sí`; en R el par de mayor similitud queda en `No: cobertura nula…`; al final, tras dos filas en blanco, el bloque **«Vía 2 — Controles del manual sin base normativa identificada»** (sin tercera hoja).
+- **Neutralización de fórmulas (CWE-1236):** `styles.escribir` es la única función que escribe texto. Un `float` no finito (NaN, inf) se escribe como celda vacía. Fuerza `data_type="s"` y `quotePrefix` cuando el texto empieza por `=`, `+`, `-`, `@`, tabulador o retorno de carro; el texto no se altera (sigue siendo subcadena del fuente). Quita además caracteres ilegales en XML.
+- **Truncado:** más de 32.767 caracteres → corta y termina en `[texto truncado, ver página N]` (N = página inicial de la sección; sin página, `[texto truncado]`).
+- **Borrador de conclusión:** una llamada con `{resumen_json}` (conteos, total, porcentaje A/(A+L+R), hasta 10 artículos R y 10 L con identificador y hasta 3 `elementos_faltantes` de 200 caracteres, controles sin base, normativas y manual). Valida con Pydantic, 120–220 palabras y que toda cifra del texto esté en el resumen; si no, `LLMOutputError` (ERR-LLM-010) y la conclusión queda vacía para el auditor. El papel añade `[Borrador generado automáticamente — validar]` si `conclusion_editada` es falso.
+
+**El destino de `generar_papel` NUNCA debe venir del cliente** (nombre ni ruta): en la fase D la API pasa un `BytesIO` o `/tmp/<uuid>.xlsx` generado en el servidor, y el nombre de descarga es otro asunto.
+
+### Mediciones (sandbox, 7 oct 2026, `taskset -c 3`, `OMP_NUM_THREADS=1`)
+
+Salida literal de la última ejecución del notebook:
+
+| Medida | Valor |
+|---|---|
+| Papel de 28 artículos × 3 pares (84) | 0,18–0,33 s |
+| 99 artículos × 1 respaldo (297 pares en el anexo), `generar_papel` | 0,45–1,28 s según la corrida |
+| RAM pico del proceso (incluye PyMuPDF y pandas) | 135,3 MB (131,9 MB antes de generar) |
+| Tamaño del `.xlsx` | 73 KB |
+| Borrador de conclusión (Groq `gpt-oss-120b`, 1 llamada) | 7–9 s, 151–153 palabras, 0 cifras ajenas |
+| Llamadas al cliente y conexiones durante `generar_papel` | 0 y 0 (con `socket.connect` bloqueado) |
+| Hostiles (`=`, `+`, `-`, `@`, TAB, CR en todo campo de texto) | 194–195 celdas por prefijo, 0 con `data_type` `f`, 0 `<f>` en el XML |
+| LibreOffice | convierte a PDF (17 páginas); un `=1+1` queda como texto literal en CSV |
+
+### Entrada de prueba (no es una simulación del modelo)
+
+`scripts/datos_papel.py` arma `Seccion`, `Par` y `Veredicto` reales con textos reales (normas L1-XVI caps. III, IV y V, el proyecto de ley LA/FT para las 99 filas, y `MOCK-DEMO-01.pdf`, leídos con PyMuPDF). La **marca de cada artículo sale de un guion cíclico** (A, L, R, A, P, L, R, A, X, A), los scores son solapamientos de palabras (no embeddings) y los comentarios son frases fijas. No se calcula nada de L3/L4.
+
+### Diferencias con la spec y decisiones técnicas
+
+- **L5 se adelantó a L3 y L4** por el reparto en paralelo del pool. Por eso la marca de cada artículo, los scores y los veredictos del notebook salen de un **guion determinista** (`scripts/datos_papel.py`), no del motor; los textos sí son reales.
+- **Decisiones del usuario (7 oct 2026):** el texto de **Objetivo** (constante `OBJETIVO`) queda tal cual; la columna 3 queda vacía en R, X y P; la Hoja 2 usa exactamente las columnas de docs/10, sin «Marca del artículo» ni filas `(sin candidatos)` (el piso `MIN_FLOOR` garantiza candidatos para todo artículo). «Conteos Hoja 1 = derivables de Hoja 2» se comprueba en el notebook re-derivando la marca con docs/09 §5 a partir de naturaleza, cobertura, confianza y elegido; no hay esa lógica en el backend.
+- **PENDIENTE de decisión del usuario: combinar la columna 2 a nivel sección.** No he encontrado una disposición que cumpla a la vez «col. 2 combinada por sección» y «el texto literal de cada artículo en su celda, una fila por artículo», porque una celda combinada guarda un solo texto. Hoy: la columna 1 se combina por normativa y libro/título, y la columna 2 lleva la ruta completa y el texto literal en cada fila (nada se pierde). Alternativas:
+  1. **Fila de sección:** una fila extra por sección con `Capítulo III › Sección I` combinada en la columna 2 y, debajo, una fila por artículo con `Art. N` y su texto literal. Efecto: el árbol se ve como pide docs/10 y el texto es literal, pero la matriz deja de ser «una fila por artículo» (hay filas sin marca) y hay que filtrar con cuidado.
+  2. **Dejar la ruta en cada fila (lo actual)** y combinar solo la columna 1. Efecto: una fila por artículo y filtros limpios, sin árbol visual en la columna 2.
+- Se editó `backend/prompts/conclusion.md` (mío): resumen entre `<texto_resumen>` como dato (LLM01) y leyenda de las marcas (sin ella el modelo llamó «pendientes» a la P).
+- El encabezado congelado ocupa ~12 filas: es lo que pide docs/10 («bajo el encabezado de la matriz»).
+- **No probado con Microsoft Excel** (no disponible aquí): «sin advertencias de reparación en Excel» queda por confirmar a mano. Sí con openpyxl y LibreOffice.
+- `.gitignore` raíz: el agente principal acotó `/output/` y `/comparador-dbx/output/` para que `backend/output/` se versione (yo no lo toqué).
+
+### Seguridad (checklist `dev-seguridad-ia`)
+
+LLM01 (resumen entre marcas y `rellenar_prompt`; identificadores y faltantes acotados), LLM05 (neutralización de fórmulas y texto siempre del fuente), LLM09 (cifras verificadas en Python, rótulo de borrador), LLM10 (una llamada, lista y tamaños acotados), ASI08 (fallo de contenido del borrador → `LLMOutputError` que degrada, no aborta). `bandit` sin hallazgos en `backend/output` y `scripts`; `pip-audit -r requirements.txt`: *No known vulnerabilities found*.
+
+### Pendiente de L4 (lo que debe entregar para cerrar el flujo)
+
+- `backend/engine/aggregate.py`: `marca_articulo(pares) -> (marca, [par_respaldo])` y `controles_sin_base(secciones, pares) -> list[str]` (docs/09 §5). **Falta** una función `armar_entrada_papel(...) -> EntradaPapel` que, con los `Documento`, las `Seccion` de artículos y manual y los `Par` juzgados, produzca cada `FilaPapel`: `marca`, `par`, `respaldo` (la `Seccion` de `par.seccion_id`), `comentario` y `elementos_faltantes` del veredicto del par elegido (para R, X y P, el del par de mayor similitud o el de la moda; el papel no muestra manual en esas marcas) y `controles_sin_base` como lista de `Seccion` (hoy `controles_sin_base` devuelve ids de texto).
+- `Par` completos: `origen`, scores y rangos de ambas vías, `cita_*_verificada`, `requiere_revision` y, si el JSON falló, `veredicto=None` (el anexo lo marca «Sin veredicto»).
+- `Veredicto.cita_manual` ya sustituida por el fragmento real (docs/09 §4); vacía si la similitud queda bajo `CITATION_SHOW_MIN`.
+- L6 (`service.py`): orden normal: juzgar → `armar_entrada_papel` → `generar_borrador` (1 llamada; capturar `LLMOutputError` y dejar la conclusión vacía) → `generar_papel`.
+
+### Origen (repo de referencia v6)
+
+Ninguno: módulos nuevos según docs/10 (la v6 no genera Excel). `conclusion.py` usa `rellenar_prompt` y `ModelClient.chat_json` de L0/L1.
+
