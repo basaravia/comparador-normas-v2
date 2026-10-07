@@ -6,6 +6,7 @@ no importa nada de `backend.llm`. Origen: módulo nuevo según docs/10 (la v6 no
 La marca de cada artículo (A/L/R/X/P) llega YA calculada en `FilaPapel`: la agregación es de L4
 (`backend/engine/aggregate.py`, docs/09 §5) y no se repite aquí.
 """
+import math
 from collections import Counter
 from datetime import date
 from typing import Literal, Optional
@@ -123,7 +124,7 @@ def _col6(f: FilaPapel, docs: dict[str, Documento]) -> str:
         man = docs[r.doc_id].nombre if r.doc_id in docs else r.doc_id
         lineas.append(f"Manual: {man}, sección {r.identificador}, {pr}")
     if f.par and _con_respaldo(f):
-        scores = [s for s in (f.par.score_v1, f.par.score_v2) if s is not None]
+        scores = [s for s in (f.par.score_v1, f.par.score_v2) if s is not None and math.isfinite(s)]
         if scores:
             lineas.append(f"Similitud: {max(scores):.3f}")
     if f.par:                                          # los avisos de revisión nunca se ocultan

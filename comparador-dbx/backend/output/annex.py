@@ -4,6 +4,8 @@ Defiende ante el regulador que no hubo selección sesgada de evidencia. Se arma 
 cada celda de texto pasa por `escribir` (neutralización de fórmulas). Las columnas son las de
 docs/10; "Artículo" y "Sección manual" llevan `id | identificador | documento` en una celda.
 """
+import math
+
 import pandas as pd
 
 from backend.output.styles import ajustar_impresion, alto_fila, escribir, estilo_encabezado, estilo_etiqueta
@@ -71,11 +73,11 @@ def tabla_pares(entrada) -> pd.DataFrame:
         a, s, v = f.articulo, entrada.secciones.get(p.seccion_id), p.veredicto
         elegido = elegidos.get(a.id)
         es_elegido = elegido is not None and elegido.id == p.id
-        scores = [x for x in (p.score_v1, p.score_v2) if x is not None]
+        scores = [x for x in (p.score_v1, p.score_v2) if x is not None and math.isfinite(x)]
         filas.append({
             "ID par": p.id, "Artículo": _etiqueta(a, docs, a.id),
             "Sección manual": _etiqueta(s, docs, p.seccion_id),
-            "Origen": "+".join(sorted(p.origen)),
+            "Origen": "ambas" if p.origen == {"v1", "v2"} else "+".join(sorted(p.origen)),
             "Similitud v1": p.score_v1, "Similitud v2": p.score_v2,
             "Similitud máxima": max(scores) if scores else None,
             "Rango v1": p.rank_v1, "Rango v2": p.rank_v2,

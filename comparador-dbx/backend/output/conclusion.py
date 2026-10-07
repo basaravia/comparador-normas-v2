@@ -46,7 +46,12 @@ def resumen_conclusion(entrada: EntradaPapel) -> dict:
         "normativas": [d.nombre for d in entrada.normativas],
         "total_articulos": len(entrada.filas),
         "conteos_por_marca": c,
+        "articulos_evaluables_A_L_R": evaluables,
+        "porcentaje_por_marca_sobre_total": {m: round(100 * n / len(entrada.filas), 1) if entrada.filas else 0
+                                             for m, n in c.items()},
         "porcentaje_cumple_sobre_evaluables": round(100 * c["A"] / evaluables, 1) if evaluables else 0,
+        "porcentaje_parcial_sobre_evaluables": round(100 * c["L"] / evaluables, 1) if evaluables else 0,
+        "porcentaje_no_cumple_sobre_evaluables": round(100 * c["R"] / evaluables, 1) if evaluables else 0,
         "articulos_R": r[:MAX_LISTA], "otros_articulos_R": max(0, len(r) - MAX_LISTA),
         "articulos_L": l[:MAX_LISTA], "otros_articulos_L": max(0, len(l) - MAX_LISTA),
         "controles_sin_base_normativa": [s.identificador for s in entrada.controles_sin_base[:MAX_LISTA]],
@@ -63,15 +68,20 @@ def cifras_no_entregadas(texto: str, resumen: dict) -> list[float]:
     return sorted(_numeros(texto) - _numeros(json.dumps(resumen, ensure_ascii=False)))
 
 
+def validar_borrador(texto: str, resumen: dict) -> None:
+    """Función pura: 120–220 palabras y ninguna cifra fuera del resumen. Si no, `LLMOutputError`."""
+    palabras = len(texto.split())
+    if not MIN_PALABRAS <= palabras <= MAX_PALABRAS:
+        raise LLMOutputError(f"Borrador de {palabras} palabras (se piden {MIN_PALABRAS}-{MAX_PALABRAS})")
+    if extra := cifras_no_entregadas(texto, resumen):
+        raise LLMOutputError(f"El borrador trae cifras que no están en el resumen: {extra}")
+
+
 def generar_borrador(entrada: EntradaPapel, cliente) -> str:
     """Una sola llamada a `cliente.chat_json`. Devuelve el borrador SIN prefijo (lo añade el papel)."""
     resumen = resumen_conclusion(entrada)
     sistema, usuario = cargar_prompt("conclusion")
     usuario = rellenar_prompt(usuario, resumen_json=json.dumps(resumen, ensure_ascii=False, indent=1))
     texto = cliente.chat_json(sistema, usuario, BorradorConclusion).borrador_conclusion
-    palabras = len(texto.split())
-    if not MIN_PALABRAS <= palabras <= MAX_PALABRAS:
-        raise LLMOutputError(f"Borrador de {palabras} palabras (se piden {MIN_PALABRAS}-{MAX_PALABRAS})")
-    if extra := cifras_no_entregadas(texto, resumen):
-        raise LLMOutputError(f"El borrador trae cifras que no están en el resumen: {extra}")
+    validar_borrador(texto, resumen)
     return texto
