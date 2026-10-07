@@ -6,6 +6,7 @@ interno de `IndexFlatIP` es el coseno. Los embeddings son los reales del stage (
 por lotes de `EMB_BATCH`, con caché en memoria por SHA-256 del texto. Un índice por stage y por modelo
 de embeddings: no se mezclan (OWASP LLM08).
 """
+from typing import Callable
 import hashlib
 import logging
 import os
@@ -43,7 +44,7 @@ def _validar(vectores: np.ndarray, n: int) -> None:
         raise IndiceError("El modelo devolvió vectores con NaN, inf o norma cero")
 
 
-def embeber(textos: list[str], cliente: ModelClient) -> np.ndarray:
+def embeber(textos: list[str], cliente: ModelClient, progreso: Callable[[int, int], None] | None = None) -> np.ndarray:
     """Vectores de los textos; solo los que no están en la caché llaman al modelo."""
     if not textos:
         return np.empty((0, 0), dtype=np.float32)
@@ -52,7 +53,8 @@ def embeber(textos: list[str], cliente: ModelClient) -> np.ndarray:
     nuevos = {c: t for c, t in zip(claves, textos) if c not in _CACHE}
     vectores = {c: _CACHE[c] for c in claves if c in _CACHE}
     if nuevos:
-        lote = np.asarray(cliente.embed(list(nuevos.values())), dtype=np.float32)  # lotes de EMB_BATCH dentro del cliente
+        pendientes = list(nuevos.values())   # lotes de EMB_BATCH dentro del cliente
+        lote = np.asarray(cliente.embed(pendientes, progreso) if progreso else cliente.embed(pendientes), dtype=np.float32)
         _validar(lote, len(nuevos))
         if _DIMS.setdefault(modelo, lote.shape[1]) != lote.shape[1]:
             raise IndiceError(f"Dimensión {lote.shape[1]} distinta de la ya vista para {modelo} ({_DIMS[modelo]})")
@@ -106,7 +108,8 @@ class Indice:
         return self.faiss.search(consulta, min(k, len(self)))
 
 
-def construir_indice(secciones: list[Seccion], cliente: ModelClient, documentos: dict[str, str] | None = None) -> Indice:
+def construir_indice(secciones: list[Seccion], cliente: ModelClient, documentos: dict[str, str] | None = None,
+                     progreso: Callable[[int, int], None] | None = None) -> Indice:
     """Sub-chunkea las secciones hoja, embebe con prefijo de contexto y arma el índice.
 
     `documentos` traduce `doc_id` -> nombre del documento para el prefijo (si falta, se usa el `doc_id`).
@@ -122,4 +125,4 @@ def construir_indice(secciones: list[Seccion], cliente: ModelClient, documentos:
     if not subs:
         raise ValueError("No hay secciones con texto para indexar")
     log.info("Indexando %d secciones en %d sub-chunks", len(secciones), len(subs))
-    return Indice(subs, embeber(textos, cliente))
+    return Indice(subs, embeber(textos, cliente, progreso))

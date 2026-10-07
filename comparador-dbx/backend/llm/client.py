@@ -8,6 +8,7 @@ El SDK ya reintenta 429 y 5xx con backoff exponencial (`max_retries=LLM_RETRIES`
 Los dos textos fijos de este archivo (el del reintento de JSON y el del ping) son
 mensajes técnicos del cliente, no prompts del producto: esos viven en `backend/prompts/`.
 """
+from typing import Callable
 import json
 import logging
 import time
@@ -120,8 +121,10 @@ class ModelClient:
             raise clasificar(e) from e
         return r.choices[0].message.content or ""
 
-    def embed(self, textos: list[str]) -> np.ndarray:
-        """Embeddings por lotes de `EMB_BATCH`: matriz float32 con cada fila de norma 1."""
+    def embed(self, textos: list[str], progreso: Callable[[int, int], None] | None = None) -> np.ndarray:
+        """Embeddings por lotes de `EMB_BATCH`: matriz float32 con cada fila de norma 1.
+
+        `progreso(hechos, total)` se llama tras cada lote (para barras de progreso)."""
         cliente, modelo = self.emb()
         vectores = []
         for i in range(0, len(textos), self.s.EMB_BATCH):
@@ -131,6 +134,8 @@ class ModelClient:
                 log.error("Fallo de embeddings %s: %s", modelo, redact(str(e)))
                 raise clasificar(e) from e
             vectores += [d.embedding for d in r.data]
+            if progreso:
+                progreso(min(i + self.s.EMB_BATCH, len(textos)), len(textos))
         m = np.array(vectores, dtype=np.float32)
         return m / np.linalg.norm(m, axis=1, keepdims=True)
 
