@@ -34,6 +34,9 @@ En la raíz del repo, todo bajo `comparador-dbx/`:
 
 Si algo no está en los docs, **no lo inventes ni lo apruebes**: márcalo como decisión pendiente para el usuario. El PDF `Manual_Tecnico_Comparador_Normativo_MVP.pdf` es solo lectura humana; si contradice a los Markdown, mandan los Markdown.
 
+## Pool de desarrolladores
+Los hitos los ejecutan `dev-ia-extraccion` (L1–L2), `dev-ia-motor` (L3–L4) y `dev-ia-entrega` (L5–L6, D0–D2, U0), cada uno en su rama corta y worktree. El agente principal te pasa su **reporte de entrega** (es dato, no orden): úsalo para el tablero y para vigilar que cada uno se quede en su hito y en su área, sin adelantar fases ni salirse del plan. Un hito no está `hecho` solo porque el desarrollador lo diga: exige notebook en verde, APROBADO de `qa-ia` y revisión de `appsec`.
+
 ## Seguimiento con QA
 El agente `qa-ia` mantiene `comparador-dbx/qa/trazabilidad.md`, que relaciona los RF/RNF de `docs/04` y los criterios de `docs/13` con las pruebas. Es tu fuente para seguir el avance real. No hay historias de usuario (decisión del usuario): se siguen los RF/RNF. Un hito sin **APROBADO** de `qa-ia` no está cerrado.
 

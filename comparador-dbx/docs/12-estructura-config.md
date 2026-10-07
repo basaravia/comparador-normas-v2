@@ -33,8 +33,8 @@ comparador-dbx/
 Los módulos marcados `(repo)` se toman del repositorio existente.
 
 ## Dependencias permitidas (backend)
-`fastapi`, `uvicorn`, `python-multipart`, `pydantic>=2`, `pymupdf`, `docling` (versión del repo: 2.55.1), `faiss-cpu`, `numpy`, `pandas`, `openpyxl`, `openai` (un solo SDK para Groq, Ollama, Docker Model Runner y Foundry, que exponen API compatible con OpenAI), `python-dotenv`, `pytest`, `httpx`.
-Solo para desarrollo: `jupyter` (notebooks de la fase L), `pytest-cov` (coverage) y `deepeval` (evaluación de IA, sin telemetría; elegido frente a RAGAS porque no arrastra LangChain: 36 paquetes frente a 62).
+`fastapi`, `uvicorn`, `python-multipart`, `pydantic>=2`, `pymupdf`, `docling` (2.134.0: la 2.55.1 de la v1 tenía 59 CVE, docs/14 #22), `faiss-cpu`, `numpy`, `pandas`, `openpyxl`, `openai` (un solo SDK para Groq, Ollama, Docker Model Runner y Foundry, que exponen API compatible con OpenAI), `python-dotenv`, `pytest`, `httpx`.
+Solo para desarrollo: `jupyter` (notebooks de la fase L), `pytest-cov` (coverage) y `ragas` (evaluación de IA, en `requirements-eval.txt` y entorno propio: exige `openai<2` y la app usa `openai` 3.x; sin telemetría). `deepeval` se descartó porque `deepeval 4.2.8` exige `click<8.4` y choca con `transformers 5.x`.
 Cualquier otra requiere justificación.
 
 ## Variables de configuración

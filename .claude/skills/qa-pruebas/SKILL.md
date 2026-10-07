@@ -16,7 +16,7 @@ source ~/miniconda3/etc/profile.d/conda.sh && conda activate comparador_v2
   - `markers = integracion: usa los modelos reales del stage (gasta tokens)`
   - `addopts = -q`
 - **`tests/conftest.py`**:
-  - pone `DEEPEVAL_TELEMETRY_OPT_OUT=YES` antes de cualquier import;
+  - pone `RAGAS_DO_NOT_TRACK=true` antes de cualquier import;
   - añade `comparador-dbx/` al `sys.path`;
   - define una fixture `cliente` (el `ModelClient` real) **solo** para las pruebas de integración.
 - **Archivos**: un `test_<módulo>.py` por módulo del backend (`test_validation.py`, `test_config.py`, …). Los datos de prueba pequeños van en `tests/datos/`. Los PDFs de prueba se generan en `tmp_path` con pymupdf, como en `notebooks/01_ingesta.ipynb`. Los MOCK están en `samples/`.

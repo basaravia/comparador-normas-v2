@@ -24,5 +24,7 @@ Origen: `../../comparador-normativas-ec-v1` (clon de `basaravia/comparador-norma
 |---|---|---|
 | `backend/config.py` | `settings.py` | Sin secret scope ni `databricks-sdk`; valores iniciales solo en `config/.env.example`, sin defaults en código; carga de prompts desde archivo |
 | `backend/core/errors.py` | `errors.py` | Sin ramas de LangChain/Vertex; código `ERR-*` y mensaje de negocio por error (`docs/05`) |
+| `backend/extraction/docling_extractor.py`, `docling_worker.py` | `providers.py` (`_build_pdf_pipeline_options`, `build_document_converter`) | Solo las opciones de Docling (`do_ocr`, tablas, dispositivo). Nuevo: subproceso con timeout, cola de 1 worker, caché SHA-256, tandas de páginas y mapeo a los tipos de docs/07 |
+| `backend/extraction/sectioner.py`, `patterns.py` | — (módulos nuevos, docs/07; la v6 no tiene seccionado equivalente) | Cascada patrones → tipografía (PyMuPDF) → longitud, con el catálogo de regex de docs/07 reescrito sin costo cuadrático |
 | `backend/ingest/*` | — (módulos nuevos, docs/06) | La v6 no tiene ingesta equivalente: validación, metadatos y clasificador se escribieron según la spec |
 | `backend/llm/client.py` | `providers.py` (`ProviderSpec.resuelto`, `_cliente_azure`, `_validar_azure`) | Sin LangChain: solo SDK `openai` (Groq, Ollama, Docker Model Runner, `AzureOpenAI`); JSON validado con Pydantic y 1 reintento |
