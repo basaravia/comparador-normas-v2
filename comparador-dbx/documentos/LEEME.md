@@ -27,3 +27,19 @@ NORMAS_DIR=/ruta/completa/a/mis/normas
 ```
 
 En Databricks, define `NORMAS_DIR` como variable de entorno apuntando a donde subas los PDF.
+
+## Modelos de Docling sin acceso a Hugging Face (red bloqueada)
+Docling descarga ~0,5 GB de modelos de `huggingface.co` la primera vez. Si tu red lo bloquea verás `ERR-EXT-004` (en el log: `SSLError ... huggingface.co`).
+Dos salidas:
+
+1. **Variables de red:** el extractor pasa a Docling `HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY`, `SSL_CERT_FILE` y `REQUESTS_CA_BUNDLE`. Si tu empresa usa proxy o certificado propio, defínelas en el entorno antes de abrir el notebook.
+2. **Modelos locales (sin red):** copia la caché de modelos y trabaja sin conexión.
+   ```
+   # 1) Descomprime en la caché de Hugging Face (crea los enlaces models--docling-project--* -> models--ds4sd--*)
+   mkdir -p ~/.cache/huggingface/hub
+   tar xzf docling-modelos.tar.gz -C ~/.cache/huggingface/hub
+   # 2) En config/.env
+   HF_HUB_OFFLINE=1
+   ```
+   `docling-modelos.tar.gz` (~470 MB) sale de una máquina donde Docling ya descargó los modelos: `~/.cache/huggingface/hub/models--ds4sd--docling-layout-heron` y `models--ds4sd--docling-models`, más dos enlaces con el nombre nuevo `docling-project--...` que apuntan a esas carpetas.
+   Con `HF_HUB_OFFLINE=1` Docling no intenta conectarse; si falta un modelo falla con `ERR-EXT-004`.
