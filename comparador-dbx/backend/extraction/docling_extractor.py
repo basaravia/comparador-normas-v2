@@ -99,6 +99,8 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
         def cortar():
             vencio.set()
             _matar(proc, signal.SIGTERM)
+            # Si el hijo ignora SIGTERM, a los 5 s se le mata sin más (cierra stdout y libera el bucle de lectura).
+            threading.Timer(5, _matar, (proc, signal.SIGKILL)).start()
 
         reloj = threading.Timer(s.DOCLING_TIMEOUT_S, cortar)
         reloj.start()
