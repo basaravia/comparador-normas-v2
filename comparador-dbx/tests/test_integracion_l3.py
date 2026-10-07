@@ -94,8 +94,8 @@ def l3():
     i_manual = construir_indice(manual, cliente, NOMBRES)
     t_indexar = time.perf_counter() - t0
 
-    num = lambda x: int(re.search(r"\d+", x.identificador).group())
-    articulos = {x.id for x in lafit if 31 <= num(x) <= 48}
+    num = lambda x: int(m.group()) if (m := re.search(r"\d+", x.identificador)) else None
+    articulos = {x.id for x in lafit if x.nivel == "articulo" and 31 <= (num(x) or 0) <= 48}
     secciones = {x.id for x in manual}
     t0 = time.perf_counter()
     pares, stats = construir_pares(i_norma, i_manual, articulos, secciones)
