@@ -1,7 +1,7 @@
 """Extracción de texto con Docling (docs/07 §1).
 
 - Cola de **1 worker** a nivel de módulo: Docling nunca corre en paralelo (CLAUDE.md, regla 7).
-- Docling corre en un **subproceso** (`docling_worker`) que se mata con `terminate()` al vencer
+- Docling corre en un **subproceso** (`docling_worker`) que se mata con `killpg` al vencer
   `DOCLING_TIMEOUT_S`: un hilo no se puede cortar y seguiría gastando CPU y RAM.
 - Antes de extraer se llama a `validar_pdf` (límites, escaneo, cabecera).
 - **Caché por SHA-256** en memoria: el mismo PDF no vuelve a pasar por Docling.
@@ -40,7 +40,7 @@ _COLA = ThreadPoolExecutor(max_workers=1)                       # Docling nunca 
 ENTORNO_HIJO = {"PATH", "HOME", "LANG", "TMPDIR", "CONDA_PREFIX", "VIRTUAL_ENV", "PYTHONPATH", "LD_LIBRARY_PATH"}
 MAX_CACHE = 8                                                   # PDFs en memoria (RAM acotada)
 _CACHE: dict[str, list[dict]] = {}                              # sha256 → bloques
-_COMANDO = [sys.executable, "-m", "backend.ingest.docling_worker"]  # reemplazable en pruebas del control
+_COMANDO = [sys.executable, "-m", "backend.extraction.docling_worker"]  # reemplazable en pruebas del control
 
 
 def limpiar_cache() -> None:

@@ -211,31 +211,96 @@ Observación fuera del notebook (medición aparte con el mismo código): la vali
   - **V2:** un PDF truncado que conserva texto en ≥ 60 % de las páginas se acepta con advertencia y `paginas` cuenta también las vacías.
 - **A vigilar en L5:** los metadatos y textos llegan al Excel: neutralizar el prefijo de fórmula (`=`, `+`, `-`, `@`).
 
-## L2 · Seccionado (en curso)
+## L2 · Seccionado (entregado a `qa-ia` y `appsec`; sin cerrar)
 
-**Estado real (auditoría del 6 oct 2026):** esqueleto subido por la herramienta `agy` sin pasar por `product-owner`, `qa-ia` ni `appsec`. **El criterio de L2 no está cumplido ni medido.** Las afirmaciones anteriores de "hecho", "cumplido" y "qa-ia APROBADO" no tenían respaldo y se retiraron.
+**Criterio (docs/13):** los artículos de la norma LA/FT coinciden con el conteo manual (≥ 95 %); volver a procesar el mismo PDF usa la caché. **Medido en `notebooks/02_seccionado.ipynb`** (Docling real, `taskset -c 0,1`, `OMP_NUM_THREADS=2`): **99 de 99 artículos (100 %), 0 falsos positivos, 0 falsos negativos**; la segunda llamada tarda 0,242 s (primera: 627,5 s). El hito lo cierran `qa-ia` y `appsec`, no el desarrollador.
 
-**Criterio (docs/13):** los artículos de la norma LA/FT coinciden con el conteo manual (≥ 95 %); volver a procesar el mismo PDF usa la caché.
+### Módulos (`backend/extraction/`, estructura de docs/12)
 
-### Qué existe
-
-| Archivo | Estado |
+| Archivo | Qué hace |
 |---|---|
-| `backend/models.py` | `Seccion` (Pydantic), 100 % cubierto. |
-| `backend/sectioner.py` | Nivel 1 de la cascada (patrones). Prueba de humo de solo lectura sobre `L1-XVI-cap-III.pdf` (norma corta de la SB, texto de pymupdf): 8 artículos detectados, 8 contados con una regex independiente, 0 falsos positivos y 0 negativos. **No es la norma LA/FT ni un conteo manual.** `extraer_jerarquia` y `aplicar_cascada` están vacíos (`pass`). |
-| `backend/ingest/docling_parser.py` | **Extracción real** (sin fallback simulado). API: `extraer(ruta, progreso=None) -> list[dict]`, `limpiar_cache()`, `ExtraccionError`. Valida con `validar_pdf` antes; cola de 1 worker a nivel de módulo; Docling en un subproceso que se mata con `terminate()` al vencer `DOCLING_TIMEOUT_S`; caché en memoria por SHA-256. Errores: `ERR-EXT-001` (fallo de Docling), `ERR-EXT-002` (timeout), `ERR-EXT-003` (sin texto); los de validación (`ERR-ING-001..003`) se propagan. Sin pruebas pytest todavía. |
-| `backend/ingest/docling_worker.py` | Subproceso: `do_ocr=False`, `generate_page_images=False`, tablas `DOCLING_TABLES`, `num_threads=DOCLING_THREADS`, `DOCLING_ARTIFACTS`; convierte por tandas de `DOCLING_CHUNK_PAGES` páginas (acota la RAM y da el progreso); exporta las **tablas** como markdown y descarta encabezados y pies de página. Emite `{"texto","pagina","tipo"}` con el `label` de Docling. |
-| `tests/test_sectioner.py` | 4 pruebas: ART./Art./ARTÍCULO, libro/título/capítulo, literales dentro del artículo y duplicados (`#2`). No cubren SEC., romanos, 3.2.1 ni "PRIMERA.-". |
+| `docling_extractor.py` | **Extracción real** (antes `ingest/docling_parser.py`). API: `extraer(ruta, progreso=None) -> list[dict]`, `limpiar_cache()`, `ExtraccionError`. Valida con `validar_pdf`; cola de 1 worker; Docling en un subproceso (`python -m backend.extraction.docling_worker`) que se mata con `killpg` al vencer `DOCLING_TIMEOUT_S`; caché en memoria por SHA-256 (máx. 8 PDFs). Errores `ERR-EXT-001..003`; los de validación (`ERR-ING-*`) se propagan. |
+| `docling_worker.py` | Subproceso de Docling (`do_ocr=False`, tablas `DOCLING_TABLES`, tandas de `DOCLING_CHUNK_PAGES` páginas). **Mapeo a docs/07 §1:** cada bloque sale `{"texto", "pagina", "tipo": encabezado|parrafo|tabla|lista, "nivel"?}`: `title`/`section_header` → `encabezado` (`nivel` 0 para el título, `level` de Docling para los demás), `list_item` → `lista`, tablas → `tabla` (markdown), todo lo demás → `parrafo`. Se descartan encabezados y pies de página. |
+| `patterns.py` | Catálogo **multi-esquema** de `Patron(clave, nivel, rango, regex, siempre)` (ver "Esquemas soportados"), `numero()` para comparar numeraciones (`3.2.1`, `IV`, `B`, `DÉCIMO PRIMERO`, `5-A`) y `CORTE_ARTICULOS`. |
+| `sectioner.py` | Cascada. API: `parsear_bloques(bloques, doc_id, tipo_doc, pdf=None, avisos=None) -> list[Seccion]`; `SeccionadoError` (`ERR-SEC-001`). `pdf` habilita la tipografía real del nivel 2; `avisos` recibe advertencias (artículo duplicado). Se eliminaron `extraer_jerarquia` y `aplicar_cascada` (vacíos): la cascada es `parsear_bloques`. |
 
-### Qué falta (decisiones del usuario, 6 oct 2026: reabrir y completar; timeout en subproceso)
-Hecho en `feat/l2-extraccion-docling` (sin APROBADO todavía): Docling real, fallback simulado quitado, cola de 1 worker, timeout en subproceso, caché SHA-256, `validar_pdf` previo, progreso por tanda de páginas, `docling==2.55.1` en `requirements.txt`.
+### Cómo funciona la cascada
+1. **Patrones** (`estrategia="patron"`). Cada bloque se compara solo por su primera línea (≤ 300 caracteres). Un patrón es "del documento" si aparece ≥ 3 veces con numeración creciente (racha no decreciente con al menos una subida: tolera duplicados y reinicios como `CAPÍTULO I` en cada título). Anidación por profundidad con una pila; la sección lleva su `ruta`. Hojas: en normativas, los artículos (y las disposiciones `PRIMERA.-`); en manuales, las secciones sin hijos (numerales `4.1`, `5.1.2` o romanos sin numerales). Los literales a), b) y, en normativas con artículos, los numerales y romanos, quedan dentro del texto del artículo. Un `Art. 317` citado dentro de una disposición reformatoria queda en el texto de esa disposición. Un identificador repetido: si el primero no tiene cuerpo es una entrada del índice y se descarta; si ambos tienen cuerpo se conservan con sufijo `#2` y un aviso.
+2. **Tipografía** (`estrategia="tipografia"`), si ningún patrón aplica: encabezados = líneas del PDF con tamaño mayor al del cuerpo o en negrita (PyMuPDF `get_text("dict")`) más los bloques `encabezado` de Docling; la profundidad sale del tamaño de fuente (o del `nivel` de Docling); mínimo 3 encabezados.
+3. **Longitud** (`estrategia="longitud"`, `seccionado_incierto=True`): grupos de ~`SECCION_CHARS` (1.200) caracteres sin partir párrafos.
+Lo anterior a la primera sección (portada, memorando, índice) no se emite. Los padres (libro, título, capítulo, romano con numerales) se emiten con `es_hoja=False` y su propio texto; solo las hojas se evalúan.
 
-Pendiente:
-1. Mapeo a la salida de docs/07 §1: `tipo` `encabezado|parrafo|tabla|lista` y `nivel` (hoy se emite el `label` crudo de Docling).
-2. Cascada completa (docs/07 §2): tipografía con PyMuPDF, longitud (~1.200 caracteres) con `seccionado_incierto=True` y regla de "≥ 3 apariciones con numeración creciente". `extraer_jerarquia` y `aplicar_cascada` siguen vacíos.
-3. `appsec` (to-be): las regex con `\s*` al inicio de línea tienen costo cuadrático (8.000 saltos de línea → 9 s por bloque).
-4. Ejecutar `02_seccionado.ipynb` con la norma LA/FT y medir ≥ 95 % contra el conteo manual.
-5. `qa-ia`: pruebas de extracción, de la cascada y de integración con Docling real; coverage ≥ 80 % por módulo. Sin su APROBADO, L2 no se cierra.
+### Cifras literales del notebook (2 CPU, stage sandbox, 7 oct 2026, tercera ejecución)
+```
+núcleos permitidos: [0, 1] · OMP_NUM_THREADS = 2
+591 bloques en 627.5 s · RAM pico del subproceso 2430 MB      (60 páginas)
+segunda llamada: 0.242 s (primera: 627.5 s) · mismo resultado: True
+143 secciones en 0.552 s (con tipografía de PyMuPDF) · estrategias: {'patron': 143}
+detectados: 99 · esperados: 99 · coinciden: 99 (100.0 %) · falsos positivos: 0 · falsos negativos: 0
+== LA/FT   rutas correctas: 98/99 (99.0 %) · inciertas: 1 de 143 (Artículo 1, ruta incorrecta y marcada) · encabezados validados aceptados con < 3 apariciones: 0
+== L1-XVI-cap-III   rutas correctas: 8/8 (100.0 %) · inciertas: 0 de 13 · encabezados validados aceptados con < 3 apariciones: 5 ['LIBRO I', 'TÍTULO XVI', 'CAPÍTULO III', 'SECCIÓN I', 'SECCIÓN II']
+esquemas sintéticos (romanos, arábigos, letras, ordinales, Capítulo/Sección numéricos y en palabras, 5-A/bis, jerarquía completa): 8 de 8 ✅
+MOCK-DEMO-01 {'hojas': 19, 'numerales': 8, 'esperados': 8, 'estrategia': ['patron'], 'inciertas': 0}
+MOCK-DEMO-02 {'hojas': 12, 'numerales': 0, 'esperados': 2, 'estrategia': ['patron'], 'inciertas': 0}
+MOCK-DEMO-03 {'hojas': 22, 'numerales': 11, 'esperados': 11, 'estrategia': ['patron'], 'inciertas': 0}
+bloques hostiles de 100 KB (14 casos, incluidos los nuevos esquemas: 'A.', DÉCIMO + espacios, 'Artículo 5' + guiones/bis, 'I.', tabuladores): 3,4 a 29,6 ms
+bloque sobre el límite → ERR-SEC-001
+```
+- **Conteo manual:** regex independiente `^[ \t]*Art[ií]culo[ \t]+(\d+)[ \t]*\.?[ \t]*-` sobre el texto de PyMuPDF: 99 (1–99). Casos dudosos revisados a mano: `Art. 317, 366, 367, 552, 553` son artículos del COIP que transcribe la Disposición Reformatoria Primera (no son de la ley; quedan en su texto) y una continuación de línea ("artículo anterior…"). Patrones que fallaron: ninguno tras el ajuste de abajo.
+- **Hallazgo real de Docling:** junta varios artículos en un solo párrafo sin salto de línea (`"… masiva. Artículo 4.- … Artículo 5.- …"`). Con el seccionado ingenuo solo salían 44 de 99; `_partir` corta el bloque antes de `Artículo N.-` / `PRIMERA.-` cuando va tras `.`, `;`, `:` o comilla de cierre (o tras un salto de línea): 99 de 99.
+- La norma tiene 60 páginas (el enunciado hablaba de 55). Tiempo 627,5 s con la Pi compartida con otros procesos; `DOCLING_TIMEOUT_S=1500` da margen.
+- **Limitación aceptada (MOCK-02):** da 0 numerales frente a 2 esperados, porque `4.1` y `4.2` (< 3 apariciones) quedan como texto de la sección `IV` (decisión del usuario: la regla ≥ 3 no tiene excepción para numerales). El documento sigue en el nivel 1 (`patron`, 12 hojas, 0 inciertas) porque sus 12 romanos cumplen la regla con el patrón `romano`, que se mantiene (decisión del usuario: conservar varios métodos de numeración); `romano` es una diferencia con el catálogo de docs/07.
+- **Limitación aceptada (Artículo 1 de la LA/FT):** Docling lo emite antes de `CAPÍTULO I`; el árbol lo marca `seccionado_incierto` y no inventa la ruta (1 de 99).
+- Niveles 2 y 3 probados con Docling real sobre PDFs generados con PyMuPDF (encabezados 16 pt en negrita sin numeración → 5 secciones `tipografia`; texto corrido → 2 bloques `longitud` inciertos).
+
+### Esquemas de encabezado soportados (`patterns.py`) y cómo añadir uno
+El nivel lo fija siempre el patrón (`rango`); la regla ≥ 3 apariciones (o encabezado validado) decide cuáles valen en cada documento. Precedencia: libro > título > capítulo > sección > artículo > numeral > literal.
+
+| Esquema | Ejemplos | Patrón (`clave`) |
+|---|---|---|
+| Romanos | `I.  INTRODUCCIÓN`, `XII.`, `LIBRO I`, `Capítulo IV` | `romano`, `libro`, `titulo`, `capitulo`, `seccion` |
+| Arábigos y jerárquicos | `1. Introducción`, `1.1`, `3.2.1`, `Sección 2`, `Capítulo 3` | `numeral` (profundidad = nº de componentes), `seccion`, `capitulo` |
+| Letras | `A.  Objetivo`, `B.`; los literales `a)`, `iv)` no abren sección | `letra`, `literal` |
+| Ordinales en palabras | `PRIMERA.-`, `Primero.-`, `SEGUNDO`, `DÉCIMO PRIMERO`, `VIGÉSIMA`, `ÚNICA`, `Capítulo Primero`, `Sección Segunda` | `disposicion`, y el número de `libro`/`titulo`/`capitulo`/`seccion` |
+| Mezclas del artículo | `Artículo 5`, `Art. 5`, `Artículo 5-A`, `Art. 5 bis`, `ARTÍCULO ÚNICO` | `articulo` (sufijo en el grupo `suf`) |
+| Encabezados sin número | `DISPOSICIONES GENERALES/TRANSITORIAS/…`, `DISPOSICIÓN FINAL` | `disposiciones`, `disposicion_final` (`siempre=True`) |
+
+**Añadir un esquema** (solo `patterns.py`): (1) regex con los grupos `id` (texto del identificador) y `num` (su numeración; `suf` opcional); (2) añadir un `Patron("clave", "nivel", rango, regex)` a `PATRONES`, de más específico a más general; (3) si el número es de un tipo nuevo, enseñárselo a `numero()`; (4) si la clave es nueva, dar su abreviatura en `ABREVIATURA` (`sectioner.py`, para el `id`). Reglas: anclar con `[ \\t]*` (nunca `^\\s*`), nada de dos `*`/`+` seguidos sobre el mismo carácter, espacios acotados (`{0,3}`), y probar con 100 KB hostiles (celda 7 del notebook). Ambigüedad conocida: `I`, `V`, `X`, `L`, `C`, `D`, `M` son romanos y letras a la vez; cada esquema cuenta sus apariciones por separado y, entre los activos, gana el primero del catálogo (`romano` antes que `letra`).
+
+### Jerarquía (nivel 1)
+- **El nivel sale del tipo de patrón** (Libro > Título > Capítulo > Sección > Artículo > numeral), no de la tipografía: en las normas TÍTULO y CAPÍTULO tienen la misma (12 pt, negrita, centrado, mayúsculas; 0 bookmarks en `get_toc`). `CAPITULO` sin tilde y `Art.` abreviado ya los cubren las regex; el encabezado partido (`CAPÍTULO I` + título en la línea o el bloque siguiente) llena `titulo`.
+- **Filtro tipográfico** (`negritas_pdf`, PyMuPDF `get_text("dict")`): un candidato de libro/título/capítulo/sección/artículo solo cuenta si su identificador abre una línea en negrita; solo se aplica a un tipo de patrón si la mayoría de sus candidatos está en negrita. En la LA/FT descartó **2** candidatos (`Art. 317` y `Art. 366` del COIP, pág. 36 y 38); una regex laxa (`Artículo N` sin exigir `.-`) habría marcado 44 bloques y ninguno quedó sin negrita: con el catálogo ya estricto el filtro aporta poco medible (2 casos), pero es barato y deja un aviso.
+- **Encabezados validados con < 3 apariciones** (decisión del usuario, 7 oct 2026): libro/título/capítulo/sección con menos de 3 apariciones se aceptan si son patrón + negrita + línea propia (abren el bloque) y el árbol sigue consistente (`_validar` los marca inciertos si rompen la jerarquía o la numeración decreciente; su primer número no tiene que ser 1: `TÍTULO XVI`, `CAPÍTULO III`). Cada aceptación deja un aviso `Encabezado aceptado…`. La regla de ≥ 3 sigue para todo lo demás (numerales `N.M`, romanos, letras, artículos).
+- **Validación del árbol** (`_validar`, solo patrones; la ruta nunca se inventa, solo se marca `seccionado_incierto` y un aviso): hijos de niveles distintos bajo un mismo padre (un artículo antes del capítulo que lo contiene); numeración decreciente; capítulo/sección/numeral/disposición que no empiezan en 1 al abrir su padre; artículos que no crecen en todo el documento; un numeral `N.M` bajo un padre con otro número. Lo que cuelga de un nodo incierto también lo es. Un nivel ausente (la LA/FT no tiene Libro) simplemente no está en la ruta.
+- **Si patrón y tipografía discrepan manda el patrón:** el nivel nunca lo decide la tipografía. Lo único que la tipografía hace es filtrar candidatos (ver arriba) y avisar.
+- **Resultado** (referencia = regex independiente sobre PyMuPDF): LA/FT **98 de 99 rutas correctas (99,0 %)**; la que falla es el Artículo 1, porque Docling lo emite *antes* de `CAPÍTULO I` (orden de lectura): queda en `TÍTULO I` y marcado incierto. `L1-XVI-cap-III` **8 de 8** (antes de aceptar los encabezados validados: 0 de 8, porque LIBRO, TÍTULO y CAPÍTULO aparecen una vez y SECCIÓN dos).
+- **`HeadingHierarchyOptions(enabled=True)` de Docling 2.134** (con `generate_parsed_pages=True`, una sola prueba sobre `L1-XVI-cap-III.pdf`, 52 s): detectó 3 encabezados (`LIBRO I`, `SECCIÓN I`, `SECCIÓN II`), **los tres con `level` 1**; `TÍTULO XVI` y `CAPÍTULO III` no salieron como encabezados. No aporta nada medible; **no se adopta**.
+
+### Seguridad del seccionado
+- **ReDoS corregido (appsec, ALTA):** el lookahead de `CORTE_ARTICULOS` tenía dos `[ \\t]*` adyacentes (`'. Artículo 1' + 100 KB de espacios` tardaba más de 20 s); ahora `[ \\t]{0,3}`. Verificado: 99/99 artículos siguen saliendo y los casos con espacios y tabuladores tras `Artículo 1`, `PRIMERA` y `\\nArtículo 1` tardan 3,6–4,2 ms (celda 7 del notebook). Revisadas las demás regex de `patterns.py`: ninguna otra tiene dos `*` seguidos sobre el mismo carácter (`_FIN` también quedó acotado). Docstring de `docling_extractor.py` corregido (`killpg`).
+- Regex sin costo cuadrático: `[ \t]*` en vez de `^\s*`+MULTILINE, `.match()` sobre la primera línea acotada y corte lineal de bloques. Un bloque hostil de 100 KB tarda ≤ 27 ms (objetivo < 0,1 s). La regex original del catálogo con 8.000 saltos de línea tardó 0,56 s en esta medición (docs/14 hablaba de 9 s con otro texto).
+- Límite de longitud: un bloque de más de `SECCION_BLOQUE_MAX` (200.000) caracteres lanza `SeccionadoError` (`ERR-SEC-001`, mensaje de negocio). LLM10 / ASI05: sin `eval`, sin shell; el subproceso de Docling no cambia (entorno mínimo, `killpg`).
+- Los manuales son entrada no confiable (LLM04): el seccionado no ejecuta ni interpreta el texto, solo lo parte.
+- `bandit -q -r backend`: sin hallazgos. Sin dependencias nuevas.
+
+### Configuración nueva (`config/.env.example`, leída en `backend/config.py`)
+`SECCION_CHARS=1200` [CALIBRAR] y `SECCION_BLOQUE_MAX=200000`.
+
+### Diferencias con la spec (docs/07) y decisiones técnicas
+1. **Catálogo ajustado y multi-esquema** (nuevos: `letra`, ordinales masculinos y compuestos, sufijos `5-A`/`5 bis`, números arábigos y ordinales en libro/título/capítulo/sección; ver "Esquemas soportados"): `[ \t]*` y primera línea (no MULTILINE); `articulo` exige terminador (`.-`, `.`, `:`, `-` o fin de línea), no `\s` (evita "Artículo 5 de la ley" al inicio de línea); las ordinales (`PRIMERA`) exigen `.-`/`-` (evita "Primera vez…"); `numeral` y `romano` distinguen mayúsculas. Añadidos: `romano` (`IV.  ALCANCE`, los manuales MOCK; la spec lo menciona pero no está en el catálogo), `disposiciones` (DISPOSICIONES GENERALES/TRANSITORIAS/…, padre sin número, siempre activo) y `disposicion_final`. `literal` está en el catálogo pero no abre sección.
+2. **Sin excepción a la regla de ≥ 3** (decisión del usuario, 7 oct 2026): se aplica siempre. Se retiró la excepción de numerales bajo un padre.
+3. **Jerarquía de Docling (nivel 1):** la spec dice "patrones + jerarquía de encabezados de Docling". Aquí el nivel 1 usa solo patrones; los `encabezado` de Docling entran en el nivel 2. En esta norma Docling devuelve `nivel` 1 en los 88 encabezados, así que no aporta jerarquía.
+4. **Padres emitidos** (`es_hoja=False`) con su texto; id `N1:T-2/C-3/ART-15` (abreviaturas `L`, `T`, `C`, `SEC`, `R`, `ART`, `DISP`, `N` + número), no el ejemplo con `L1`.
+5. **Índice del manual:** una entrada de índice repetida sin cuerpo se descarta (la spec no lo trata); un duplicado real con cuerpo lleva `#2` y un aviso.
+6. **Limitación aceptada por el usuario (anexos):**  lo anterior a la primera sección no se emite. Limitación conocida: lo posterior a la última sección (en la LA/FT, las firmas de respaldo y el memorando final tras la Disposición Final) queda dentro del texto de esa última sección (5.669 caracteres).
+7. **Limitación aceptada por el usuario:** un patrón con menos de 3 apariciones que no sea libro/título/capítulo/sección validado (negrita) queda como texto de la sección anterior.
+8. Un `Art. 317` citado se ignora solo dentro de una disposición reformatoria (`disposiciones` abierta).
+9. `models.py` ya no existe: el contrato vive en `backend/models/schemas.py` (sin cambios).
+
+### Para `qa-ia` (tests/ no se tocó)
+- `tests/test_sectioner.py` importa `backend.sectioner` (movido a `backend.extraction.sectioner`) y `extraer_jerarquia`/`aplicar_cascada` (eliminadas). `from backend.models import Seccion` sigue valiendo.
+- Sus 3 fixtures de seccionado usan 1–2 apariciones de un patrón, que por la regla de docs/07 (≥ 3 con numeración creciente) ya no producen estructura: hay que ampliarlas a ≥ 3. Los ids pasan de `ARTICULO-1` a `ART-1` (el duplicado sigue siendo `#2`); `ruta` sigue siendo el identificador (`["LIBRO I", "TÍTULO II", "CAPÍTULO III"]`).
+- Sin pruebas todavía: `docling_extractor` (el comando del subproceso es `_COMANDO`), `patterns.numero`, `_partir`, `negritas_pdf`, `_validar` (cada regla), tipografía y longitud. Ojo: `parsear_bloques(..., pdf=...)` ahora abre el PDF también en el nivel 1 (filtro de negrita); sin `pdf` el filtro no corre.
 
 ### Seguridad de la extracción (`appsec`, OBSERVACIONES, corregido)
 - El subproceso recibe un **entorno mínimo** (PATH, HOME, LANG, TMPDIR, HF_*…): no le llegan `GROQ_API_KEY` ni `FOUNDRY_AI_TOKEN`. Verificado con un hijo que imprime su entorno.
@@ -267,5 +332,5 @@ La primera ejecución descargó modelos nuevos (+0,5 GB, 103 s). La versión nue
 - La Pi tiene `/tmp` en `tmpfs` de 4 GB (RAM): la instalación de Docling falló con "No space left" hasta usar `TMPDIR` en disco. En la Pi `torch` trae CUDA (`+cu130`, entorno de 6,3 GB); en Databricks (x86) se usa la versión CPU.
 
 ### Origen
-- `models.py` y `sectioner.py`: módulos nuevos según docs/07 (la v6 no tiene seccionado equivalente).
-- `docling_parser.py` y `docling_worker.py`: **nuevos**. De la v6 (`backend/src/providers.py`, `_build_pdf_pipeline_options` y `build_document_converter`) se tomó solo la idea de las opciones de Docling (`do_ocr`, modo de tablas, dispositivo); se reescribió sin LangChain, con subproceso, caché y tandas de páginas, que la v6 no tiene.
+- `extraction/sectioner.py` y `patterns.py`: módulos nuevos según docs/07 (la v6 no tiene seccionado equivalente).
+- `extraction/docling_extractor.py` y `docling_worker.py`: **nuevos**. De la v6 (`backend/src/providers.py`, `_build_pdf_pipeline_options` y `build_document_converter`) se tomó solo la idea de las opciones de Docling (`do_ocr`, modo de tablas, dispositivo); se reescribió sin LangChain, con subproceso, caché y tandas de páginas, que la v6 no tiene.

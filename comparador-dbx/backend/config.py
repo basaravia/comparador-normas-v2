@@ -70,6 +70,10 @@ class Settings:
     DOCLING_TIMEOUT_S: int = int(_env("DOCLING_TIMEOUT_S"))
     DOCLING_CHUNK_PAGES: int = int(_env("DOCLING_CHUNK_PAGES"))
 
+    # Seccionado
+    SECCION_CHARS: int = int(_env("SECCION_CHARS"))              # nivel 3: caracteres por bloque
+    SECCION_BLOQUE_MAX: int = int(_env("SECCION_BLOQUE_MAX"))    # tope de un bloque de texto (entrada hostil)
+
     # Indexación
     SUBCHUNK_TOKENS: int = int(_env("SUBCHUNK_TOKENS"))
     SUBCHUNK_OVERLAP: float = float(_env("SUBCHUNK_OVERLAP"))
