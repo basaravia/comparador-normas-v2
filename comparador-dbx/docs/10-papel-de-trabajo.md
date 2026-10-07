@@ -11,7 +11,7 @@ Es el **entregable de auditoría** y debe respetar el formato del banco.
 |---|---|
 | Nombre de la revisión | En blanco; lo llena el auditor |
 | Nombre del papel de trabajo | Plantilla: "Evaluación de cumplimiento normativo — {manual}" |
-| Objetivo | Texto estándar de plantilla, editable |
+| Objetivo | Texto estándar, editable por el auditor: «Evaluar el cumplimiento de la normativa regulatoria aplicable por parte del manual de control interno de la entidad, identificando brechas y evidencia de respaldo en ambas vías (norma → manual y manual → norma).» (aprobado por el usuario, 7 oct 2026; se cambia cuando el banco entregue su plantilla) |
 | Corte o periodo | En blanco; lo llena el auditor |
 | Fuente | Libro, título y capítulo de cada normativa analizada **versus** el manual analizado |
 | Marcas de verificación | Leyenda fija (ver abajo) |
@@ -33,14 +33,14 @@ Es el **entregable de auditoría** y debe respetar el formato del banco.
 | # | Columna | Contenido |
 |---|---|---|
 | 1 | Nombre de la normativa | Libro, capítulo, norma: identificación de la fuente |
-| 2 | Sección / Artículo | Árbol: sección con artículo anidado (ruta + identificador) y debajo el **texto en claro literal** extraído. Nunca generado |
+| 2 | Sección / Artículo | Una fila por artículo: ruta completa + identificador y debajo el **texto en claro literal** extraído. Nunca generado. No se combina por sección porque una celda combinada guarda un solo texto y se perdería el literal de cada artículo (decisión del usuario, 7 oct 2026) |
 | 3 | Manual interno | Sección del manual de respaldo (1) con identificador y **cita literal verificada**. Vacío si la marca es R, X o P |
 | 4 | Verificación | Marca codificada A / L / R / X / P, centrada, color suave por marca |
 | 5 | Comentario | Razonamiento del juez: por qué la evidencia satisface la obligación o qué elementos faltan |
 | 6 | Referencias / Evidencias | Archivo y página de la norma; archivo, sección y página del manual; similitud semántica del candidato elegido; aviso si la cita no se verificó |
 
 ### Reglas de formato
-- Árbol en Excel: celdas **combinadas verticalmente** en col. 1 (y en col. 2 a nivel sección) cuando agrupan varios artículos; ruta con separador `›` (ej. `Capítulo III › Sección 2 › Art. 15`) y el texto literal en la misma celda tras un salto de línea.
+- Árbol en Excel: celdas **combinadas verticalmente** en col. 1 (por normativa y libro/título) cuando agrupan varios artículos; la col. 2 lleva la ruta completa en cada fila; ruta con separador `›` (ej. `Capítulo III › Sección 2 › Art. 15`) y el texto literal en la misma celda tras un salto de línea.
 - Encabezado de la matriz: fondo verde institucional (`COLOR_PRIMARIO`), texto blanco, negrita. Paleta base verde y blanco, en configuración, hasta recibir el brand kit del banco.
 - `wrap_text=True`, alineación superior, paneles congelados bajo el encabezado de la matriz.
 - Anchos orientativos: 18 / 45 / 45 / 10 / 40 / 28.
@@ -60,7 +60,7 @@ Registra **todo** candidato evaluado. Defiende ante el regulador que no hubo sel
 | Similitud v1 / v2 / máxima | Scores coseno |
 | Rango v1 / v2 | Posición en el top-K de cada vía |
 | Naturaleza / Cobertura / Confianza | Salida del juez |
-| Elegido para el papel | Sí / No; si No, motivo (cobertura menor, confianza menor) |
+| Elegido para el papel | `Sí` o `No: <motivo>` (cobertura menor, confianza menor, cobertura nula, informativo, no aplica). Solo A y L tienen un par `Sí`; en R, X y P la columna 3 del papel queda **vacía** (decisión del usuario, 7 oct 2026) |
 | Comentario del juez | Texto completo |
 | Banderas | `cita_no_verificada`, `requiere_revision`, `seccionado_incierto` |
 

@@ -11,3 +11,6 @@ docling==2.134.0        # extracción de PDFs (L2); la 2.55.1 tenía 59 CVE (doc
 pillow==12.3.0          # procesa imágenes de los PDF (35 CVE en 11.3.0)
 lxml==6.1.3             # 2 CVE en 5.4.0
 transformers==5.19.0    # 9 CVE en 4.57.6
+# Papel de trabajo en Excel (L5, docs/12: pandas y openpyxl permitidas)
+pandas==3.0.6           # arma la tabla del Anexo técnico (Hoja 2) y los conteos
+openpyxl==3.1.5         # escribe el .xlsx del papel de trabajo
