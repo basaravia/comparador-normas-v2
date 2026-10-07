@@ -23,7 +23,8 @@ from backend.extraction.sectioner import parsear_bloques
 
 pytestmark = pytest.mark.integracion
 
-NORMAS = Path(os.environ.get("NORMAS_DIR", RAIZ.parent.parent / "comparador-normativas-ec-v1" / "Normativa2026"))
+from backend.config import carpeta_normas
+NORMAS = carpeta_normas()
 CAP3 = NORMAS / "L1-XVI-cap-III.pdf"
 LAFT = NORMAS / "Proyecto-de-Ley-Organica-Organica-para-Reprimir-y-Prevenir-el-Lavado-de-Activos-y-la-Financiacion-del-Terrorismo.pdf"
 BLOQUES_LAFT = Path("/tmp/claude-1000/extraccion-l2/lafit.json")

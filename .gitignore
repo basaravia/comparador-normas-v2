@@ -29,3 +29,7 @@ Manual_Tecnico_Comparador_Normativo_MVP.pdf
 !comparador-dbx/config/stages/dev.env
 !comparador-dbx/config/stages/sandbox.env
 !comparador-dbx/config/stages/mvp.env
+
+# Carpeta de PDFs de normas (se leen de aquí, no se versionan)
+/comparador-dbx/documentos/*
+!/comparador-dbx/documentos/LEEME.md

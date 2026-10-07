@@ -53,8 +53,9 @@ def test_clave_invalida_es_error_de_configuracion():
 
 
 # L1 (docs/13): los 3 MOCK salen como manual_control y la norma LA/FT como normativa.
-# Las normas reales no se versionan: se leen del clon de la v1 o de NORMAS_DIR (skip si no están).
-NORMAS = Path(os.environ.get("NORMAS_DIR", RAIZ.parent.parent / "comparador-normativas-ec-v1" / "Normativa2026"))
+# Las normas reales no se versionan: se leen de NORMAS_DIR, por defecto documentos/normas/ (skip si no están).
+from backend.config import carpeta_normas
+NORMAS = carpeta_normas()
 LAFT = ("Proyecto-de-Ley-Organica-Organica-para-Reprimir-y-Prevenir-el-Lavado-de-Activos-"
         "y-la-Financiacion-del-Terrorismo.pdf")
 
