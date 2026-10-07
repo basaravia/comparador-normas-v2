@@ -5,4 +5,8 @@ pydantic==2.13.5
 python-dotenv==1.2.4
 numpy==2.4.6
 pymupdf==1.28.2         # PDF: validación, metadatos y detección de escaneo (L1)
-docling==2.55.1         # extracción de PDFs (L2); en Databricks (x86) torch se instala solo-CPU por dependencia
+docling==2.134.0        # extracción de PDFs (L2); la 2.55.1 tenía 59 CVE (docs/14 #22). En Databricks (x86) torch se instala solo-CPU
+# Versiones mínimas con arreglo de CVE (pip-audit): fijadas aquí aunque son dependencias de docling
+pillow==12.3.0          # procesa imágenes de los PDF (35 CVE en 11.3.0)
+lxml==6.1.3             # 2 CVE en 5.4.0
+transformers==5.19.0    # 9 CVE en 4.57.6
