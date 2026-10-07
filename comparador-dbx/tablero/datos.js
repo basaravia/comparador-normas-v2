@@ -77,6 +77,9 @@ window.TABLERO = {
     { id: "P-15", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "Golden set: confirmar 2 pares por_confirmar (art. 31 -> 4.1 y art. 37 -> V de MOCK-01)",
       nota: "Golden set de 51 pares; las 2 filas por_confirmar las decide el usuario." },
 
+    { id: "P-16", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "Conjunto de mejoras tras revisar los notebooks",
+      nota: "Pendiente de las pruebas del usuario (7 oct 2026): (a) cambiar DMR_LLM_MODEL de dev a ai/gemma4 (qwen3.5 devuelve respuesta vacía); (b) mensaje claro cuando el LLM devuelve respuesta vacía (finish_reason) en lugar de JSON inválido; (c) revisar el juez de L4 y la conclusión de L5 con gemma4." },
+
     // ── Seguridad (agente appsec) ──
     { id: "S-01", fase: "L", tipo: "seguridad", estado: "por_hacer", titulo: "L4: chequeo de frases al evaluador → requiere_revision",
       nota: "Decisión del usuario (docs/14 #18)." },
@@ -232,6 +235,10 @@ window.TABLERO = {
       nota: "Tres observaciones de baja severidad para después del MVP." },
     { id: "V-10", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "classifier.py con 79 % de coverage",
       nota: "Subir a 80 % o más en el to-be." },
+    { id: "V-11", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "Diferenciar el modelo fundacional por etapa del flujo",
+      nota: "To-be (7 oct 2026): usar un modelo distinto según la tarea, p. ej. uno ligero y sin razonamiento para ingesta/clasificación y conclusión, y uno más capaz para el juez de L4; configurable por variable de entorno por etapa (LLM por etapa) en cada stage (dev, sandbox, mvp). Origen: con qwen3.5 (modelo de razonamiento) el clasificador de la ingesta devolvía respuesta vacía en dev (DMR) y con gemma4 funcionó. El usuario decide cuándo." },
+    { id: "V-12", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "Ingesta: metadatos y tipo con reglas deterministas primero y LLM de respaldo",
+      nota: "Pospuesto: propuesta B del análisis. El usuario decidió el 7 oct 2026 dejar la ingesta como está (LLM en ingesta, opción A) por ahora; queda como posible mejora." },
 
     // ── To-be de appsec (observaciones que el usuario dejó para después) ──
     { id: "S-09", fase: "L", tipo: "seguridad", estado: "hecho", titulo: "L2: timeout por documento al parsear PDFs (hito L2)",
@@ -250,6 +257,7 @@ window.TABLERO = {
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-07", texto: "main (c031b78): hecho carpetas documentos/normas y documentos/manuales (NORMAS_DIR, MANUALES_DIR), defaults.env y .env.example, barras de progreso tqdm en notebooks 01, 02, 03 y 05; nuevas tarjetas P-16 (mejoras tras revisar notebooks), V-11 (modelo por etapa) y V-12 (ingesta con reglas primero, pospuesta por decisión del usuario)." },
     { fecha: "2026-10-07", texto: "main (686dca4): L2, L3 y L5 con APROBADO de qa-ia; QA-02 corregido; golden set de 51 pares; nuevo ritmo (D-35); CI pospuesto (A-16); to-be V-07..V-10; próximo: notebooks 02, 03, 05 y luego L4." },
     { fecha: "2026-10-06", texto: "Rama fix/docling-cve: Docling 2.134.0 con pila sin CVE (D-32, V-06 hecha; D-31 descartada); RAGAS reemplaza a DeepEval (D-21 descartada, D-33, D-34); L2 sigue en curso." },
     { fecha: "2026-10-06", texto: "L2 sigue en curso: extracción real con Docling (321c377), cola de 1 worker, caché y timeout en subproceso; P-06, P-08, S-09, S-12 hechas; mediciones en la Pi; CVE de Docling aceptados (D-31, V-06)." },
