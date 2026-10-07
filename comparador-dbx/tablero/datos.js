@@ -12,7 +12,7 @@
 window.TABLERO = {
   actualizado: "2026-10-07",
   rama: "main",
-  ultimo_commit: "686dca4 fix(l3): defectos QA-L3-01..03, Settings sin secretos en repr y test L3 con la cascada de L2",
+  ultimo_commit: "a1c7f36 Merge rama fix/docling-red-bloqueada",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -213,6 +213,9 @@ window.TABLERO = {
     { id: "D-29", fase: "L", tipo: "decision", estado: "hecho", titulo: "Reportes cortos con la salida literal de las herramientas",
       nota: "Preferencia del usuario, recogida en los agentes.", commit: "214cc5e" },
 
+    { id: "A-18", fase: "L", tipo: "actividad", estado: "hecho", titulo: "Docling con la red corporativa bloqueada, defaults.env y notebooks en macOS",
+      nota: "Arreglo de Docling con red bloqueada (a1c7f36): el subproceso hereda proxy y certificados; error ERR-EXT-004 con mensaje de negocio; modelos locales sin red con HF_HUB_OFFLINE=1 (procedimiento en documentos/LEEME.md). Verificado en la Pi sin red: 43 bloques en 33 s. Corregidos también: comentarios de defaults.env leídos como valor (652300f) y notebooks compatibles con macOS (873771b).", commit: "a1c7f36" },
+
     // ── Pospuestas a V2 ──
     { id: "V-01", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "Renombrar docs/ a specs/",
       nota: "Pospuesto a después de la demo." },
@@ -239,6 +242,10 @@ window.TABLERO = {
       nota: "To-be (7 oct 2026): usar un modelo distinto según la tarea, p. ej. uno ligero y sin razonamiento para ingesta/clasificación y conclusión, y uno más capaz para el juez de L4; configurable por variable de entorno por etapa (LLM por etapa) en cada stage (dev, sandbox, mvp). Origen: con qwen3.5 (modelo de razonamiento) el clasificador de la ingesta devolvía respuesta vacía en dev (DMR) y con gemma4 funcionó. El usuario decide cuándo." },
     { id: "V-12", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "Ingesta: metadatos y tipo con reglas deterministas primero y LLM de respaldo",
       nota: "Pospuesto: propuesta B del análisis. El usuario decidió el 7 oct 2026 dejar la ingesta como está (LLM en ingesta, opción A) por ahora; queda como posible mejora." },
+    { id: "V-13", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "Borrar la rama auxiliar aux/docling-modelos de GitHub y el tar local de la Pi",
+      nota: "To-be, lo decide el usuario. La rama (6 trozos de 90 MB, ~470 MB de modelos públicos de Docling) se subió para que el usuario los descargue en su Mac sin estar en la misma red; el usuario decidió no borrarla todavía. Incluye también eliminar ~/docling-modelos.tar.gz en la Pi y el worktree wt-aux-docling." },
+    { id: "V-14", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "Evaluar granite-docling (DMR) como extractor opcional de dev",
+      nota: "To-be, no es prioridad. Alternativa que mencionó el usuario: cambia la estructura de la extracción (no validada con el seccionado de L2) y dev y mvp extraerían distinto. Relacionada con V-02." },
 
     // ── To-be de appsec (observaciones que el usuario dejó para después) ──
     { id: "S-09", fase: "L", tipo: "seguridad", estado: "hecho", titulo: "L2: timeout por documento al parsear PDFs (hito L2)",
@@ -257,6 +264,7 @@ window.TABLERO = {
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-07", texto: "main (a1c7f36): Docling funciona con la red corporativa bloqueada (proxy y certificados heredados, ERR-EXT-004, modelos locales con HF_HUB_OFFLINE=1; verificado en la Pi: 43 bloques en 33 s); defaults.env (652300f) y notebooks en macOS (873771b) corregidos; nuevas tarjetas A-18, V-13 (borrar rama aux/docling-modelos, decide el usuario) y V-14 (granite-docling en dev)." },
     { fecha: "2026-10-07", texto: "main (c031b78): hecho carpetas documentos/normas y documentos/manuales (NORMAS_DIR, MANUALES_DIR), defaults.env y .env.example, barras de progreso tqdm en notebooks 01, 02, 03 y 05; nuevas tarjetas P-16 (mejoras tras revisar notebooks), V-11 (modelo por etapa) y V-12 (ingesta con reglas primero, pospuesta por decisión del usuario)." },
     { fecha: "2026-10-07", texto: "main (686dca4): L2, L3 y L5 con APROBADO de qa-ia; QA-02 corregido; golden set de 51 pares; nuevo ritmo (D-35); CI pospuesto (A-16); to-be V-07..V-10; próximo: notebooks 02, 03, 05 y luego L4." },
     { fecha: "2026-10-06", texto: "Rama fix/docling-cve: Docling 2.134.0 con pila sin CVE (D-32, V-06 hecha; D-31 descartada); RAGAS reemplaza a DeepEval (D-21 descartada, D-33, D-34); L2 sigue en curso." },
