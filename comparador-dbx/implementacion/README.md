@@ -13,7 +13,7 @@ Tablero de avance estilo Jira: [`tablero/index.html`](../tablero/index.html) (ab
 | L0 · Base | ✅ Cumplido | `feat/fase-l-local` · `feat(L0): …` | `notebooks/00_modelos.ipynb` |
 | L1 · Ingesta | ✅ Cumplido | `feat/fase-l-local` · `feat(L1): …` | `notebooks/01_ingesta.ipynb` |
 | L2 · Seccionado | 🚧 En curso (esqueleto, sin evidencia) | `fix/l2-estado-real` | `notebooks/02_seccionado.ipynb` (sin ejecutar) |
-| L3 · Recuperación | Pendiente | — | — |
+| L3 · Recuperación | 🚧 Entregado a `qa-ia` y `appsec` (sin cerrar) | `feat/l3-recuperacion` | `notebooks/03_recuperacion.ipynb` |
 | L4 · Juez | Pendiente | — | — |
 | L5 · Papel | Pendiente | — | — |
 | L6 · Extremo a extremo | Pendiente | — | — |
@@ -269,3 +269,57 @@ La primera ejecución descargó modelos nuevos (+0,5 GB, 103 s). La versión nue
 ### Origen
 - `models.py` y `sectioner.py`: módulos nuevos según docs/07 (la v6 no tiene seccionado equivalente).
 - `docling_parser.py` y `docling_worker.py`: **nuevos**. De la v6 (`backend/src/providers.py`, `_build_pdf_pipeline_options` y `build_document_converter`) se tomó solo la idea de las opciones de Docling (`do_ocr`, modo de tablas, dispositivo); se reescribió sin LangChain, con subproceso, caché y tandas de páginas, que la v6 no tiene.
+
+
+## L3 · Recuperación
+
+**Estado:** implementado y medido por `dev-ia-motor`; **sin cerrar** (lo cierran `qa-ia` y `appsec`).
+**Criterio (docs/13):** recall en candidatos ≥ 90 % sobre el golden set; se registran los pares antes y después de deduplicar. Evidencia: `notebooks/03_recuperacion.ipynb` (ejecutado de punta a punta, embeddings reales de Ollama `bge-m3` y FAISS real).
+
+### Módulos
+
+| Archivo | Responsabilidad | API |
+|---|---|---|
+| `backend/retrieval/chunker.py` | Sub-chunks por sección (~`SUBCHUNK_TOKENS`, solape `SUBCHUNK_OVERLAP`; sección corta = 1) y prefijo de contexto | `subchunkear(seccion, documento=None) -> list[SubChunk]`, `texto_a_embeber(seccion, sub, documento=None) -> str`, `estimar_tokens(texto)` |
+| `backend/retrieval/index.py` | Embeddings por lotes (`ModelClient.embed`, `EMB_BATCH`) con caché por SHA-256, e índice FAISS `IndexFlatIP` con mapa sub-chunk → sección | `construir_indice(secciones, cliente, documentos=None) -> Indice`; `Indice.buscar`, `.vectores_de(seccion_id)`, `.filtrar(ids)` (subíndice temporal); `embeber(textos, cliente)`, `limpiar_cache()` |
+| `backend/engine/candidatos.py` | Candidatos de una sección origen (docs/09 §1) | `candidatos(consulta, destino, s=settings) -> list[(seccion_id, score)]` |
+| `backend/engine/pares.py` | Unión de las dos vías y deduplicación por `(articulo_id, seccion_id)` (docs/09 §2) | `construir_pares(norma, manual, articulos_sel, secciones_sel, s=settings) -> (list[Par], stats)` |
+
+Uso: `i_norma = construir_indice(articulos, cliente, {"N1": "Nombre del PDF"})`, igual con el manual, y `pares, stats = construir_pares(i_norma, i_manual, {ids de artículos}, {ids de secciones})`. Entra `list[Seccion]`; solo se indexan las hojas con texto. `Par.origen` es `{"v1"}`, `{"v2"}` o ambas; `stats` trae `n_pares_ingenuo`, `n_pares_unicos`, `solo_v1`, `solo_v2`, `ambas` (también va al log). El score de una sección es el mejor de sus sub-chunks; los umbrales (`K_SUBCHUNKS`, `SIM_THRESHOLD`, `MIN_FLOOR`, `MAX_CANDIDATES`) se leen de `settings`, nada fijo en el código.
+
+### Configuración
+Sin variables nuevas. `SIM_THRESHOLD` se calibra **por stage** (docs/14 #1): `config/.env.example` conserva el valor por defecto 0,30 y `config/stages/sandbox.env` fija **0,50** (con `bge-m3`: recall@candidatos 93,3 % a 0,50, 96,7 % a 0,30, 86,7 % a 0,55). `dev` y `mvp` se recalibran con sus modelos. El notebook lee el valor efectivo de `settings` y comprueba que coincide con el del stage. **Ojo:** un `SIM_THRESHOLD` en `config/.env` local (el del repo principal trae uno) pisa al del stage por la precedencia de `config.py`; hay que borrar esa línea. Para la ejecución del notebook se pasó `SIM_THRESHOLD` como variable de entorno con el valor de `sandbox.env`.
+
+### Mediciones (sandbox, `taskset -c 2,3`, `OMP_NUM_THREADS=2`, Ollama y CPU compartidos con L2)
+Notebook completo: 9 min 57 s de reloj (`taskset -c 2,3`); RAM pico del notebook 138 MB, de Docling (subproceso) 1.915 MB.
+
+| Medida | Resultado |
+|---|---|
+| Docling (nivel 1) | `L1-XVI-cap-III` 3 págs: 54 s · LA/FT págs 19-24: 52 s |
+| Sub-chunks | 93 secciones → 94 sub-chunks (solo 1 sección pasa de 500 tokens: el art. 4 de cap-III, con tabla → 2); mediana 97 tokens, máx 466 |
+| Embeddings reales (bge-m3, Ollama compartido) | 85 sub-chunks (26 norma + 59 manual) en 415 s = **0,20 textos/s**; primer embedding 3,4 s. Con Ollama libre iría a ~7 textos/s |
+| Caché por hash | reconstruir el índice del manual: 1 ms, 0 llamadas |
+| FAISS | 2 × `IndexFlatIP`, dimensión 1024, vectores float32 con norma 1 |
+| Pares (18 artículos × 59 secciones = 1.062 posibles) | umbral 0,30: ingenuo 770 → únicos 616 · **umbral 0,50 (calibrado): ingenuo 637 → únicos 483** (solo vía 1: 20; solo vía 2: 309; ambas: 154); 0,01 s |
+| **recall@candidatos** (30 pares golden con sección) | umbral 0,30: 29/30 = 96,7 % · **umbral 0,50: 28/30 = 93,3 %** |
+| Fallos con 0,50 | Art. 31 → MOCK-DEMO-01 `4.1`: vía 1 rank 36, vía 2 rank 6, score 0,493 · Art. 37 → MOCK-DEMO-01 `V`: vía 1 rank 12, vía 2 rank 11, score 0,526. Ambos marcados `por_confirmar` en el golden |
+| Calibración | K=5: 83,3 % · K=10 y K=20: igual (96,7 % a 0,30; 93,3 % a 0,50; 86,7 % a 0,55; 80,0 % a 0,60 o más). Scores de los pares golden: mín 0,493 · mediana 0,690 · máx 0,837; el mejor score de cada artículo contra el manual va de 0,676 a 0,837 |
+| `L1-XVI-cap-III` contra los MOCK (no relacionada) | mejores scores: máx 0,604 · mediana 0,502, frente a 0,676-0,837 de la LA/FT |
+
+### Diferencias con la spec y decisiones técnicas
+- **Secciones de entrada provisionales.** La cascada de L2 aún no existe: la norma sale de `extraer()` + `parsear_bloques()` (nivel 1) y los 3 manuales MOCK se seccionan en el notebook con una regex (hojas = encabezados `IV.` y `4.1`, marcadas `seccionado_incierto=True`). El nivel 1 deja varios artículos pegados en un bloque de Docling (`Artículo 29.- … Artículo 30.- …`): el notebook parte esos bloques antes (provisional, solo corta). Con la cascada de L2, el código de L3 recibe `list[Seccion]` sin cambios.
+- **LA/FT recortada:** solo las páginas 19-24 (arts. 29-54) pasaron por Docling por la RAM compartida; como se seleccionan los arts. 31-48, los candidatos no cambian.
+- **Golden set:** 51 filas, 30 con sección esperada (`cumple`/`parcial`); las 21 `omision` no tienen sección que recuperar, así que el recall se mide sobre 30.
+- **Un solo índice de manual** con las secciones de los 3 manuales (el subíndice filtra por selección); en el producto, el manual seleccionado.
+- **`SIM_THRESHOLD`** con `bge-m3` discrimina poco (casi todo par ya da ≥ 0,50): mandan `MAX_CANDIDATES` y el piso. El valor 0,50 es el más alto que mantiene recall ≥ 90 %.
+- **Lotes de embeddings:** con Ollama compartido y CPU saturada, `EMB_BATCH=64` y `LLM_TIMEOUT_S=120` dan *Request timed out*; el notebook usa `EMB_BATCH=8` y `LLM_TIMEOUT_S=900` solo para esa ejecución (variables de entorno). Decisión pendiente: valores por stage.
+- El texto de un sub-chunk es un trozo del literal con los saltos de línea unidos por espacio (solo para embeber); el `texto_literal` de la sección no se toca.
+- Caché de embeddings acotada a 20.000 vectores (`MAX_CACHE`, ~80 MB, también dentro de un lote grande), global del proceso; clave `sha256(STAGE|EMB_PROVIDER|modelo + texto)` (LLM08).
+- Validación de la capa (`IndiceError`, `ERR-IDX-001`, aborta): forma `(n, dim)`, `np.isfinite` y norma > 0 antes de caché y FAISS, dimensión constante por modelo, sección o consulta inexistente. `client.embed` (L0) con un vector cero devuelve NaN al normalizar (división por 0): se detecta aquí; no se cambió `client.py`.
+- Chunker lineal: `_es_frontera` mira solo los caracteres anteriores y `_empaquetar` lleva un contador de palabras (400 KB de `1. 1. 1. …`: de 8 s a 0,26 s).
+
+### Seguridad (`dev-seguridad-ia`)
+LLM08: un índice por tipo de documento, en memoria, sin persistir; no se mezclan modelos de embeddings (el stage fija uno). LLM10: caché acotada, lotes de `EMB_BATCH`, sin reintentos propios (los del SDK). LLM02: los textos solo van al proveedor del stage; no se registran. ASI04: `faiss-cpu==1.15.1` fijado, `pip-audit` sin hallazgos. `bandit -r backend/retrieval backend/engine`: sin hallazgos.
+
+### Origen (repo de referencia v6)
+`chunker.py` ← `backend/src/chunking.py` (corte por párrafos/numerales/literales, solape, estimación de tokens por palabras; sin pandas); `index.py` ← idea de `search_engine.py` (`IndexFlatIP` + vectores L2); `candidatos.py` y `pares.py`: nuevos según docs/09.

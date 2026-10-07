@@ -4,6 +4,7 @@ openai==3.22.1          # un SDK para Groq, Ollama y Azure AI Foundry
 pydantic==2.13.5
 python-dotenv==1.2.4
 numpy==2.4.6
+faiss-cpu==1.15.1       # índices FAISS IndexFlatIP en L3 (docs/12, docs/08); wheel aarch64 y x86
 pymupdf==1.28.2         # PDF: validación, metadatos y detección de escaneo (L1)
 docling==2.134.0        # extracción de PDFs (L2); la 2.55.1 tenía 59 CVE (docs/14 #22). En Databricks (x86) torch se instala solo-CPU
 # Versiones mínimas con arreglo de CVE (pip-audit): fijadas aquí aunque son dependencias de docling
