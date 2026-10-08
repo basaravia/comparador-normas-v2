@@ -9,6 +9,7 @@ Cada bloque (docs/07 §1): {"texto", "pagina", "tipo": encabezado|parrafo|tabla|
 perder contenido, y se descartan encabezados y pies de página.
 """
 import json
+import os
 import sys
 
 OMITIR = {"page_header", "page_footer"}
@@ -37,7 +38,7 @@ def main(pdf: str, tablas: str, hilos: int, por_tanda: int, artefactos: str = ""
     o.do_table_structure = tablas != "off"
     if o.do_table_structure:
         o.table_structure_options.mode = TableFormerMode.ACCURATE if tablas == "accurate" else TableFormerMode.FAST
-    o.accelerator_options = AcceleratorOptions(num_threads=hilos, device="cpu")
+    o.accelerator_options = AcceleratorOptions(num_threads=hilos, device=os.environ["DOCLING_DEVICE"])   # auto | cpu | cuda | mps
     if artefactos:
         o.artifacts_path = artefactos
     conversor = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=o)})
