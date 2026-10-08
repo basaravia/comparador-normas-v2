@@ -8,6 +8,8 @@
 """
 import logging
 import socket
+
+import numpy as np
 from dataclasses import replace
 
 import pytest
@@ -191,3 +193,74 @@ def test_partir_en_ventanas_cubre_todo_el_texto_sin_perder_ninguna_palabra():
 def test_partir_en_ventanas_no_parte_un_texto_corto():
     from backend.llm.client import partir_en_ventanas
     assert partir_en_ventanas("uno dos tres", 4) == ["uno dos tres"] and partir_en_ventanas("a b c d e f", 1) == ["a b c d e f"]
+
+
+# --- embed con textos más largos que el contexto del modelo ----------------------------------------------------------------
+# TransporteConLimite NO imita un modelo: solo rechaza por longitud, como DMR con granite, para probar la lógica de ventanas y de error.
+
+class _Dato:
+    def __init__(self, v): self.embedding = v
+
+
+class TransporteConLimite:
+    """`embeddings.create` que rechaza todo texto de más de `limite` palabras con el mensaje real de DMR; el resto sale como [1, len/limite]."""
+    def __init__(self, limite, mensaje="Error code: 500 - {'error': {'message': 'input (535 tokens) is too large to process'}}"):
+        self.limite, self.mensaje, self.llamadas = limite, mensaje, []
+        self.embeddings = self
+
+    def create(self, model, input):
+        self.llamadas.append(list(input))
+        if any(len(t.split()) > self.limite for t in input):
+            raise RuntimeError(self.mensaje)
+        return type("R", (), {"data": [_Dato([1.0, len(t.split()) / self.limite]) for t in input]})()
+
+
+def cliente_con(transporte, lote=4):
+    mc = ModelClient(replace(BASE, EMB_PROVIDER="ollama", EMB_BATCH=lote))
+    mc._emb = (transporte, "modelo-prueba")
+    return mc
+
+
+def test_embed_un_texto_largo_se_vectoriza_por_ventanas_sin_recortar_nada():
+    t = TransporteConLimite(limite=60)
+    corto, largo = "palabra " * 10, " ".join(f"p{i}" for i in range(100))
+    m = cliente_con(t).embed([corto, largo])
+    assert m.shape == (2, 2) and abs(float(np.linalg.norm(m[1])) - 1.0) < 1e-5 and abs(float(np.linalg.norm(m[0])) - 1.0) < 1e-5
+    ventanas = [v for llamada in t.llamadas for v in llamada if v.startswith("p0")]
+    assert " ".join(ventanas).split().count("p99") >= 1                              # la última palabra del texto llegó al modelo
+    todo = set(" ".join(v for llamada in t.llamadas[2:] for v in llamada).split())
+    assert {f"p{i}" for i in range(100)} <= todo                                      # ninguna palabra se perdió
+
+
+def test_embed_con_textos_que_caben_no_usa_ventanas():
+    t = TransporteConLimite(limite=60)
+    cliente_con(t).embed(["uno dos", "tres cuatro", "cinco"])
+    assert len(t.llamadas) == 1                                                       # un solo lote
+
+
+def test_embed_sube_el_numero_de_ventanas_hasta_que_caben():
+    t = TransporteConLimite(limite=20)
+    m = cliente_con(t).embed([" ".join(f"p{i}" for i in range(100))])
+    assert m.shape == (1, 2) and max(len(v.split()) for llamada in t.llamadas[-1:] for v in llamada) <= 20
+
+
+def test_embed_si_ni_con_8_ventanas_cabe_el_error_se_propaga():
+    from backend.core.errors import ComparadorError
+    t = TransporteConLimite(limite=1)
+    with pytest.raises(ComparadorError):                                              # error de negocio de nuestro código, no una traza del SDK
+        cliente_con(t).embed([" ".join(f"p{i}" for i in range(40))])
+    assert len(t.llamadas) == 1 + 7                                                   # el lote entero y luego 2..8 ventanas
+
+
+def test_embed_otro_error_no_se_toma_por_texto_largo():
+    from backend.core.errors import ComparadorError
+    t = TransporteConLimite(limite=1, mensaje="Error code: 401 - invalid api key")
+    with pytest.raises(ComparadorError):
+        cliente_con(t).embed(["uno dos tres"])
+    assert len(t.llamadas) == 1                                                       # no reintenta ni parte en ventanas
+
+
+def test_embed_informa_el_progreso_con_textos_largos():
+    t, avance = TransporteConLimite(limite=30), []
+    cliente_con(t, lote=2).embed(["a b", " ".join(f"p{i}" for i in range(80)), "c d"], progreso=lambda h, tot: avance.append((h, tot)))
+    assert avance == [(2, 3), (3, 3)]
