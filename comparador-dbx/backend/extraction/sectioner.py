@@ -16,7 +16,7 @@ from typing import Any, Literal
 
 from backend.config import settings
 from backend.core.errors import ComparadorError
-from backend.extraction.patterns import CORTE_ARTICULOS, PATRONES, numero
+from backend.extraction.patterns import COLA_DOCUMENTO, CORTE_ARTICULOS, PATRONES, numero
 from backend.models import Seccion
 
 log = logging.getLogger(__name__)
@@ -309,9 +309,10 @@ def _validar(nodos, descartados, avisos) -> set[int]:
 
 
 def _armar(bloques, marcas, doc_id, tipo_doc, estrategia, avisos) -> list[Seccion]:
-    nodos, pila = [], []
+    nodos, pila, en_cola = [], [], False
     for i, b in enumerate(bloques):
         if i in marcas:
+            en_cola = False
             m = marcas[i]
             while pila and nodos[pila[-1]]["rango"] >= m["rango"]:
                 pila.pop()
@@ -319,7 +320,10 @@ def _armar(bloques, marcas, doc_id, tipo_doc, estrategia, avisos) -> list[Seccio
                               padre=pila[-1] if pila else None, ruta=[nodos[j]["ident"] for j in pila],
                               ruta_id=[nodos[j]["token"] or _slug(nodos[j]["ident"])[:40] for j in pila]))
             pila.append(len(nodos) - 1)
-        elif nodos:  # lo anterior a la primera sección (portada, memorando, índice) no es evaluable
+        elif nodos and not en_cola:  # lo anterior a la primera sección (portada, memorando, índice) no es evaluable
+            if COLA_DOCUMENTO.match(b["texto"][:200]):
+                en_cola = True       # firmas y certificaciones: no son texto de la norma; se ignoran hasta el próximo encabezado
+                continue
             nodos[-1]["textos"].append(_texto(b))
             nodos[-1]["fin"] = b["pagina"]
 

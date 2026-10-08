@@ -99,6 +99,10 @@ def numero(texto: str | None, sufijo: str | None = None, es_letra: bool = False)
 
 
 # Docling a veces junta varios artículos en un solo párrafo ("... masiva. Artículo 4.- El CONCLAFT ... Artículo 5.- ..."):
+# Cola del documento: hojas de firmas y certificaciones que siguen al texto de la norma (p. ej. "FIRMAS DE RESPALDO …",
+# "Firmado electrónicamente por: …", "CERTIFICACIÓN:"). Sin esto se pegan a la última sección. Anclado al inicio del bloque: sin backtracking.
+COLA_DOCUMENTO = re.compile(r"[ \t]*(?:FIRMAS?[ \t]+DE[ \t]+RESPALDO|Firmado[ \t]+electr[óo]nicamente[ \t]+por|CERTIFICACI[ÓO]N[ \t]*:?[ \t]*$)", re.I)
+
 # antes de buscar patrones el bloque se parte en esos puntos. Exige el ".-" tras el número y, dentro de una línea,
 # que venga después de un punto, ";", ":" o comilla de cierre (así no corta "conforme al artículo 5 de esta Ley").
 # Búsqueda lineal: los espacios antes del guion están acotados (`{0,3}`); dos `*` seguidos sobre el mismo carácter serían cuadráticos (appsec).
