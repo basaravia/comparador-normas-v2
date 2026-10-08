@@ -10,6 +10,7 @@
 import json
 import logging
 import os
+import re
 import signal
 import subprocess  # nosec B404
 import sys
@@ -78,6 +79,32 @@ def _trabajo(ruta: Path, sha256: str, progreso) -> list[dict]:
     return bloques
 
 
+def _columnas(tabla: str) -> int:
+    return len(tabla.split("\n", 1)[0].strip().strip("|").split("|"))
+
+
+def _es_continuacion(previa: dict, b: dict) -> bool:
+    """Una tabla que sigue en la página siguiente: misma cantidad de columnas y su "cabecera" es en realidad un dato (empieza por número).
+
+    Docling no une las tablas partidas por una página (issue #2976) y toma la primera fila de la continuación como cabecera."""
+    if previa["tipo"] != "tabla" or b["tipo"] != "tabla" or b["pagina"] != previa.get("pagina_fin", previa["pagina"]) + 1:
+        return False
+    primera = b["texto"].split("\n", 1)[0].strip().strip("|").split("|")[0].strip()
+    return _columnas(previa["texto"]) == _columnas(b["texto"]) and bool(re.fullmatch(r"[\d.,%\s-]+", primera))
+
+
+def _unir_tablas(bloques: list[dict]) -> list[dict]:
+    salida = []
+    for b in bloques:
+        if salida and _es_continuacion(salida[-1], b):
+            filas = b["texto"].split("\n")
+            datos = filas[2:] if len(filas) > 1 and re.fullmatch(r"\|[\s:|-]+\|", filas[1].strip()) else filas[1:]
+            salida[-1] = {**salida[-1], "texto": "\n".join([salida[-1]["texto"], filas[0], *datos]), "pagina_fin": b["pagina"]}
+            continue
+        salida.append(b)
+    return salida
+
+
 def limpiar_bloques(bloques: list[dict]) -> list[dict]:
     """Texto en NFC (cada tilde en una sola forma) y sin encabezados o pies de página repetidos.
 
@@ -88,8 +115,9 @@ def limpiar_bloques(bloques: list[dict]) -> list[dict]:
     veces = Counter(texto for _, texto in {(b["pagina"], b["texto"]) for b in bloques
                                            if b["tipo"] == "parrafo" and len(b["texto"]) <= 150})
     repetidos = {t for t, n in veces.items() if n >= max(3, len(paginas) // 2)}
-    return [{**b, "texto": unicodedata.normalize("NFC", b["texto"])} for b in bloques
-            if not (b["tipo"] == "parrafo" and b["texto"] in repetidos)]
+    limpios = [{**b, "texto": unicodedata.normalize("NFC", b["texto"])} for b in bloques
+               if not (b["tipo"] == "parrafo" and b["texto"] in repetidos)]
+    return _unir_tablas(limpios) if settings.TABLAS_ATOMICAS else limpios
 
 
 def _matar(proc, senal) -> None:
@@ -111,7 +139,7 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
         raise ExtraccionError(f"DOCLING_DEVICE={s.DOCLING_DEVICE!r} no es válido; usa uno de {sorted(DISPOSITIVOS)}")
     entorno.update(DOCLING_DEVICE=s.DOCLING_DEVICE, OMP_NUM_THREADS=str(s.DOCLING_THREADS), HF_HUB_DISABLE_TELEMETRY="1", DO_NOT_TRACK="1")
 
-    bloques, vencio = None, threading.Event()
+    bloques, figuras, vencio = None, [], threading.Event()
     with tempfile.TemporaryFile() as errores:
         # cwd=RAIZ: `python -m backend...` debe encontrar el paquete aunque quien llama esté en otra carpeta.
         # Lista fija con sys.executable, sin shell, y la ruta ya validada: por eso B404/B603 son aceptables.
@@ -137,6 +165,8 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
                     progreso(*evento["progreso"])
                 elif "bloques" in evento:
                     bloques = evento["bloques"]
+                elif "figuras" in evento:
+                    figuras = evento["figuras"]
             try:
                 proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
@@ -164,4 +194,5 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
     if not bloques:
         raise ExtraccionError("Docling no encontró texto en el documento.", "ERR-EXT-003",
                               "No encontramos texto en este documento.")
-    return limpiar_bloques(bloques)
+    figuras = [{"texto": f"Figura en la página {f['pagina']} (su contenido no se analiza)", "pagina": f["pagina"], "tipo": "figura"} for f in figuras]
+    return limpiar_bloques(bloques) + figuras

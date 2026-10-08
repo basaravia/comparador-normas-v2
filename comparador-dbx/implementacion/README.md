@@ -348,6 +348,20 @@ Revisión de los PDFs de `Normativa2026/` (español, tablas, imágenes) y cambio
 | Tabla de recuperación para validar las secciones contra el PDF | `backend/retrieval/tabla.py` (`tabla_recuperacion` → DataFrame, reutilizable por la UI) y sección 5b del notebook 02, con CSV en `output/` |
 | `DOCLING_DEVICE=auto` | Docling usa la GPU si hay (CUDA, Metal, ROCm) y si no la CPU; el worker ya no fija `cpu` |
 
+### L2/L3 · tablas y figuras (8 oct 2026, `TABLAS_ATOMICAS`)
+Tras revisar la documentación oficial de Docling y probar con los PDFs reales:
+
+| Cambio | Detalle |
+|---|---|
+| Tablas atómicas (`chunker.py`) | Las filas Markdown consecutivas son **una** unidad. Si no cabe, se parte por filas y **cada trozo repite la cabecera** (como `repeat_table_header` de Docling). El solape (`_cola`) nunca retrocede por encima de una tabla |
+| Tablas continuadas (`docling_extractor._unir_tablas`) | Docling no une una tabla que sigue en la página siguiente (issue #2976) y toma su primera fila de datos como cabecera. Se unen si están en páginas contiguas, tienen las mismas columnas y la primera celda es numérica; el bloque lleva `pagina_fin` |
+| Aviso de figuras (`docling_worker._figuras`) | El worker emite las imágenes que parecen figuras con contenido (única, ≥ 5 % de la página, forma ≤ 4:1, fuera del 12 % superior); se descartan logos y sellos (mismo tamaño en varias páginas), banners y QR. Llegan como bloques `tipo="figura"`; el seccionador los saca del texto y deja un aviso (`Figura en la pág. N…`). Sin generar imágenes: no cuesta RAM |
+| Interruptor | `TABLAS_ATOMICAS=true` (en `defaults.env`). `false` = método anterior (una fila por línea, tablas partidas por página). La etiqueta `antes-tablas-atomicas` marca el commit anterior |
+
+No se activó `HeadingHierarchyOptions` de Docling: los PDFs de `Normativa2026/` no tienen marcadores y recuperó niveles solo en parte (mejoró `cap-II`, no `cap-III`); el nivel ya lo da el patrón. Queda como señal de validación opcional (to-be).
+
+Efecto medido con Docling real en `L1-XVI-cap-III`: la tabla variable del Art. 4 sale como **una tabla de las págs. 2-3**; el segundo sub-chunk del artículo empieza por texto solapado y no por filas de tabla sueltas. Ninguna figura avisada (solo hay logos y QR).
+
 ## L3 · Recuperación
 
 **Estado:** APROBADO por `qa-ia` (recall 28/30 = 93,3 %; 100 % sin las 2 filas `por_confirmar`).

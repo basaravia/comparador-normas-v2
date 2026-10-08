@@ -41,6 +41,8 @@ def parsear_bloques(bloques: list[dict[str, Any]], doc_id: str, tipo_doc: Litera
                     pdf: Path | None = None, avisos: list[str] | None = None) -> list[Seccion]:
     """Aplica la cascada. `pdf` (opcional) habilita el nivel 2 con la tipografía real; `avisos` recibe las advertencias."""
     avisos = avisos if avisos is not None else []
+    avisos += [f"Figura en la pág. {b['pagina']}: su contenido (imagen) no se analiza." for b in bloques if b.get("tipo") == "figura"]
+    bloques = [b for b in bloques if b.get("tipo") != "figura"]
     for b in bloques:
         if len(b["texto"]) > settings.SECCION_BLOQUE_MAX:
             raise SeccionadoError(f"Bloque de {len(b['texto'])} caracteres (máximo {settings.SECCION_BLOQUE_MAX}).")
@@ -325,7 +327,7 @@ def _armar(bloques, marcas, doc_id, tipo_doc, estrategia, avisos) -> list[Seccio
                 en_cola = True       # firmas y certificaciones: no son texto de la norma; se ignoran hasta el próximo encabezado
                 continue
             nodos[-1]["textos"].append(_texto(b))
-            nodos[-1]["fin"] = b["pagina"]
+            nodos[-1]["fin"] = b.get("pagina_fin", b["pagina"])
 
     # Un identificador repetido cuyo primer aparecer no tiene cuerpo es una entrada del índice: se descarta.
     # Si ambos tienen cuerpo es un duplicado real de la fuente: se conservan los dos (#2).

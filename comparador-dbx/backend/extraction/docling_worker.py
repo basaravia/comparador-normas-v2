@@ -22,12 +22,33 @@ def _tipo(item, es_tabla: bool) -> str:
     return {"title": "encabezado", "section_header": "encabezado", "list_item": "lista"}.get(item.label.value, "parrafo")
 
 
+def _imagen(item, doc) -> dict:
+    """Posición y tamaño de una imagen, relativos a su página (sin generar la imagen: no cuesta RAM)."""
+    prov = item.prov[0]
+    pagina = doc.pages[prov.page_no].size
+    b = prov.bbox.to_top_left_origin(pagina.height)
+    ancho, alto = max(b.r - b.l, 1.0), max(b.b - b.t, 1.0)
+    return {"pagina": prov.page_no, "fraccion": ancho * alto / (pagina.width * pagina.height), "forma": round(ancho / alto, 1),
+            "tamano": (round(ancho), round(alto)), "arriba": b.t / pagina.height}
+
+
+def _figuras(imagenes: list[dict], paginas: int) -> list[dict]:
+    """Imágenes que parecen figuras con contenido: se descartan logos y sellos (se repiten con el mismo tamaño en varias páginas),
+    banners de encabezado (muy anchos o pegados al borde superior) y códigos QR o iconos (menos del 5 % de la página)."""
+    veces = {}
+    for i in imagenes:
+        veces[i["tamano"]] = veces.get(i["tamano"], 0) + 1
+    logo = {t for t, n in veces.items() if n >= max(3, paginas // 2)}
+    return [{"pagina": i["pagina"], "fraccion": round(i["fraccion"], 3)} for i in imagenes
+            if i["tamano"] not in logo and i["fraccion"] >= 0.05 and i["forma"] <= 4 and i["arriba"] > 0.12]
+
+
 def main(pdf: str, tablas: str, hilos: int, por_tanda: int, artefactos: str = "") -> None:
     import pymupdf
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import AcceleratorOptions, PdfPipelineOptions, TableFormerMode
     from docling.document_converter import DocumentConverter, PdfFormatOption
-    from docling_core.types.doc import TableItem
+    from docling_core.types.doc import PictureItem, TableItem
 
     with pymupdf.open(pdf) as d:
         total = d.page_count
@@ -43,11 +64,14 @@ def main(pdf: str, tablas: str, hilos: int, por_tanda: int, artefactos: str = ""
         o.artifacts_path = artefactos
     conversor = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=o)})
 
-    bloques = []
+    bloques, imagenes = [], []
     for inicio in range(1, total + 1, por_tanda):
         fin = min(inicio + por_tanda - 1, total)
         doc = conversor.convert(pdf, page_range=(inicio, fin)).document
         for item, _ in doc.iterate_items():
+            if isinstance(item, PictureItem) and getattr(item, "prov", None):
+                imagenes.append(_imagen(item, doc))
+                continue
             if not getattr(item, "prov", None) or getattr(item.label, "value", "") in OMITIR:
                 continue
             texto = item.export_to_markdown(doc) if isinstance(item, TableItem) else getattr(item, "text", "")
@@ -60,6 +84,7 @@ def main(pdf: str, tablas: str, hilos: int, por_tanda: int, artefactos: str = ""
                     bloque["marcador"] = item.marker.strip()      # Docling quita la numeración del texto: 1., 2., a), b)
                 bloques.append(bloque)
         print(json.dumps({"progreso": [fin, total]}), flush=True)
+    print(json.dumps({"figuras": _figuras(imagenes, total)}), flush=True)
     print(json.dumps({"bloques": bloques}, ensure_ascii=False), flush=True)
 
 

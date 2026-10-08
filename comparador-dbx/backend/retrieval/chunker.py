@@ -37,14 +37,48 @@ def _es_frontera(texto: str, i: int) -> bool:
     return texto[j] in ".;:"
 
 
-def _unidades(texto: str) -> list[str]:
-    """Texto -> párrafos, numerales y literales."""
+def _es_fila_tabla(linea: str) -> bool:
+    return linea.lstrip().startswith("|")
+
+
+def _unidades(texto: str, tablas: bool = True) -> list[str]:
+    """Texto -> párrafos, numerales y literales. Con `tablas`, las filas Markdown consecutivas (`| a | b |`) son UNA unidad."""
     salida = []
-    for parrafo in texto.split("\n"):
+    lineas, i = texto.split("\n"), 0
+    while i < len(lineas):
+        if tablas and _es_fila_tabla(lineas[i]):
+            j = i
+            while j < len(lineas) and _es_fila_tabla(lineas[j]):
+                j += 1
+            salida.append("\n".join(x.strip() for x in lineas[i:j]))
+            i = j
+            continue
+        parrafo, i = lineas[i], i + 1
         cortes = [m.start() for m in _MARCADOR.finditer(parrafo) if m.start() > 0 and _es_frontera(parrafo, m.start())]
         limites = [0, *cortes, len(parrafo)]
         salida += [parrafo[a:b].strip() for a, b in zip(limites, limites[1:])]
     return [u for u in salida if u]
+
+
+_SEPARADOR_TABLA = re.compile(r"\|[\s:|-]+\|")
+
+
+def _partir_tabla(tabla: str, presupuesto: int) -> list[tuple[str, bool]]:
+    """Una tabla que no cabe se parte por filas y **cada trozo repite la cabecera** (como `repeat_table_header` de Docling).
+
+    Un trozo lleva al menos una fila. Devuelve `(pieza, True)`: la cabecera ya da el contexto, no se añade solape."""
+    filas = tabla.split("\n")
+    n = 2 if len(filas) > 1 and _SEPARADOR_TABLA.fullmatch(filas[1].strip()) else 1
+    cabecera, cuerpo = filas[:n], filas[n:]
+    piezas, actual = [], []
+    for fila in cuerpo:
+        if actual and estimar_tokens("\n".join([*cabecera, *actual, fila])) > presupuesto:
+            piezas.append("\n".join([*cabecera, *actual]))
+            actual = []
+        actual.append(fila)
+    if actual or not piezas:
+        piezas.append("\n".join([*cabecera, *actual]))
+    return [(p, k > 0) for k, p in enumerate(piezas)]
 
 
 def _partir_largo(unidad: str, presupuesto: int, solape: int = 0) -> list[tuple[str, bool]]:
@@ -64,17 +98,34 @@ def _partir_largo(unidad: str, presupuesto: int, solape: int = 0) -> list[tuple[
     return piezas
 
 
-def _empaquetar(unidades: list[str], presupuesto: int, solape: int) -> list[str]:
+def _cola(piezas: list[str], palabras: int, tablas: bool) -> str:
+    """Las últimas `palabras` palabras del chunk, sin retroceder nunca por encima de una tabla (sus filas no sirven de solape)."""
+    cola: list[str] = []
+    for pieza in reversed(piezas):
+        if tablas and _es_fila_tabla(pieza):
+            break
+        cola = pieza.split() + cola
+        if len(cola) >= palabras:
+            break
+    return " ".join(cola[-palabras:])
+
+
+def _empaquetar(unidades: list[str], presupuesto: int, solape: int, tablas: bool = True) -> list[str]:
     """Agrupa unidades hasta `presupuesto` tokens; cada chunk repite las últimas `solape` tokens del anterior."""
     chunks, actual, palabras = [], [], 0       # `palabras` acumuladas: evita re-unir `actual` en cada pieza
     for unidad in unidades:
-        for pieza, solapada in ([(unidad, False)] if estimar_tokens(unidad) <= presupuesto
-                                else _partir_largo(unidad, presupuesto, solape)):
+        if estimar_tokens(unidad) <= presupuesto:
+            partes = [(unidad, False)]
+        elif tablas and _es_fila_tabla(unidad):
+            partes = _partir_tabla(unidad, presupuesto)
+        else:
+            partes = _partir_largo(unidad, presupuesto, solape)
+        for pieza, solapada in partes:
             n = len(pieza.split())
             if actual and math.ceil((palabras + n) * TOKENS_POR_PALABRA) > presupuesto:
                 cerrado = " ".join(actual)
                 chunks.append(cerrado)
-                cola = " ".join(cerrado.split()[-max(1, int(solape / TOKENS_POR_PALABRA)):]) if solape > 0 else ""
+                cola = _cola(actual, max(1, int(solape / TOKENS_POR_PALABRA)), tablas) if solape > 0 else ""
                 cabe = int(presupuesto / TOKENS_POR_PALABRA) - n     # palabras de solape que caben junto a la pieza
                 cola = " ".join(cola.split()[-cabe:]) if cabe > 0 and not solapada else ""   # sin salirse del presupuesto
                 actual, palabras = ([cola, pieza], len(cola.split()) + n) if cola else ([pieza], n)
@@ -102,7 +153,7 @@ def subchunkear(seccion: Seccion, documento: str | None = None, s: Settings = se
         piezas = [texto]
     else:
         presupuesto = max(s.SUBCHUNK_TOKENS - gastado, PRESUPUESTO_MINIMO)
-        piezas = _empaquetar(_unidades(texto), presupuesto, int(presupuesto * s.SUBCHUNK_OVERLAP)) or [texto]
+        piezas = _empaquetar(_unidades(texto, s.TABLAS_ATOMICAS), presupuesto, int(presupuesto * s.SUBCHUNK_OVERLAP), s.TABLAS_ATOMICAS) or [texto]
     return [SubChunk(id=f"{seccion.id}#c{i}", seccion_id=seccion.id, texto=p, orden=i) for i, p in enumerate(piezas)]
 
 
