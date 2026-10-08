@@ -162,3 +162,58 @@ def test_entrada_hostil_de_400kb_en_menos_de_medio_segundo(patron):
     ) % (str(RAIZ), str(RAIZ / "tests"), patron, len(patron))
     salida = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True, check=True, cwd=RAIZ)
     assert float(salida.stdout) < 0.5, f"{patron!r}: {salida.stdout.strip()} s"
+
+
+# --- Tablas atómicas (TABLAS_ATOMICAS) -----------------------------------------------------------------------------
+
+from backend.retrieval.chunker import _empaquetar, _partir_tabla  # noqa: E402
+
+TABLA = "\n".join(["| Desde | Hasta | % |", "|---|---|---|"] + [f"| {i}00 | {i}99 | {i}.5% |" for i in range(1, 41)])
+
+
+def test_una_tabla_es_una_sola_unidad_y_el_texto_de_alrededor_se_separa():
+    u = _unidades("Conforme a la tabla:\n" + TABLA + "\nLa porción variable es otra.")
+    assert len(u) == 3 and u[1] == TABLA and u[0].startswith("Conforme") and u[2].startswith("La porción")
+
+
+def test_sin_el_interruptor_la_tabla_vuelve_a_ser_una_unidad_por_fila():
+    assert len(_unidades(TABLA, tablas=False)) == 42
+
+
+def test_una_tabla_larga_se_parte_por_filas_y_cada_trozo_repite_la_cabecera():
+    piezas = _partir_tabla(TABLA, presupuesto=120)
+    assert len(piezas) > 1
+    for k, (p, solapada) in enumerate(piezas):
+        assert p.startswith("| Desde | Hasta | % |\n|---|---|---|") and solapada == (k > 0)
+    filas = [f for p, _ in piezas for f in p.split("\n")[2:]]
+    assert filas == TABLA.split("\n")[2:]                               # ninguna fila se pierde ni se repite
+    assert all(estimar_tokens(p) <= 120 for p, _ in piezas)
+
+
+def test_la_tabla_nunca_se_corta_sin_cabecera_al_empaquetar():
+    chunks = _empaquetar(_unidades("Texto previo.\n" + TABLA), presupuesto=120, solape=15)
+    for c in chunks:
+        if "| 2" in c or "| 3" in c:
+            assert "| Desde | Hasta | % |" in c
+
+
+def test_subchunkear_respeta_el_interruptor(monkeypatch):
+    import dataclasses
+    from backend.config import settings
+    from l3_ayudas import cfg  # noqa: F401
+    sec = seccion(texto="Art.\n" + TABLA)
+    con = subchunkear(sec, "Ley", dataclasses.replace(S, TABLAS_ATOMICAS=True, SUBCHUNK_TOKENS=200))
+    sin = subchunkear(sec, "Ley", dataclasses.replace(S, TABLAS_ATOMICAS=False, SUBCHUNK_TOKENS=200))
+    assert all("| Desde | Hasta | % |" in c.texto for c in con if "| 3" in c.texto)
+    assert any("| Desde | Hasta | % |" not in c.texto for c in sin if "| 3" in c.texto)
+
+
+def test_el_solape_no_arrastra_filas_de_una_tabla_aunque_el_texto_final_sea_corto():
+    tabla = "\n".join(TABLA.split("\n")[:7])                                  # cabecera + 5 filas
+    corto = "En ningún caso la porción variable podrá superar los dos mil dólares."
+    largo = "Otro párrafo largo sin tablas. " * 20
+    chunks = _empaquetar(["Intro.", tabla, corto, largo], presupuesto=90, solape=60)
+    k = next(i for i, c in enumerate(chunks) if corto in c)
+    assert k + 1 < len(chunks)
+    siguiente = chunks[k + 1]
+    assert "|" not in siguiente and siguiente.startswith("En ningún caso")        # solapa el texto corto, nunca filas de la tabla

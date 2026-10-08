@@ -416,3 +416,62 @@ def test_limpiar_normaliza_las_tildes_a_nfc_y_no_cambia_el_texto_en_espanol():
     [b] = de.limpiar_bloques([_p(nfd, 1)])
     assert b["texto"] == "Administración, año, ¿cuántos? ¡Sí!" and unicodedata.is_normalized("NFC", b["texto"])
     assert "ñ" in b["texto"] and "¿" in b["texto"] and "¡" in b["texto"] and "�" not in b["texto"]
+
+
+# --- Tablas continuadas y figuras ----------------------------------------------------------------------------------
+
+def _t(texto, pagina):
+    return {"texto": texto, "pagina": pagina, "tipo": "tabla"}
+
+
+T1 = "| Años | Cantidad | % |\n|---|---|---|\n| 1 | 0 | 1.0% |"
+T2 = "| 3 | 100.001 | 0.75% |\n|---|---|---|\n| 2 | 150.001 | 0.5% |"
+
+
+def test_una_tabla_que_sigue_en_la_pagina_siguiente_se_une_a_la_anterior():
+    [t] = de.limpiar_bloques([_t(T1, 2), _t(T2, 3)])
+    assert t["pagina"] == 2 and t["pagina_fin"] == 3
+    assert t["texto"].split("\n") == ["| Años | Cantidad | % |", "|---|---|---|", "| 1 | 0 | 1.0% |", "| 3 | 100.001 | 0.75% |", "| 2 | 150.001 | 0.5% |"]
+
+
+def test_no_se_unen_tablas_con_cabecera_propia_distinto_numero_de_columnas_o_paginas_lejanas():
+    propia = "| Nombre | Valor | X |\n|---|---|---|\n| a | 1 | 2 |"
+    assert len(de.limpiar_bloques([_t(T1, 2), _t(propia, 3)])) == 2         # su primera fila es una cabecera de texto
+    assert len(de.limpiar_bloques([_t(T1, 2), _t("| 3 | 4 |\n|---|---|\n| 5 | 6 |", 3)])) == 2   # 2 columnas, no 3
+    assert len(de.limpiar_bloques([_t(T1, 2), _t(T2, 5)])) == 2             # no es la página siguiente
+
+
+def test_con_el_interruptor_apagado_las_tablas_no_se_unen(ajustes):
+    ajustes(TABLAS_ATOMICAS=False)
+    assert len(de.limpiar_bloques([_t(T1, 2), _t(T2, 3)])) == 2
+
+
+def test_las_figuras_que_emite_el_worker_llegan_como_bloques_de_tipo_figura(hacer_pdf, comando):
+    comando("print(json.dumps({'figuras': [{'pagina': 2, 'fraccion': 0.2}]}))\n"
+            "print(json.dumps({'bloques': [{'texto': 'Artículo 1.- Objeto', 'pagina': 1, 'tipo': 'parrafo'}]}))")
+    bl = extraer(pdf_n(hacer_pdf, 1))
+    assert [b["tipo"] for b in bl] == ["parrafo", "figura"] and bl[1]["pagina"] == 2
+
+
+def test_el_worker_descarta_logos_banners_y_qr_y_conserva_una_figura_con_contenido():
+    def img(pag, w, h, y=0.4, frac=None):
+        return {"pagina": pag, "fraccion": frac if frac is not None else w * h / (595 * 842), "forma": round(w / h, 1),
+                "tamano": (w, h), "arriba": y}
+    logos = [img(p, 175, 50, y=0.05) for p in (1, 2, 3)]                      # se repite en cada página
+    qr = [img(1, 38, 37)]                                                    # menos del 5 % de la página
+    banner = [img(1, 425, 46, y=0.04)]                                       # ancho y pegado al borde superior
+    figura = [img(2, 300, 250)]                                              # única, de tamaño medio, en el cuerpo
+    assert [f["pagina"] for f in docling_worker._figuras(logos + qr + banner + figura, paginas=3)] == [2]
+
+
+def test_imagen_calcula_fraccion_forma_y_posicion_relativas_a_la_pagina():
+    from types import SimpleNamespace as NS
+
+    class Caja:                                   # bbox en coordenadas de Docling (origen abajo a la izquierda)
+        def to_top_left_origin(self, alto):       # → origen arriba a la izquierda
+            return NS(l=100, r=400, t=200, b=450)
+    item = NS(prov=[NS(page_no=3, bbox=Caja())])
+    doc = NS(pages={3: NS(size=NS(width=600, height=800))})
+    i = docling_worker._imagen(item, doc)
+    assert i["pagina"] == 3 and i["tamano"] == (300, 250) and i["forma"] == 1.2
+    assert i["fraccion"] == pytest.approx(300 * 250 / (600 * 800)) and i["arriba"] == pytest.approx(200 / 800)

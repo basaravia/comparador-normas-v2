@@ -555,3 +555,19 @@ def test_la_palabra_certificacion_dentro_de_un_articulo_no_corta_el_texto():
     bl = [_bl("Artículo 1.- Objeto.", 1), _bl("La certificación de cumplimiento será emitida por la entidad.", 1),
           _bl("Artículo 2.- Dos.", 2), _bl("Artículo 3.- Tres.", 2)]
     assert "certificación de cumplimiento" in parsear_bloques(bl, "N1", "normativa")[0].texto_literal
+
+
+def test_una_figura_avisa_y_no_entra_al_texto_de_la_seccion():
+    bl = [_bl("Artículo 1.- Uno.", 1), _bl("Figura en la página 1 (su contenido no se analiza)", 1, "figura"),
+          _bl("Artículo 2.- Dos.", 2), _bl("Artículo 3.- Tres.", 2)]
+    avisos = []
+    secs = parsear_bloques(bl, "N1", "normativa", avisos=avisos)
+    assert [s.identificador for s in secs] == ["Artículo 1", "Artículo 2", "Artículo 3"]
+    assert all("Figura" not in s.texto_literal for s in secs)
+    assert any("Figura en la pág. 1" in a for a in avisos)
+
+
+def test_la_pagina_fin_de_una_tabla_unida_alarga_la_seccion():
+    bl = [_bl("Artículo 1.- Uno.", 1), {"texto": "| a | b |\n|---|---|\n| 1 | 2 |", "pagina": 1, "pagina_fin": 2, "tipo": "tabla"},
+          _bl("Artículo 2.- Dos.", 3), _bl("Artículo 3.- Tres.", 3)]
+    assert parsear_bloques(bl, "N1", "normativa")[0].pagina_fin == 2

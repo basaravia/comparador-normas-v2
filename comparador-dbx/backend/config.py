@@ -70,6 +70,7 @@ class Settings:
     NORMAS_DIR: str = _env("NORMAS_DIR")          # carpeta de PDFs de normas (no se versiona); relativa a comparador-dbx/
     DOCLING_THREADS: int = int(_env("DOCLING_THREADS"))
     DOCLING_DEVICE: str = _env("DOCLING_DEVICE")    # auto | cpu | cuda | mps
+    TABLAS_ATOMICAS: bool = _env("TABLAS_ATOMICAS").lower() == "true"   # true: la tabla no se parte sin su cabecera y se unen las continuadas
     DOCLING_TABLES: str = _env("DOCLING_TABLES")          # fast | off | accurate
     DOCLING_TIMEOUT_S: int = int(_env("DOCLING_TIMEOUT_S"))
     DOCLING_CHUNK_PAGES: int = int(_env("DOCLING_CHUNK_PAGES"))
