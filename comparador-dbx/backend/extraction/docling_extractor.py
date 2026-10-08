@@ -15,6 +15,8 @@ import subprocess  # nosec B404
 import sys
 import tempfile
 import threading
+import unicodedata
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable
@@ -74,6 +76,20 @@ def _trabajo(ruta: Path, sha256: str, progreso) -> list[dict]:
         _CACHE.pop(next(iter(_CACHE)))  # descarta el más antiguo
     _CACHE[sha256] = bloques
     return bloques
+
+
+def limpiar_bloques(bloques: list[dict]) -> list[dict]:
+    """Texto en NFC (cada tilde en una sola forma) y sin encabezados o pies de página repetidos.
+
+    Docling a veces deja como texto corriente la línea que se repite en cada página ("Codificación de las Normas…"),
+    y quedaría en medio de un artículo. Se descarta un párrafo corto idéntico que aparece en la mitad de las páginas
+    (y al menos en 3). El resto del texto no se toca."""
+    paginas = {b["pagina"] for b in bloques}
+    veces = Counter(texto for _, texto in {(b["pagina"], b["texto"]) for b in bloques
+                                           if b["tipo"] == "parrafo" and len(b["texto"]) <= 150})
+    repetidos = {t for t, n in veces.items() if n >= max(3, len(paginas) // 2)}
+    return [{**b, "texto": unicodedata.normalize("NFC", b["texto"])} for b in bloques
+            if not (b["tipo"] == "parrafo" and b["texto"] in repetidos)]
 
 
 def _matar(proc, senal) -> None:
@@ -148,4 +164,4 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
     if not bloques:
         raise ExtraccionError("Docling no encontró texto en el documento.", "ERR-EXT-003",
                               "No encontramos texto en este documento.")
-    return bloques
+    return limpiar_bloques(bloques)

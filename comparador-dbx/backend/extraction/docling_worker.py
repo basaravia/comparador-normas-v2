@@ -56,6 +56,8 @@ def main(pdf: str, tablas: str, hilos: int, por_tanda: int, artefactos: str = ""
                 bloque = {"texto": texto.strip(), "pagina": item.prov[0].page_no, "tipo": tipo}
                 if tipo == "encabezado":
                     bloque["nivel"] = 0 if item.label.value == "title" else getattr(item, "level", 1)
+                if tipo == "lista" and getattr(item, "enumerated", False) and getattr(item, "marker", ""):
+                    bloque["marcador"] = item.marker.strip()      # Docling quita la numeración del texto: 1., 2., a), b)
                 bloques.append(bloque)
         print(json.dumps({"progreso": [fin, total]}), flush=True)
     print(json.dumps({"bloques": bloques}, ensure_ascii=False), flush=True)

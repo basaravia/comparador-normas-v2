@@ -7,6 +7,7 @@ Los PDFs se generan con pymupdf (fixture `hacer_pdf`). Docling real: `test_integ
 """
 import dataclasses
 import json
+import unicodedata
 import os
 import signal
 import subprocess
@@ -384,3 +385,34 @@ def test_comando_por_defecto_es_el_trabajador_y_importarlo_no_carga_docling():
                              "print(any(m.split('.')[0] == 'docling' for m in sys.modules))"],
                             capture_output=True, text=True, cwd=RAIZ, check=True)
     assert salida.stdout.strip() == "False"
+
+
+# --- Limpieza del texto: NFC y encabezados de página repetidos -----------------------------------------------------
+
+def _p(texto, pagina, tipo="parrafo"):
+    return {"texto": texto, "pagina": pagina, "tipo": tipo}
+
+
+def test_limpiar_quita_el_encabezado_que_se_repite_en_cada_pagina_y_conserva_el_resto():
+    enc = "Codificación de las Normas de la Superintendencia de Bancos"
+    bl = [_p(enc, 1), _p("ARTÍCULO 1.- Objeto", 1), _p(enc, 2), _p("cuerpo del artículo", 2), _p(enc, 3), _p("fin", 3)]
+    textos = [b["texto"] for b in de.limpiar_bloques(bl)]
+    assert enc not in textos and textos == ["ARTÍCULO 1.- Objeto", "cuerpo del artículo", "fin"]
+
+
+def test_limpiar_no_toca_un_texto_que_se_repite_poco_ni_encabezados_ni_tablas():
+    bl = [_p("Aviso", 1), _p("Aviso", 2), _p("Sección", 1, "encabezado"), _p("Sección", 2, "encabezado"), _p("Sección", 3, "encabezado"),
+          _p("| a | b |", 1, "tabla"), _p("| a | b |", 2, "tabla"), _p("| a | b |", 3, "tabla")]
+    assert de.limpiar_bloques(bl) == bl
+
+
+def test_limpiar_documento_corto_no_descarta_nada():
+    bl = [_p("Pie", 1), _p("Pie", 2), _p("texto", 2)]       # solo 2 páginas: no alcanza el mínimo de 3
+    assert de.limpiar_bloques(bl) == bl
+
+
+def test_limpiar_normaliza_las_tildes_a_nfc_y_no_cambia_el_texto_en_espanol():
+    nfd = "Administración, año, ¿cuántos? ¡Sí!"        # o + ◌́ y n + ◌̃ (descompuestos, como los deja algún PDF de Mac)
+    [b] = de.limpiar_bloques([_p(nfd, 1)])
+    assert b["texto"] == "Administración, año, ¿cuántos? ¡Sí!" and unicodedata.is_normalized("NFC", b["texto"])
+    assert "ñ" in b["texto"] and "¿" in b["texto"] and "¡" in b["texto"] and "�" not in b["texto"]

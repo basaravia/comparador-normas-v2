@@ -504,3 +504,24 @@ def test_parsear_bloques_con_un_bloque_hostil_de_100_kb_en_menos_de_0_1_s(nombre
     t0 = time.perf_counter()
     parsear_bloques([{"texto": HOSTILES[nombre], "pagina": 1, "tipo": "parrafo"}], "N1", "normativa")
     assert time.perf_counter() - t0 < 0.1
+
+
+# --- Numeración de las listas (marcador) ---------------------------------------------------------------------------
+
+def test_la_numeracion_de_la_lista_entra_al_texto_de_la_seccion_pero_no_cambia_el_seccionado():
+    bl = [{"texto": "Artículo 78.- Son infracciones graves:", "pagina": 1, "tipo": "parrafo"},
+          {"texto": "Operar sin registro.", "pagina": 1, "tipo": "lista", "marcador": "1."},
+          {"texto": "No reportar.", "pagina": 1, "tipo": "lista", "marcador": "2."},
+          {"texto": "Artículo 79.- Otras.", "pagina": 2, "tipo": "parrafo"}]
+    sin = [{k: v for k, v in b.items() if k != "marcador"} for b in bl]
+    con, base = parsear_bloques(bl, "N1", "normativa"), parsear_bloques(sin, "N1", "normativa")
+    assert [s.id for s in con] == [s.id for s in base]                       # los mismos encabezados y la misma jerarquía
+    assert "1. Operar sin registro." in con[0].texto_literal and "2. No reportar." in con[0].texto_literal
+    assert "1. " not in base[0].texto_literal
+
+
+def test_el_marcador_solo_va_en_el_primer_trozo_de_un_bloque_partido():
+    bl = [{"texto": "Artículo 1.- Uno. Artículo 2.- Dos.", "pagina": 1, "tipo": "lista", "marcador": "a)"}]
+    textos = [b["texto"] for b in sectioner._partir(bl)]
+    marcas = [b.get("marcador") for b in sectioner._partir(bl)]
+    assert len(textos) == 2 and marcas == ["a)", ""]
