@@ -42,6 +42,22 @@ class FilaPapel(BaseModel):
     elementos_faltantes: list[str] = []
 
 
+class SeccionExcluida(BaseModel):
+    """Sección que no se comparó por no ser cuerpo del documento (carátula, índice, anexo…) y su motivo (RNF-06, docs/10)."""
+    documento: str
+    identificador: str
+    titulo: str = ""
+    ruta: str = ""
+    paginas: str = ""
+    motivo: str
+
+
+def secciones_excluidas(tabla) -> list[SeccionExcluida]:
+    """Convierte `seleccion.excluidas(tabla)` (DataFrame) en la lista que lleva `EntradaPapel`."""
+    return [SeccionExcluida(documento=r["Documento"], identificador=r["Identificador"], titulo=r["Título"], ruta=r["Ruta"],
+                            paginas=str(r["Págs"]), motivo=r["Motivo"]) for _, r in tabla.iterrows()]
+
+
 class EntradaPapel(BaseModel):
     """Todo lo que necesita `generar_papel`. No incluye ningún objeto del modelo ni del índice."""
     manual: Documento
@@ -50,6 +66,7 @@ class EntradaPapel(BaseModel):
     pares: list[Par]                             # TODOS los pares evaluados (anexo)
     secciones: dict[str, Seccion]                # id → Seccion: artículos y secciones del manual
     controles_sin_base: list[Seccion] = []       # vía 2 (L4: controles_sin_base)
+    excluidas: list[SeccionExcluida] = []        # no comparables, con su motivo (decisión del usuario, docs/14 #24)
     conclusion: str = ""                         # borrador (o texto editado) sin prefijo
     conclusion_editada: bool = False
     fecha_ejecucion: Optional[date] = None       # por defecto, hoy

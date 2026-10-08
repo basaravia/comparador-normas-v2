@@ -65,6 +65,7 @@ Registra **todo** candidato evaluado. Defiende ante el regulador que no hubo sel
 | Banderas | `cita_no_verificada`, `requiere_revision`, `seccionado_incierto` |
 
 Al final del anexo, bloque **"Vía 2 — Controles del manual sin base normativa identificada"** con las secciones del manual sin pares con cobertura. Va en la Hoja 2, sin tercera hoja.
+Tras ese bloque, otro **"Secciones excluidas como no comparables"** (documento, identificador, ruta, páginas y motivo) para que la exclusión quede rastreable (RNF-06).
 
 ## Borrador de conclusión
 - Prompt: [`backend/prompts/conclusion.md`](../backend/prompts/conclusion.md). **1 sola llamada.**
