@@ -525,3 +525,33 @@ def test_el_marcador_solo_va_en_el_primer_trozo_de_un_bloque_partido():
     textos = [b["texto"] for b in sectioner._partir(bl)]
     marcas = [b.get("marcador") for b in sectioner._partir(bl)]
     assert len(textos) == 2 and marcas == ["a)", ""]
+
+
+# --- Cola del documento (firmas, certificaciones) -------------------------------------------------------------------
+
+def _bl(texto, pagina, tipo="parrafo"):
+    return {"texto": texto, "pagina": pagina, "tipo": tipo}
+
+
+@pytest.mark.parametrize("cola", ["FIRMAS DE RESPALDO AL PROYECTO DE LEY", "Firmado electrónicamente por: JUAN PÉREZ", "CERTIFICACIÓN:"])
+def test_las_hojas_de_firmas_no_se_pegan_a_la_ultima_seccion(cola):
+    bl = [_bl("Artículo 1.- Objeto.", 1), _bl("Artículo 2.- Ámbito de aplicación.", 1), _bl("Artículo 3.- Vigencia.", 2), _bl("Texto del artículo tres.", 2),
+          _bl(cola, 3), _bl("NOMBRES Y APELLIDOS", 3), _bl("BYRON MALDONADO", 4)]
+    secs = parsear_bloques(bl, "N1", "normativa")
+    ultima = secs[-1]
+    assert ultima.identificador == "Artículo 3" and ultima.texto_literal.endswith("Texto del artículo tres.")
+    assert "BYRON" not in ultima.texto_literal and ultima.pagina_fin == 2       # termina donde termina la norma
+
+
+def test_un_encabezado_despues_de_las_firmas_reabre_el_texto():
+    bl = [_bl("Artículo 1.- Uno.", 1), _bl("Firmado electrónicamente por: ANA", 1), _bl("ruido", 1),
+          _bl("Artículo 2.- Dos.", 2), _bl("cuerpo", 2), _bl("Artículo 3.- Tres.", 3)]
+    secs = parsear_bloques(bl, "N1", "normativa")
+    assert [s.identificador for s in secs] == ["Artículo 1", "Artículo 2", "Artículo 3"]
+    assert "ruido" not in secs[0].texto_literal and "cuerpo" in secs[1].texto_literal
+
+
+def test_la_palabra_certificacion_dentro_de_un_articulo_no_corta_el_texto():
+    bl = [_bl("Artículo 1.- Objeto.", 1), _bl("La certificación de cumplimiento será emitida por la entidad.", 1),
+          _bl("Artículo 2.- Dos.", 2), _bl("Artículo 3.- Tres.", 2)]
+    assert "certificación de cumplimiento" in parsear_bloques(bl, "N1", "normativa")[0].texto_literal
