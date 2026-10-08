@@ -52,6 +52,7 @@ def embeber(textos: list[str], cliente: ModelClient, progreso: Callable[[int, in
     claves = [hashlib.sha256(f"{modelo}\x00{t}".encode("utf-8")).hexdigest() for t in textos]
     nuevos = {c: t for c, t in zip(claves, textos) if c not in _CACHE}
     vectores = {c: _CACHE[c] for c in claves if c in _CACHE}
+    log.info("Embeddings: %d textos, %d nuevos (el resto sale de la caché)", len(textos), len(nuevos))
     if nuevos:
         pendientes = list(nuevos.values())   # lotes de EMB_BATCH dentro del cliente
         lote = np.asarray(cliente.embed(pendientes, progreso) if progreso else cliente.embed(pendientes), dtype=np.float32)
