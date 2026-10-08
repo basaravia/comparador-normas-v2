@@ -571,3 +571,43 @@ def test_la_pagina_fin_de_una_tabla_unida_alarga_la_seccion():
     bl = [_bl("Artículo 1.- Uno.", 1), {"texto": "| a | b |\n|---|---|\n| 1 | 2 |", "pagina": 1, "pagina_fin": 2, "tipo": "tabla"},
           _bl("Artículo 2.- Dos.", 3), _bl("Artículo 3.- Tres.", 3)]
     assert parsear_bloques(bl, "N1", "normativa")[0].pagina_fin == 2
+
+
+# --- Títulos con numeración jerárquica que Docling toma como lista, o pega en una línea -------------------------------
+
+def _h(texto, pagina=1, tipo="encabezado", **kw):
+    return {"texto": texto, "pagina": pagina, "tipo": tipo, **kw}
+
+
+def test_un_titulo_numerado_que_docling_toma_como_lista_vuelve_a_ser_encabezado():
+    bl = [_h("I. INTRODUCCIÓN"), _h("II. OBJETIVOS"), _h("Objetivo principal", tipo="lista", marcador="2.1"),
+          _h("texto del objetivo", tipo="parrafo"), _h("Objetivos específicos", tipo="lista", marcador="2.2"),
+          _h("III. ALCANCE"), _h("Administración del riesgo", tipo="lista", marcador="3.1"), _h("Etapas", tipo="lista", marcador="3.2")]
+    secs = {s.identificador: s for s in parsear_bloques(bl, "M", "manual_control")}
+    assert {"2.1", "2.2", "3.1", "3.2"} <= set(secs)
+    assert secs["2.1"].ruta == ["II"] and secs["3.2"].ruta == ["III"]
+
+
+def test_una_lista_con_numeracion_simple_no_se_toma_por_titulo():
+    bl = [_h("I. A"), _h("II. B"), _h("III. C"), _h("Operar sin registro.", tipo="lista", marcador="1."), _h("No reportar.", tipo="lista", marcador="2.")]
+    secs = parsear_bloques(bl, "M", "manual_control")
+    assert all(s.identificador not in ("1", "2") for s in secs)
+    assert "1. Operar sin registro." in secs[-1].texto_literal
+
+
+def test_una_frase_larga_con_numeracion_jerarquica_no_se_toma_por_titulo():
+    larga = "Las entidades deberán " + "conservar los registros de operaciones " * 6
+    bl = [_h("I. A"), _h("II. B"), _h("III. C"), _h(larga, tipo="lista", marcador="3.1")]
+    assert all(s.identificador != "3.1" for s in parsear_bloques(bl, "M", "manual_control"))
+
+
+def test_dos_encabezados_pegados_en_una_linea_se_separan():
+    bl = [_h("I. A"), _h("VIII. CULTURA ORGANIZACIONAL Y CAPACITACIÓN 8.1 Capacitación al personal"), _h("texto 8.1", tipo="parrafo"),
+          _h("8.2 Evaluación"), _h("8.3 Registro"), _h("IX. REPORTES")]
+    ids = [s.identificador for s in parsear_bloques(bl, "M", "manual_control")]
+    assert "VIII" in ids and "8.1" in ids
+
+
+def test_un_encabezado_normal_con_un_numero_dentro_no_se_parte():
+    bl = [_h("I. A"), _h("II. B"), _h("III. CONFORME AL ARTÍCULO 3.2 DE LA LEY"), _h("texto", tipo="parrafo")]
+    assert [s.identificador for s in parsear_bloques(bl, "M", "manual_control")].count("III") == 1

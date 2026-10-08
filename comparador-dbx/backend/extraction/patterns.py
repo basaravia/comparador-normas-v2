@@ -99,6 +99,10 @@ def numero(texto: str | None, sufijo: str | None = None, es_letra: bool = False)
 
 
 # Docling a veces junta varios artículos en un solo párrafo ("... masiva. Artículo 4.- El CONCLAFT ... Artículo 5.- ..."):
+# Dos encabezados pegados en una línea ("VIII. CULTURA ORGANIZACIONAL 8.1 Capacitación al personal"): se corta antes de una numeración
+# jerárquica seguida de mayúscula. Solo se aplica a bloques de tipo encabezado. Solo lookahead: búsqueda lineal.
+CORTE_ENCABEZADOS = re.compile(r"(?<=\S)[ \t]+(?=\d{1,2}(?:\.\d{1,2}){1,4}[ \t]+[A-ZÁÉÍÓÚÑ])")
+
 # Cola del documento: hojas de firmas y certificaciones que siguen al texto de la norma (p. ej. "FIRMAS DE RESPALDO …",
 # "Firmado electrónicamente por: …", "CERTIFICACIÓN:"). Sin esto se pegan a la última sección. Anclado al inicio del bloque: sin backtracking.
 COLA_DOCUMENTO = re.compile(r"[ \t]*(?:FIRMAS?[ \t]+DE[ \t]+RESPALDO|Firmado[ \t]+electr[óo]nicamente[ \t]+por|CERTIFICACI[ÓO]N[ \t]*:?[ \t]*$)", re.I)
