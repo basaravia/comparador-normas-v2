@@ -335,6 +335,19 @@ La primera ejecución descargó modelos nuevos (+0,5 GB, 103 s). La versión nue
 - `extraction/sectioner.py` y `patterns.py`: módulos nuevos según docs/07 (la v6 no tiene seccionado equivalente).
 - `extraction/docling_extractor.py` y `docling_worker.py`: **nuevos**. De la v6 (`backend/src/providers.py`, `_build_pdf_pipeline_options` y `build_document_converter`) se tomó solo la idea de las opciones de Docling (`do_ocr`, modo de tablas, dispositivo); se reescribió sin LangChain, con subproceso, caché y tandas de páginas, que la v6 no tiene.
 
+### L2 · ajustes tras revisar los PDFs (8 oct 2026)
+Revisión de los PDFs de `Normativa2026/` (español, tablas, imágenes) y cambios que salieron de ella:
+
+| Hallazgo | Cambio |
+|---|---|
+| Sin caracteres rotos, ligaduras ni guiones suaves; todo en NFC | Comprobación fija en el notebook 02 y `limpiar_bloques` normaliza a NFC (un PDF de Mac puede traer tildes descompuestas) |
+| El encabezado de página ("Codificación de las Normas de la Superintendencia de Bancos") se colaba **en medio de un artículo** | `limpiar_bloques` (extractor): descarta un párrafo corto idéntico en la mitad de las páginas (y al menos 3) |
+| Docling **quitaba la numeración** de los literales (`1.`, `2.`, `a)`) | El worker guarda `marcador` en los elementos de lista numerada; el seccionador lo antepone al texto de la sección **después** de detectar encabezados (no cambia el seccionado). 33 de 34 listas de las págs. 29-31 de la LA/FT lo traen |
+| Las tablas salen como Markdown **dentro del artículo** al que pertenecen | Sin cambio: el contexto no se corta. Una tabla que continúa en otra página queda en dos bloques, el segundo sin cabecera |
+| `Transformacion-Digital` es un escaneo (32 págs, 0 caracteres de texto); las demás traen imágenes de fondo con su texto | Se rechaza con ERR-ING-001 (sin OCR). OCR queda como to-be |
+| Tabla de recuperación para validar las secciones contra el PDF | `backend/retrieval/tabla.py` (`tabla_recuperacion` → DataFrame, reutilizable por la UI) y sección 5b del notebook 02, con CSV en `output/` |
+| `DOCLING_DEVICE=auto` | Docling usa la GPU si hay (CUDA, Metal, ROCm) y si no la CPU; el worker ya no fija `cpu` |
+
 ## L3 · Recuperación
 
 **Estado:** APROBADO por `qa-ia` (recall 28/30 = 93,3 %; 100 % sin las 2 filas `por_confirmar`).

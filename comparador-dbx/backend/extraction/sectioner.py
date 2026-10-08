@@ -56,6 +56,13 @@ def parsear_bloques(bloques: list[dict[str, Any]], doc_id: str, tipo_doc: Litera
 
 # --- Nivel 1: patrones ---------------------------------------------------------------------------
 
+def _texto(b: dict) -> str:
+    """Texto del bloque con su numeración (`1.`, `a)`) si es un elemento de lista numerada.
+
+    El marcador va aparte del texto del bloque para que los patrones de encabezado no confundan una lista con una sección."""
+    return f"{b['marcador']} {b['texto']}" if b.get("marcador") else b["texto"]
+
+
 def _primera_linea(texto: str) -> str:
     return texto.split("\n", 1)[0][:LINEA_MAX]
 
@@ -69,7 +76,8 @@ def _partir(bloques: list[dict]) -> list[dict]:
             salida.append(b)
             continue
         limites = [0, *cortes, len(b["texto"])]
-        salida += [dict(b, texto=b["texto"][a:z].strip()) for a, z in zip(limites, limites[1:]) if b["texto"][a:z].strip()]
+        partes = [b["texto"][a:z].strip() for a, z in zip(limites, limites[1:]) if b["texto"][a:z].strip()]
+        salida += [dict(b, texto=t, marcador=b.get("marcador", "") if k == 0 else "") for k, t in enumerate(partes)]   # la numeración, solo en el primer trozo
     return salida
 
 
@@ -312,7 +320,7 @@ def _armar(bloques, marcas, doc_id, tipo_doc, estrategia, avisos) -> list[Seccio
                               ruta_id=[nodos[j]["token"] or _slug(nodos[j]["ident"])[:40] for j in pila]))
             pila.append(len(nodos) - 1)
         elif nodos:  # lo anterior a la primera sección (portada, memorando, índice) no es evaluable
-            nodos[-1]["textos"].append(b["texto"])
+            nodos[-1]["textos"].append(_texto(b))
             nodos[-1]["fin"] = b["pagina"]
 
     # Un identificador repetido cuyo primer aparecer no tiene cuerpo es una entrada del índice: se descarta.
@@ -359,6 +367,6 @@ def _por_longitud(bloques, doc_id, tipo_doc) -> list[Seccion]:
         grupos.append(actual)
     return [Seccion(
         id=f"{doc_id}:BLOQUE-{n}", doc_id=doc_id, tipo_doc=tipo_doc, nivel="bloque", identificador=f"Bloque {n}",
-        titulo=None, ruta=[], texto_literal="\n".join(b["texto"] for b in g).strip(),
+        titulo=None, ruta=[], texto_literal="\n".join(_texto(b) for b in g).strip(),
         pagina_inicio=g[0]["pagina"], pagina_fin=g[-1]["pagina"], seccionado_incierto=True, estrategia="longitud",
         es_hoja=True) for n, g in enumerate(grupos, 1)]
