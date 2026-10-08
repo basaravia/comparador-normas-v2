@@ -34,3 +34,6 @@ Manual_Tecnico_Comparador_Normativo_MVP.pdf
 /comparador-dbx/documentos/*
 !/comparador-dbx/documentos/LEEME.md
 !/comparador-dbx/documentos/manuales/
+# En manuales/ solo van en git los MOCK ficticios; cualquier otro manual (p. ej. MANUAL-ARLAFT-V14) se queda en local
+/comparador-dbx/documentos/manuales/*
+!/comparador-dbx/documentos/manuales/MOCK-DEMO-*.pdf
