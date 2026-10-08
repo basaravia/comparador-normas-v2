@@ -64,3 +64,17 @@ def test_titulo_visible_usa_el_titulo_de_la_seccion_o_la_primera_linea_sin_su_nu
     assert titulo_visible(con) == "Etapas del sistema"
     assert titulo_visible(sin) == "Administración del Riesgo de LA/FT (ARLAFT)."
     assert len(titulo_visible(larga)) <= 90
+
+
+def test_guardar_csv_neutraliza_las_formulas_de_los_textos_del_documento(tmp_path):
+    import pandas as pd
+    from backend.retrieval.tabla import guardar_csv
+    t = pd.DataFrame({"Título": ["=HYPERLINK(\"http://x\",\"clic\")", "+1+1", "-2", "@SUM(A1)", "\tcmd", "Texto normal", None], "Págs": [1, 2, 3, 4, 5, 6, 7]})
+    ruta = tmp_path / "t.csv"
+    guardar_csv(t, ruta)
+    import csv
+    with open(ruta, encoding="utf-8-sig", newline="") as f:
+        celdas = [fila[0] for fila in list(csv.reader(f))[1:]]
+    assert all(c.startswith("'") for c in celdas[:5])                              # ninguna celda empieza como fórmula
+    assert celdas[5] == "Texto normal" and celdas[6] == ""
+    assert t["Título"][0].startswith("=")                                           # no modifica el DataFrame original

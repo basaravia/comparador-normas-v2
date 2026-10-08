@@ -645,3 +645,11 @@ def test_una_entrada_de_indice_con_restos_de_texto_se_descarta_pero_un_duplicado
     dup = [_h("I. A", pagina=2), _h("cuerpo a " * 8, pagina=2, tipo="parrafo"), _h("I. A", pagina=2), _h("cuerpo b " * 8, pagina=2, tipo="parrafo"),
            _h("II. B", pagina=2), _h("III. C", pagina=2)]
     assert sorted(s.id for s in parsear_bloques(dup, "M", "manual_control") if s.identificador == "I") == ["M:R-1", "M:R-1#2"]
+
+
+def test_cola_del_documento_no_es_cuadratica_con_espacios_y_tabuladores_hostiles():
+    import time
+    from backend.extraction.patterns import COLA_DOCUMENTO
+    for hostil in ("CERTIFICACIÓN" + " \t" * 50_000, "CERTIFICACIÓN" + "\t" * 100_000, "Firmado" + " " * 100_000, "FIRMAS DE" + " " * 100_000):
+        t0 = time.perf_counter(); COLA_DOCUMENTO.match(hostil); assert time.perf_counter() - t0 < 0.5
+    assert COLA_DOCUMENTO.match("CERTIFICACIÓN:") and COLA_DOCUMENTO.match("CERTIFICACIÓN : ") and not COLA_DOCUMENTO.match("La certificación de cumplimiento")
