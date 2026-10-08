@@ -42,6 +42,7 @@ ENTORNO_HIJO = {"PATH", "HOME", "LANG", "TMPDIR", "CONDA_PREFIX", "VIRTUAL_ENV",
                 "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
                 "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE"}
 _RED_BLOQUEADA = ("SSLError", "MaxRetryError", "ConnectionError", "LocalEntryNotFoundError", "offline mode")  # fallo al bajar modelos
+DISPOSITIVOS = {"auto", "cpu", "cuda", "mps"}                    # `auto`: GPU si hay (CUDA, Metal, ROCm); si no, CPU
 MAX_CACHE = 8                                                   # PDFs en memoria (RAM acotada)
 _CACHE: dict[str, list[dict]] = {}                              # sha256 → bloques
 _COMANDO = [sys.executable, "-m", "backend.extraction.docling_worker"]  # reemplazable en pruebas del control
@@ -90,7 +91,9 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
         comando.append(s.DOCLING_ARTIFACTS)
     # Entorno mínimo: Docling no necesita las claves de los modelos (GROQ_API_KEY, FOUNDRY_AI_TOKEN…).
     entorno = {k: v for k, v in os.environ.items() if k in ENTORNO_HIJO or k.startswith(("HF_", "LC_"))}
-    entorno.update(OMP_NUM_THREADS=str(s.DOCLING_THREADS), HF_HUB_DISABLE_TELEMETRY="1", DO_NOT_TRACK="1")
+    if s.DOCLING_DEVICE not in DISPOSITIVOS:
+        raise ExtraccionError(f"DOCLING_DEVICE={s.DOCLING_DEVICE!r} no es válido; usa uno de {sorted(DISPOSITIVOS)}")
+    entorno.update(DOCLING_DEVICE=s.DOCLING_DEVICE, OMP_NUM_THREADS=str(s.DOCLING_THREADS), HF_HUB_DISABLE_TELEMETRY="1", DO_NOT_TRACK="1")
 
     bloques, vencio = None, threading.Event()
     with tempfile.TemporaryFile() as errores:

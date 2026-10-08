@@ -69,6 +69,7 @@ class Settings:
     MANUALES_DIR: str = _env("MANUALES_DIR")      # carpeta de manuales de control (los MOCK, versionados); relativa a comparador-dbx/
     NORMAS_DIR: str = _env("NORMAS_DIR")          # carpeta de PDFs de normas (no se versiona); relativa a comparador-dbx/
     DOCLING_THREADS: int = int(_env("DOCLING_THREADS"))
+    DOCLING_DEVICE: str = _env("DOCLING_DEVICE")    # auto | cpu | cuda | mps
     DOCLING_TABLES: str = _env("DOCLING_TABLES")          # fast | off | accurate
     DOCLING_TIMEOUT_S: int = int(_env("DOCLING_TIMEOUT_S"))
     DOCLING_CHUNK_PAGES: int = int(_env("DOCLING_CHUNK_PAGES"))
