@@ -10,9 +10,9 @@
 // ids:    hitos como en docs/13; P- pendientes, S- seguridad, D- descartadas,
 //         V- pospuestas a V2, A- actividades. Nunca se borran tarjetas.
 window.TABLERO = {
-  actualizado: "2026-10-07",
+  actualizado: "2026-10-08",
   rama: "main",
-  ultimo_commit: "a1c7f36 Merge rama fix/docling-red-bloqueada",
+  ultimo_commit: "a55ec66 Merge rama feat/tablas-y-figuras",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -79,6 +79,13 @@ window.TABLERO = {
 
     { id: "P-16", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "Conjunto de mejoras tras revisar los notebooks",
       nota: "Pendiente de las pruebas del usuario (7 oct 2026): (a) cambiar DMR_LLM_MODEL de dev a ai/gemma4 (qwen3.5 devuelve respuesta vacía); (b) mensaje claro cuando el LLM devuelve respuesta vacía (finish_reason) en lugar de JSON inválido; (c) revisar el juez de L4 y la conclusión de L5 con gemma4." },
+
+    { id: "A-19", fase: "L", tipo: "actividad", estado: "hecho", titulo: "L2 v0.3.1: tablas atómicas, hojas de firmas fuera y tabla de recuperación",
+      nota: "Tablas atómicas con cabecera repetida y tablas continuadas unidas, aviso de figuras, interruptor TABLAS_ATOMICAS y etiqueta de vuelta atrás antes-tablas-atomicas (a55ec66); hojas de firmas fuera de la última sección (cc4a56b); DOCLING_DEVICE=auto (942cdd9); tabla de recuperación como DataFrame en backend/retrieval/tabla.py y sección 5b del notebook 02 (e50e1c2). El usuario lo probó en su Mac (8 oct 2026): funcionó muy bien y le gustaron las tablas.", commit: "a55ec66" },
+    { id: "P-17", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "Mejora E2E: selección y filtro de secciones sobre la tabla de recuperación (RF-09, RF-10)",
+      nota: "Pendiente de aprobación del usuario. Según el usuario, estas tablas son clave para que el auditor seleccione qué quiere comparar y contra qué, y filtre las secciones que se lanzan a analizar entre normas y manuales. Propuesta: backend/retrieval/seleccion.py con seleccionar(tabla, ruta/nivel/texto/páginas) (marcar un padre marca a sus hijos, solo hojas), contadores, estimar_pares e ids_seleccionados (entrada de construir_pares y de Indice.filtrar); columna Incluir en la tabla y sección 5c del notebook 02. La interfaz (casillas, filtros, buscador) va en la fase U (U0) sobre la misma lógica." },
+    { id: "P-18", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "Mejora E2E: todo proceso largo o iterativo lleva barra de progreso y logger sencillo",
+      nota: "Decidida por el usuario (8 oct 2026): necesita saber qué hace y cómo avanza cada paso. Implementación: backend/core/progreso.py (configurar_logs, barras para Docling y embeddings), aplicada a los notebooks 02 y 03, y regla en CLAUDE.md para todo hito nuevo." },
 
     // ── Seguridad (agente appsec) ──
     { id: "S-01", fase: "L", tipo: "seguridad", estado: "por_hacer", titulo: "L4: chequeo de frases al evaluador → requiere_revision",
@@ -264,6 +271,7 @@ window.TABLERO = {
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-08", texto: "main (a55ec66): L2 v0.3.1 con tablas atómicas, hojas de firmas fuera, DOCLING_DEVICE=auto y tabla de recuperación (A-19, probado por el usuario en su Mac); nuevas mejoras P-17 (selección y filtro de secciones, pendiente de aprobación) y P-18 (barra de progreso y logger, decidida)." },
     { fecha: "2026-10-07", texto: "main (a1c7f36): Docling funciona con la red corporativa bloqueada (proxy y certificados heredados, ERR-EXT-004, modelos locales con HF_HUB_OFFLINE=1; verificado en la Pi: 43 bloques en 33 s); defaults.env (652300f) y notebooks en macOS (873771b) corregidos; nuevas tarjetas A-18, V-13 (borrar rama aux/docling-modelos, decide el usuario) y V-14 (granite-docling en dev)." },
     { fecha: "2026-10-07", texto: "main (c031b78): hecho carpetas documentos/normas y documentos/manuales (NORMAS_DIR, MANUALES_DIR), defaults.env y .env.example, barras de progreso tqdm en notebooks 01, 02, 03 y 05; nuevas tarjetas P-16 (mejoras tras revisar notebooks), V-11 (modelo por etapa) y V-12 (ingesta con reglas primero, pospuesta por decisión del usuario)." },
     { fecha: "2026-10-07", texto: "main (686dca4): L2, L3 y L5 con APROBADO de qa-ia; QA-02 corregido; golden set de 51 pares; nuevo ritmo (D-35); CI pospuesto (A-16); to-be V-07..V-10; próximo: notebooks 02, 03, 05 y luego L4." },
