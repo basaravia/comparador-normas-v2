@@ -105,7 +105,7 @@ CORTE_ENCABEZADOS = re.compile(r"(?<=\S)[ \t]+(?=\d{1,2}(?:\.\d{1,2}){1,4}[ \t]+
 
 # Cola del documento: hojas de firmas y certificaciones que siguen al texto de la norma (p. ej. "FIRMAS DE RESPALDO …",
 # "Firmado electrónicamente por: …", "CERTIFICACIÓN:"). Sin esto se pegan a la última sección. Anclado al inicio del bloque: sin backtracking.
-COLA_DOCUMENTO = re.compile(r"[ \t]*(?:FIRMAS?[ \t]+DE[ \t]+RESPALDO|Firmado[ \t]+electr[óo]nicamente[ \t]+por|CERTIFICACI[ÓO]N[ \t]*:?[ \t]*$)", re.I)
+COLA_DOCUMENTO = re.compile(r"[ \t]{0,3}(?:FIRMAS?[ \t]+DE[ \t]+RESPALDO|Firmado[ \t]+electr[óo]nicamente[ \t]+por|CERTIFICACI[ÓO]N[ \t]{0,3}:?[ \t]{0,3}$)", re.I)
 
 # antes de buscar patrones el bloque se parte en esos puntos. Exige el ".-" tras el número y, dentro de una línea,
 # que venga después de un punto, ";", ":" o comilla de cierre (así no corta "conforme al artículo 5 de esta Ley").

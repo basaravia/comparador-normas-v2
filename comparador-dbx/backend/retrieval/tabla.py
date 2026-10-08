@@ -9,6 +9,7 @@ import pandas as pd
 import pymupdf
 
 from backend.models import Seccion
+from backend.output.styles import PREFIJOS_FORMULA
 from backend.retrieval.chunker import estimar_tokens, subchunkear
 
 COLUMNAS = ["Documento", "Rol", "Nivel", "Identificador", "Título", "Ruta", "Págs", "Caracteres", "Sub-chunks",
@@ -54,3 +55,10 @@ def tabla_recuperacion(secciones: list[Seccion], pdf: Path, nombre: str) -> pd.D
             "Incierto": "⚠" if x.seccionado_incierto else "",
             "Inicio del texto": texto[:90].replace("\n", " ⏎ "), "Fin del texto": texto[-60:].replace("\n", " ⏎ ")})
     return pd.DataFrame(filas, columns=COLUMNAS)
+
+
+def guardar_csv(tabla: pd.DataFrame, ruta: Path) -> None:
+    """CSV para abrir en Excel, sin inyección de fórmulas (CWE-1236): un texto del documento que empieza por = + - @ (o tab/CR) se guarda con un
+    apóstrofo delante. Los textos salen de PDFs que no controlamos."""
+    seguro = tabla.map(lambda v: "'" + v if isinstance(v, str) and v.startswith(PREFIJOS_FORMULA) else v)   # celda a celda: no depende del dtype
+    seguro.to_csv(ruta, index=False, encoding="utf-8-sig")        # utf-8-sig: Excel lo abre con tildes

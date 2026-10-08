@@ -45,3 +45,9 @@ Dos salidas:
    ```
    `docling-modelos.tar.gz` (~470 MB) sale de una máquina donde Docling ya descargó los modelos: `~/.cache/huggingface/hub/models--ds4sd--docling-layout-heron` y `models--ds4sd--docling-models`, más dos enlaces con el nombre nuevo `docling-project--...` que apuntan a esas carpetas.
    Con `HF_HUB_OFFLINE=1` Docling no intenta conectarse; si falta un modelo falla con `ERR-EXT-004`.
+
+## Caché de bloques (`BLOQUES_DIR`)
+Si defines `BLOQUES_DIR`, los notebooks guardan el **texto íntegro** que Docling extrae de cada PDF (un `.json` por documento) para no repetir los 6-10 minutos de extracción. Con un manual real, eso es información del banco **en claro en tu disco**:
+- Se crea con permisos privados (carpeta 700, archivos 600). Elige una carpeta tuya, fuera de cualquier carpeta que se sincronice o se suba, y bórrala al terminar (`/tmp` sirve).
+- Nunca la subas a git. La app **no** la usa: no persiste nada (CLAUDE.md, regla 8).
+- Antes de usar la caché se valida el PDF (tipo, tamaño y páginas); una caché dañada o manipulada se ignora y se vuelve a extraer.

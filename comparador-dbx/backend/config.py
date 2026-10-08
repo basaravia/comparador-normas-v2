@@ -168,4 +168,5 @@ def redact(texto: str) -> str:
     for nombre, valor in settings.__dict__.items():
         if es_secreto(nombre) and len(valor) >= 4:
             texto = texto.replace(valor, "***")
+    texto = re.sub(r"(://)[^/@\s]+@", r"\1***@", texto)      # usuario:clave@host de una URL (p. ej. HTTPS_PROXY)
     return re.sub(r"\b(sk-|gsk_|dapi)[A-Za-z0-9_-]{12,}", "***", texto)

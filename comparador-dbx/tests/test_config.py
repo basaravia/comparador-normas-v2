@@ -174,3 +174,11 @@ def test_redact_ignora_secretos_cortos_o_vacios(monkeypatch):
 def test_redact_claves_con_formato_conocido(monkeypatch, texto, esperado):
     monkeypatch.setattr(config, "settings", replace(settings, GROQ_API_KEY="", FOUNDRY_AI_TOKEN=""))
     assert redact(texto) == esperado
+
+
+def test_redact_oculta_las_credenciales_de_una_url_de_proxy():
+    from backend.config import redact
+    sucio = "ProxyError: HTTPSConnectionPool via http://usuario:S3cr3tPw@proxy.empresa.com:8080 failed"
+    limpio = redact(sucio)
+    assert "S3cr3tPw" not in limpio and "usuario" not in limpio and "http://***@proxy.empresa.com:8080" in limpio
+    assert redact("https://huggingface.co/api/models/x") == "https://huggingface.co/api/models/x"    # una URL sin credenciales no cambia
