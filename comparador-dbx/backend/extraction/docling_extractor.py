@@ -16,6 +16,7 @@ import subprocess  # nosec B404
 import sys
 import tempfile
 import threading
+import time
 import unicodedata
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -130,6 +131,8 @@ def _matar(proc, senal) -> None:
 
 def _ejecutar(ruta: Path, progreso) -> list[dict]:
     s = settings
+    log.info("Docling: extrayendo %s (dispositivo %s, %d hilos)", ruta.name, s.DOCLING_DEVICE, s.DOCLING_THREADS)
+    t0 = time.perf_counter()
     comando = [*_COMANDO, str(ruta), s.DOCLING_TABLES, str(s.DOCLING_THREADS), str(s.DOCLING_CHUNK_PAGES)]
     if s.DOCLING_ARTIFACTS:
         comando.append(s.DOCLING_ARTIFACTS)
@@ -195,4 +198,5 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
         raise ExtraccionError("Docling no encontró texto en el documento.", "ERR-EXT-003",
                               "No encontramos texto en este documento.")
     figuras = [{"texto": f"Figura en la página {f['pagina']} (su contenido no se analiza)", "pagina": f["pagina"], "tipo": "figura"} for f in figuras]
+    log.info("Docling: %d bloques en %.0f s (%d figuras avisadas)", len(bloques), time.perf_counter() - t0, len(figuras))
     return limpiar_bloques(bloques) + figuras

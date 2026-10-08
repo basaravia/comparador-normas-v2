@@ -3,6 +3,7 @@
 El LLM solo propone: la decisión de preseleccionar el tipo la toma el código (`tipo_sugerido`).
 """
 import json
+import logging
 from datetime import date
 from pathlib import Path
 from typing import Literal
@@ -14,6 +15,9 @@ from backend.core.errors import LLMOutputError
 from backend.ingest.pdf_metadata import metadatos_limpios, texto_primeras_paginas
 from backend.ingest.validation import nombre_seguro, validar_pdf
 from backend.llm.client import ModelClient
+
+
+log = logging.getLogger(__name__)
 
 
 class MetadatosLLM(BaseModel):
@@ -80,7 +84,9 @@ def ingerir(ruta: Path, cliente: ModelClient) -> dict:
         return {"archivo": nombre, "ok": False, "codigo": v.codigo, "mensaje": v.mensaje}
 
     nativos = metadatos_limpios(v.metadatos)
+    log.info("Ingesta: clasificando %s (%d págs)", nombre, v.paginas)
     r = clasificar(cliente, nombre, nativos, texto_primeras_paginas(ruta))
+    log.info("Ingesta: %s → %s (confianza %.2f)", nombre, r.tipo_documento, r.confianza_tipo)
     excluir = {"tipo_documento", "confianza_tipo", "evidencia_tipo"}
     metadatos = {k: val for k, val in r.model_dump(mode="json", exclude=excluir).items() if val}  # fechas como texto
     # Prioridad: editado por el auditor (llega en la API) > LLM > nativo del PDF > vacío.
