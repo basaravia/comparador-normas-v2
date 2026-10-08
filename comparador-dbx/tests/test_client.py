@@ -159,3 +159,35 @@ def test_ping_sin_servicio_devuelve_mensaje_de_negocio_y_el_detalle_va_al_log(ca
     assert "127.0.0.1" not in str(estado)          # nada técnico hacia la pantalla
     assert "Ping de llm falló" in caplog.text      # el detalle sí queda en el log
 
+
+
+# --- Texto demasiado largo para el modelo de embeddings (solo la detección; el recorte real se comprueba con el modelo, en el notebook 03) ---
+
+@pytest.mark.parametrize("mensaje", [
+    "Error code: 500 - {'error': {'code': 500, 'message': 'input (535 tokens) is too large to process. increase the physical batch size', 'type': 'server_error'}}",
+    "This model's maximum context length is 8192 tokens, however you requested 9000 tokens", "Input is too long for this model",
+    "the request exceeds the maximum context size"])
+def test_demasiado_largo_reconoce_los_rechazos_por_longitud(mensaje):
+    from backend.llm.client import demasiado_largo
+    assert demasiado_largo(Exception(mensaje))
+
+
+@pytest.mark.parametrize("mensaje", ["Connection error.", "Error code: 401 - invalid api key", "Error code: 429 - rate limit exceeded", "model not found"])
+def test_demasiado_largo_no_confunde_otros_errores(mensaje):
+    from backend.llm.client import demasiado_largo
+    assert not demasiado_largo(Exception(mensaje))
+
+
+def test_partir_en_ventanas_cubre_todo_el_texto_sin_perder_ninguna_palabra():
+    from backend.llm.client import partir_en_ventanas
+    texto = " ".join(f"p{i}" for i in range(500))
+    for n in (2, 3, 5, 8):
+        v = partir_en_ventanas(texto, n)
+        assert len(v) == n and set(" ".join(v).split()) == set(texto.split())                  # cubren todo
+        assert all(len(x.split()) < 500 for x in v) and v[0].split()[0] == "p0" and v[-1].split()[-1] == "p499"
+        assert set(v[0].split()) & set(v[1].split())                                           # y se solapan
+
+
+def test_partir_en_ventanas_no_parte_un_texto_corto():
+    from backend.llm.client import partir_en_ventanas
+    assert partir_en_ventanas("uno dos tres", 4) == ["uno dos tres"] and partir_en_ventanas("a b c d e f", 1) == ["a b c d e f"]

@@ -78,10 +78,18 @@ def validar_borrador(texto: str, resumen: dict) -> None:
 
 
 def generar_borrador(entrada: EntradaPapel, cliente) -> str:
-    """Una sola llamada a `cliente.chat_json`. Devuelve el borrador SIN prefijo (lo añade el papel)."""
+    """Una llamada a `cliente.chat_json`; si el borrador no valida (p. ej. el modelo inventa una cifra), UN reintento con el motivo
+    adjunto (docs/09 §4). Si vuelve a fallar, `LLMOutputError`. Devuelve el borrador SIN prefijo (lo añade el papel)."""
     resumen = resumen_conclusion(entrada)
     sistema, usuario = cargar_prompt("conclusion")
     usuario = rellenar_prompt(usuario, resumen_json=json.dumps(resumen, ensure_ascii=False, indent=1))
-    texto = cliente.chat_json(sistema, usuario, BorradorConclusion).borrador_conclusion
-    validar_borrador(texto, resumen)
-    return texto
+    for intento in (1, 2):
+        texto = cliente.chat_json(sistema, usuario, BorradorConclusion).borrador_conclusion
+        try:
+            validar_borrador(texto, resumen)
+            return texto
+        except LLMOutputError as e:
+            if intento == 2:
+                raise
+            usuario += f"\n\nTu borrador anterior fue rechazado: {e}. Escríbelo de nuevo usando solo las cifras del resumen."
+    raise AssertionError("inalcanzable")

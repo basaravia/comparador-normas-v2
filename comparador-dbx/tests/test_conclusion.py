@@ -131,3 +131,49 @@ def test_generar_borrador_con_llm_real(cliente):
         pytest.fail(f"El borrador real incumple la validación del código: {e}")
     assert 120 <= len(texto.split()) <= 220
     assert cifras_no_entregadas(texto, resumen_conclusion(ent)) == []
+
+
+# --- Reintento del borrador (el modelo a veces inventa una cifra) ---------------------------------------------------------
+# ClienteGuion no imita a un modelo: entrega borradores escritos a mano para probar la lógica de reintento (el modelo real va en la prueba de integración).
+
+class ClienteGuion:
+    def __init__(self, *borradores):
+        self.borradores, self.prompts = list(borradores), []
+
+    def chat_json(self, sistema, usuario, esquema):
+        self.prompts.append(usuario)
+        return esquema(borrador_conclusion=self.borradores.pop(0))
+
+
+def _valido(resumen_ent):
+    base = ("El manual se evaluó frente a la normativa seleccionada y se revisaron los artículos evaluables con sus marcas de verificación. "
+            "Los incumplimientos y los cumplimientos parciales se documentan en el anexo técnico, junto con las secciones consultadas y la "
+            "confianza de cada evaluación, de modo que el auditor pueda validar el resultado antes de firmar el papel de trabajo. ") * 3
+    return base
+
+
+def test_si_el_borrador_trae_una_cifra_inventada_se_reintenta_con_el_motivo():
+    from tests.datos_papel import entrada
+    ent = entrada()
+    bueno = _valido(ent)
+    cliente = ClienteGuion(bueno + " Representa el 99.9 por ciento.", bueno)
+    assert generar_borrador(ent, cliente) == bueno.strip()
+    assert len(cliente.prompts) == 2 and "rechazado" in cliente.prompts[1] and "99.9" in cliente.prompts[1]
+
+
+def test_con_un_borrador_valido_no_hay_reintento():
+    from tests.datos_papel import entrada
+    ent = entrada()
+    cliente = ClienteGuion(_valido(ent))
+    generar_borrador(ent, cliente)
+    assert len(cliente.prompts) == 1
+
+
+def test_si_el_reintento_tambien_falla_se_lanza_el_error():
+    from backend.core.errors import LLMOutputError
+    from tests.datos_papel import entrada
+    ent = entrada()
+    cliente = ClienteGuion("muy corto", "tambien corto")
+    with pytest.raises(LLMOutputError):
+        generar_borrador(ent, cliente)
+    assert len(cliente.prompts) == 2

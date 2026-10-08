@@ -10,6 +10,7 @@ mensajes técnicos del cliente, no prompts del producto: esos viven en `backend/
 """
 from typing import Callable
 import json
+import re
 import logging
 import time
 from urllib.parse import urlparse
@@ -63,6 +64,24 @@ def crear_cliente(proveedor: str, s: Settings, embeddings: bool = False) -> tupl
         return cliente, deployment
 
     raise ProviderConfigError(f"Proveedor desconocido: {proveedor!r}")
+
+
+_DEMASIADO_LARGO = re.compile(r"too large|too long|exceeds? the (maximum )?(context|token)|maximum context length|input.{0,40}tokens", re.I)
+
+
+def demasiado_largo(error: Exception) -> bool:
+    """¿El modelo rechazó el texto por superar su contexto? (DMR: "input (535 tokens) is too large to process")."""
+    return bool(_DEMASIADO_LARGO.search(str(error)))
+
+
+def partir_en_ventanas(texto: str, n: int, solape: float = 0.15) -> list[str]:
+    """`n` ventanas de palabras con solape que juntas cubren TODO el texto (ninguna palabra se pierde)."""
+    palabras = texto.split()
+    if n <= 1 or len(palabras) < 2 * n:
+        return [texto]
+    paso = -(-len(palabras) // n)                       # ceil: tamaño base de cada ventana
+    extra = max(1, int(paso * solape))
+    return [" ".join(palabras[max(0, i * paso - extra): min(len(palabras), (i + 1) * paso + extra)]) for i in range(n)]
 
 
 class ModelClient:
@@ -121,6 +140,26 @@ class ModelClient:
             raise clasificar(e) from e
         return r.choices[0].message.content or ""
 
+    def _embed_por_ventanas(self, cliente, modelo: str, texto: str) -> list[float]:
+        """Un texto que el modelo rechaza por largo (granite admite 512 tokens) se vectoriza en ventanas con solape que CUBREN TODO el texto,
+        y se promedian sus vectores (normalizados). No se recorta nada: el chunk no cambia y toda su información cuenta.
+
+        Empieza con 2 ventanas y sube hasta 8 si hace falta. En un modelo de contexto amplio (bge-m3, Foundry) no se activa."""
+        for n in range(2, 9):
+            ventanas = partir_en_ventanas(texto, n)
+            try:
+                r = cliente.embeddings.create(model=modelo, input=ventanas)
+            except Exception as e:
+                if not demasiado_largo(e) or n == 8:
+                    log.error("Fallo de embeddings %s: %s", modelo, redact(str(e)))
+                    raise clasificar(e) from e
+                continue
+            log.info("Embeddings: un texto superaba el límite del modelo; se vectorizó en %d ventanas y se promedió (sin recortar).", n)
+            m = np.array([d.embedding for d in r.data], dtype=np.float32)
+            m /= np.linalg.norm(m, axis=1, keepdims=True)
+            return list(m.mean(axis=0))
+        raise AssertionError("inalcanzable")
+
     def embed(self, textos: list[str], progreso: Callable[[int, int], None] | None = None) -> np.ndarray:
         """Embeddings por lotes de `EMB_BATCH`: matriz float32 con cada fila de norma 1.
 
@@ -128,12 +167,16 @@ class ModelClient:
         cliente, modelo = self.emb()
         vectores = []
         for i in range(0, len(textos), self.s.EMB_BATCH):
+            lote = textos[i:i + self.s.EMB_BATCH]
             try:
-                r = cliente.embeddings.create(model=modelo, input=textos[i:i + self.s.EMB_BATCH])
+                r = cliente.embeddings.create(model=modelo, input=lote)
+                vectores += [d.embedding for d in r.data]
             except Exception as e:
-                log.error("Fallo de embeddings %s: %s", modelo, redact(str(e)))
-                raise clasificar(e) from e
-            vectores += [d.embedding for d in r.data]
+                if demasiado_largo(e):          # un texto del lote no cabe: se vectoriza uno a uno y el largo, por ventanas
+                    vectores += [self._embed_por_ventanas(cliente, modelo, t) for t in lote]
+                else:
+                    log.error("Fallo de embeddings %s: %s", modelo, redact(str(e)))
+                    raise clasificar(e) from e
             if progreso:
                 progreso(min(i + self.s.EMB_BATCH, len(textos)), len(textos))
         m = np.array(vectores, dtype=np.float32)
