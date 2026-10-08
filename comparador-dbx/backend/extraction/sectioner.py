@@ -59,19 +59,23 @@ def parsear_bloques(bloques: list[dict[str, Any]], doc_id: str, tipo_doc: Litera
 # --- Nivel 1: patrones ---------------------------------------------------------------------------
 
 _NUM_JERARQUICO = re.compile(r"\d+(?:\.\d+)+\.?")     # 3.1  ·  5.4.5  ·  5.3.10.1
+_NUM_ROMANO = re.compile(r"[IVXLC]{1,6}\.")           # I.  ·  IV.  ·  XII.
 MAX_PALABRAS_TITULO = 25
+MAX_PALABRAS_CAPITULO = 12
 
 
 def _promover_numerados(bloques: list[dict]) -> list[dict]:
     """Un título con numeración automática de Word (3.1, 5.4.5…) llega de Docling como elemento de lista: el número queda
     en `marcador` y el texto es solo el título, así que ningún patrón lo vería. Se vuelve a unir y pasa a encabezado.
 
-    Solo numeración jerárquica (con punto: 3.1) y texto corto de una línea: una lista `1.`, `2.` de un artículo no se toca."""
+    Solo numeración jerárquica (con punto: 3.1) y texto corto de una línea; o un capítulo romano (`IV.`) en MAYÚSCULAS y corto,
+    para que un índice escrito como lista no deje entradas sueltas. Una lista `1.`, `2.` o las fracciones `I.`, `II.` de un artículo no se tocan."""
     salida = []
     for b in bloques:
-        m = b.get("marcador")
-        if b.get("tipo") == "lista" and m and _NUM_JERARQUICO.fullmatch(m) and "\n" not in b["texto"] \
-                and len(b["texto"].split()) <= MAX_PALABRAS_TITULO:
+        m, texto = b.get("marcador"), b["texto"]
+        jerarquico = bool(m) and _NUM_JERARQUICO.fullmatch(m) and len(texto.split()) <= MAX_PALABRAS_TITULO
+        capitulo = bool(m) and _NUM_ROMANO.fullmatch(m) and texto.isupper() and len(texto.split()) <= MAX_PALABRAS_CAPITULO
+        if b.get("tipo") == "lista" and "\n" not in texto and (jerarquico or capitulo):
             b = {**{k: v for k, v in b.items() if k != "marcador"}, "tipo": "encabezado", "texto": f"{m} {b['texto']}", "nivel": 1}
         salida.append(b)
     return salida
@@ -332,6 +336,13 @@ def _validar(nodos, descartados, avisos) -> set[int]:
     return malos
 
 
+def _es_entrada_de_indice(previo: dict, posterior: dict) -> bool:
+    """Entrada de índice con restos de texto (las subentradas que no llegaron a ser encabezados): está en una página anterior
+    y su contenido es menos de la cuarta parte del de la sección real. Un duplicado real en la misma página no cumple esto."""
+    cuerpo = lambda n: sum(len(t) for t in n["textos"][1:])
+    return previo["ini"] < posterior["ini"] and cuerpo(previo) * 4 <= cuerpo(posterior)
+
+
 def _armar(bloques, marcas, doc_id, tipo_doc, estrategia, avisos) -> list[Seccion]:
     nodos, pila, en_cola = [], [], False
     for i, b in enumerate(bloques):
@@ -357,7 +368,7 @@ def _armar(bloques, marcas, doc_id, tipo_doc, estrategia, avisos) -> list[Seccio
     descartados, ultimo = set(), {}
     for k, base in enumerate(clave_de):
         previo = ultimo.get(base)
-        if previo is not None and len(nodos[previo]["textos"]) <= 1:
+        if previo is not None and (len(nodos[previo]["textos"]) <= 1 or _es_entrada_de_indice(nodos[previo], nodos[k])):
             descartados.add(previo)
         ultimo[base] = k
     inciertos = _validar(nodos, descartados, avisos) if estrategia == "patron" else set()

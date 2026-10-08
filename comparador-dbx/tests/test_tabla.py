@@ -54,3 +54,13 @@ def test_acepta_que_el_inicio_este_en_una_pagina_vecina(tmp_path, pagina_inicio)
     pdf = _pdf(tmp_path, ["relleno", "Artículo 9.- Texto que empieza aquí", "relleno"])
     t = tabla_recuperacion([_seccion("Art. 9", "Artículo 9.- Texto que empieza aquí", pagina=pagina_inicio, pagina_fin=pagina_inicio)], pdf, "N")
     assert t.iloc[0]["Inicio en el PDF"] == "✔"
+
+
+def test_titulo_visible_usa_el_titulo_de_la_seccion_o_la_primera_linea_sin_su_numeracion():
+    from backend.retrieval.tabla import titulo_visible
+    con = _seccion("3.2", "3.2 Etapas del sistema.\ntexto", identificador="3.2", titulo="Etapas del sistema")
+    sin = _seccion("3.1", "3.1 Administración del Riesgo de LA/FT (ARLAFT).\ntexto", identificador="3.1", titulo=None)
+    larga = _seccion("9", "9 " + "palabra " * 40, identificador="9", titulo=None)
+    assert titulo_visible(con) == "Etapas del sistema"
+    assert titulo_visible(sin) == "Administración del Riesgo de LA/FT (ARLAFT)."
+    assert len(titulo_visible(larga)) <= 90

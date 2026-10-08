@@ -19,6 +19,16 @@ def _norm(texto: str) -> str:
     return re.sub(r"\s+", " ", texto).strip().lower()
 
 
+def titulo_visible(x: Seccion, maximo: int = 90) -> str:
+    """Título para mostrar: el de la sección o, si el seccionador no lo aceptó (termina en punto, muy largo), la primera línea sin su numeración."""
+    if x.titulo:
+        return x.titulo
+    linea = x.texto_literal.strip().split("\n", 1)[0]
+    if linea.startswith(x.identificador):
+        linea = linea[len(x.identificador):]
+    return linea.lstrip(" .:-–—").strip()[:maximo]
+
+
 def tabla_recuperacion(secciones: list[Seccion], pdf: Path, nombre: str) -> pd.DataFrame:
     """Una fila por sección: ruta y páginas, cómo se parte para embeddings y si su inicio coincide con el PDF.
 
@@ -36,7 +46,7 @@ def tabla_recuperacion(secciones: list[Seccion], pdf: Path, nombre: str) -> pd.D
         texto = x.texto_literal.strip()
         filas.append({
             "Documento": nombre, "Rol": "se compara (hoja)" if x.es_hoja else "agrupa",
-            "Nivel": x.nivel, "Identificador": x.identificador, "Título": x.titulo or "", "Ruta": " › ".join(x.ruta),
+            "Nivel": x.nivel, "Identificador": x.identificador, "Título": titulo_visible(x), "Ruta": " › ".join(x.ruta),
             "Págs": f"{x.pagina_inicio}-{x.pagina_fin}" if x.pagina_fin != x.pagina_inicio else str(x.pagina_inicio),
             "Caracteres": len(x.texto_literal), "Sub-chunks": len(subs),
             "Tokens máx.": max((estimar_tokens(sc.texto) for sc in subs), default=0),

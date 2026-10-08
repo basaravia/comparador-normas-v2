@@ -126,6 +126,11 @@ def carpeta_manuales() -> Path:
     return _carpeta(settings.MANUALES_DIR)
 
 
+def manuales_locales() -> list[Path]:
+    """Manuales en `documentos/manuales/` que no son los MOCK de git (p. ej. un manual real o parecido a uno real, solo en local)."""
+    return sorted(p for p in carpeta_manuales().glob("*.pdf") if not p.name.startswith("MOCK-DEMO-"))
+
+
 def es_secreto(nombre: str) -> bool:
     return nombre.endswith(("_KEY", "_TOKEN"))  # GROQ_API_KEY, FOUNDRY_AI_TOKEN
 
