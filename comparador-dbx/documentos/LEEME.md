@@ -17,7 +17,9 @@ Copia aquí los PDF de las normas (por ejemplo los de `Normativa2026/` del repo 
 | `Proyecto-de-Ley-Organica-Organica-para-Reprimir-y-Prevenir-el-Lavado-de-Activos-y-la-Financiacion-del-Terrorismo.pdf` | notebooks 01, 02, 03 y pruebas de L2 y L3 |
 
 ## manuales/
-Los manuales MOCK (`MOCK-DEMO-01/02/03.pdf`) son ficticios y **sí** están versionados. Un manual real del banco no se sube a git: guárdalo fuera de esta carpeta (por ejemplo en `NORMAS_DIR` o en otra ruta local).
+Los manuales MOCK (`MOCK-DEMO-01/02/03.pdf`) son ficticios y **sí** están versionados. `MANUAL-ARLAFT-V14` (`.docx` y `.pdf`) es un manual **sintético** muy parecido a uno real: 57 páginas, 120 encabezados de hasta 5 niveles (`5.4.6.2.1`) con capítulos romanos, 14 tablas y numeración repetida (dos `XI.`, dos `XII.`). El `.docx` es el original, sin el autor en sus propiedades; el `.pdf` se generó con LibreOffice y es el que acepta hoy la ingesta (el `.docx` se rechaza con ERR-ING-003). Sirve para probar el seccionado con una jerarquía profunda.
+
+Un manual real del banco no se sube a git: guárdalo fuera de esta carpeta (por ejemplo en `NORMAS_DIR` o en otra ruta local).
 
 ## Otra ubicación
 Define `NORMAS_DIR` en `config/.env` (ruta absoluta, o relativa a `comparador-dbx/`):
