@@ -571,3 +571,77 @@ def test_la_pagina_fin_de_una_tabla_unida_alarga_la_seccion():
     bl = [_bl("Artículo 1.- Uno.", 1), {"texto": "| a | b |\n|---|---|\n| 1 | 2 |", "pagina": 1, "pagina_fin": 2, "tipo": "tabla"},
           _bl("Artículo 2.- Dos.", 3), _bl("Artículo 3.- Tres.", 3)]
     assert parsear_bloques(bl, "N1", "normativa")[0].pagina_fin == 2
+
+
+# --- Títulos con numeración jerárquica que Docling toma como lista, o pega en una línea -------------------------------
+
+def _h(texto, pagina=1, tipo="encabezado", **kw):
+    return {"texto": texto, "pagina": pagina, "tipo": tipo, **kw}
+
+
+def test_un_titulo_numerado_que_docling_toma_como_lista_vuelve_a_ser_encabezado():
+    bl = [_h("I. INTRODUCCIÓN"), _h("II. OBJETIVOS"), _h("Objetivo principal", tipo="lista", marcador="2.1"),
+          _h("texto del objetivo", tipo="parrafo"), _h("Objetivos específicos", tipo="lista", marcador="2.2"),
+          _h("III. ALCANCE"), _h("Administración del riesgo", tipo="lista", marcador="3.1"), _h("Etapas", tipo="lista", marcador="3.2")]
+    secs = {s.identificador: s for s in parsear_bloques(bl, "M", "manual_control")}
+    assert {"2.1", "2.2", "3.1", "3.2"} <= set(secs)
+    assert secs["2.1"].ruta == ["II"] and secs["3.2"].ruta == ["III"]
+
+
+def test_una_lista_con_numeracion_simple_no_se_toma_por_titulo():
+    bl = [_h("I. A"), _h("II. B"), _h("III. C"), _h("Operar sin registro.", tipo="lista", marcador="1."), _h("No reportar.", tipo="lista", marcador="2.")]
+    secs = parsear_bloques(bl, "M", "manual_control")
+    assert all(s.identificador not in ("1", "2") for s in secs)
+    assert "1. Operar sin registro." in secs[-1].texto_literal
+
+
+def test_una_frase_larga_con_numeracion_jerarquica_no_se_toma_por_titulo():
+    larga = "Las entidades deberán " + "conservar los registros de operaciones " * 6
+    bl = [_h("I. A"), _h("II. B"), _h("III. C"), _h(larga, tipo="lista", marcador="3.1")]
+    assert all(s.identificador != "3.1" for s in parsear_bloques(bl, "M", "manual_control"))
+
+
+def test_dos_encabezados_pegados_en_una_linea_se_separan():
+    bl = [_h("I. A"), _h("VIII. CULTURA ORGANIZACIONAL Y CAPACITACIÓN 8.1 Capacitación al personal"), _h("texto 8.1", tipo="parrafo"),
+          _h("8.2 Evaluación"), _h("8.3 Registro"), _h("IX. REPORTES")]
+    ids = [s.identificador for s in parsear_bloques(bl, "M", "manual_control")]
+    assert "VIII" in ids and "8.1" in ids
+
+
+def test_un_encabezado_normal_con_un_numero_dentro_no_se_parte():
+    bl = [_h("I. A"), _h("II. B"), _h("III. CONFORME AL ARTÍCULO 3.2 DE LA LEY"), _h("texto", tipo="parrafo")]
+    assert [s.identificador for s in parsear_bloques(bl, "M", "manual_control")].count("III") == 1
+
+
+def test_un_indice_escrito_como_lista_no_deja_secciones_sueltas():
+    def lista(t, m):
+        return _h(t, tipo="lista", marcador=m)
+    indice = [lista("INTRODUCCIÓN", "I."), lista("OBJETIVOS", "II."), lista("Objetivo principal", "2.1"), lista("Objetivo específico", "2.2"),
+              lista("Objetivo de gestión", "2.3"), lista("ALCANCE", "III.")]
+    cuerpo = [lista("INTRODUCCIÓN", "I."), _h("texto uno", tipo="parrafo"), lista("OBJETIVOS", "II."),
+              lista("Objetivo principal", "2.1"), _h("texto 2.1", tipo="parrafo"), lista("Objetivo específico", "2.2"), _h("texto 2.2", tipo="parrafo"),
+              lista("Objetivo de gestión", "2.3"), _h("texto 2.3", tipo="parrafo"), lista("ALCANCE", "III."), _h("texto tres", tipo="parrafo")]
+    secs = parsear_bloques(indice + cuerpo, "M", "manual_control")
+    ids = [s.id for s in secs]
+    assert len(ids) == len(set(ids)) == 6 and all("texto" in s.texto_literal for s in secs if s.es_hoja)       # solo las del cuerpo, ninguna entrada de índice
+    assert next(s for s in secs if s.identificador == "2.1").ruta == ["II"]
+
+
+def test_las_fracciones_romanas_de_un_articulo_no_se_toman_por_capitulos():
+    bl = [_h("Artículo 1.- Objeto.", tipo="parrafo"), _h("Artículo 2.- Sujetos.", tipo="parrafo"), _h("Artículo 3.- Obligaciones:", tipo="parrafo"),
+          _h("CONSERVAR LOS REGISTROS", tipo="lista", marcador="I."),                            # mayúsculas pero dentro de un artículo
+          _h("Reportar a la autoridad las operaciones sospechosas que detecte en el ejercicio de su actividad.", tipo="lista", marcador="II.")]
+    secs = parsear_bloques(bl, "N", "normativa")
+    assert [s.nivel for s in secs] == ["articulo"] * 3 and "II. Reportar" in secs[-1].texto_literal
+
+
+def test_una_entrada_de_indice_con_restos_de_texto_se_descarta_pero_un_duplicado_real_no():
+    indice = [_h("I. INTRODUCCIÓN", pagina=1), _h("II. OBJETIVOS", pagina=1), _h("III. ALCANCE", pagina=1), _h("4.1 Funciones (pág. 3)", pagina=1, tipo="parrafo")]
+    cuerpo = [_h("I. INTRODUCCIÓN", pagina=2), _h("texto de introducción " * 8, pagina=2, tipo="parrafo"), _h("II. OBJETIVOS", pagina=2),
+              _h("texto de objetivos " * 8, pagina=2, tipo="parrafo"), _h("III. ALCANCE", pagina=2), _h("texto de alcance " * 8, pagina=2, tipo="parrafo")]
+    secs = parsear_bloques(indice + cuerpo, "M", "manual_control")
+    assert [s.id for s in secs] == ["M:R-1", "M:R-2", "M:R-3"] and all(s.pagina_inicio == 2 for s in secs)    # sin sufijo #2
+    # dos secciones con el mismo número en la MISMA página (error de la fuente): se conservan las dos
+    dup = [_h("I. A", pagina=2), _h("cuerpo a " * 8, pagina=2, tipo="parrafo"), _h("I. A", pagina=2), _h("cuerpo b " * 8, pagina=2, tipo="parrafo"),
+           _h("II. B", pagina=2), _h("III. C", pagina=2)]
+    assert sorted(s.id for s in parsear_bloques(dup, "M", "manual_control") if s.identificador == "I") == ["M:R-1", "M:R-1#2"]

@@ -16,7 +16,7 @@ from typing import Any, Literal
 
 from backend.config import settings
 from backend.core.errors import ComparadorError
-from backend.extraction.patterns import COLA_DOCUMENTO, CORTE_ARTICULOS, PATRONES, numero
+from backend.extraction.patterns import COLA_DOCUMENTO, CORTE_ARTICULOS, CORTE_ENCABEZADOS, PATRONES, numero
 from backend.models import Seccion
 
 log = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ def parsear_bloques(bloques: list[dict[str, Any]], doc_id: str, tipo_doc: Litera
     """Aplica la cascada. `pdf` (opcional) habilita el nivel 2 con la tipografía real; `avisos` recibe las advertencias."""
     avisos = avisos if avisos is not None else []
     avisos += [f"Figura en la pág. {b['pagina']}: su contenido (imagen) no se analiza." for b in bloques if b.get("tipo") == "figura"]
-    bloques = [b for b in bloques if b.get("tipo") != "figura"]
+    bloques = _promover_numerados([b for b in bloques if b.get("tipo") != "figura"])
     for b in bloques:
         if len(b["texto"]) > settings.SECCION_BLOQUE_MAX:
             raise SeccionadoError(f"Bloque de {len(b['texto'])} caracteres (máximo {settings.SECCION_BLOQUE_MAX}).")
@@ -57,6 +57,29 @@ def parsear_bloques(bloques: list[dict[str, Any]], doc_id: str, tipo_doc: Litera
 
 
 # --- Nivel 1: patrones ---------------------------------------------------------------------------
+
+_NUM_JERARQUICO = re.compile(r"\d+(?:\.\d+)+\.?")     # 3.1  ·  5.4.5  ·  5.3.10.1
+_NUM_ROMANO = re.compile(r"[IVXLC]{1,6}\.")           # I.  ·  IV.  ·  XII.
+MAX_PALABRAS_TITULO = 25
+MAX_PALABRAS_CAPITULO = 12
+
+
+def _promover_numerados(bloques: list[dict]) -> list[dict]:
+    """Un título con numeración automática de Word (3.1, 5.4.5…) llega de Docling como elemento de lista: el número queda
+    en `marcador` y el texto es solo el título, así que ningún patrón lo vería. Se vuelve a unir y pasa a encabezado.
+
+    Solo numeración jerárquica (con punto: 3.1) y texto corto de una línea; o un capítulo romano (`IV.`) en MAYÚSCULAS y corto,
+    para que un índice escrito como lista no deje entradas sueltas. Una lista `1.`, `2.` o las fracciones `I.`, `II.` de un artículo no se tocan."""
+    salida = []
+    for b in bloques:
+        m, texto = b.get("marcador"), b["texto"]
+        jerarquico = bool(m) and _NUM_JERARQUICO.fullmatch(m) and len(texto.split()) <= MAX_PALABRAS_TITULO
+        capitulo = bool(m) and _NUM_ROMANO.fullmatch(m) and texto.isupper() and len(texto.split()) <= MAX_PALABRAS_CAPITULO
+        if b.get("tipo") == "lista" and "\n" not in texto and (jerarquico or capitulo):
+            b = {**{k: v for k, v in b.items() if k != "marcador"}, "tipo": "encabezado", "texto": f"{m} {b['texto']}", "nivel": 1}
+        salida.append(b)
+    return salida
+
 
 def _texto(b: dict) -> str:
     """Texto del bloque con su numeración (`1.`, `a)`) si es un elemento de lista numerada.
@@ -73,6 +96,9 @@ def _partir(bloques: list[dict]) -> list[dict]:
     """Parte los bloques donde Docling juntó varios artículos o disposiciones (ver `CORTE_ARTICULOS`)."""
     salida = []
     for b in bloques:
+        if b.get("tipo") == "encabezado" and CORTE_ENCABEZADOS.search(b["texto"]):
+            salida += [{**b, "texto": t.strip()} for t in CORTE_ENCABEZADOS.split(b["texto"]) if t.strip()]
+            continue
         cortes = [m.start() for m in CORTE_ARTICULOS.finditer(b["texto"])]
         if not cortes:
             salida.append(b)
@@ -310,6 +336,13 @@ def _validar(nodos, descartados, avisos) -> set[int]:
     return malos
 
 
+def _es_entrada_de_indice(previo: dict, posterior: dict) -> bool:
+    """Entrada de índice con restos de texto (las subentradas que no llegaron a ser encabezados): está en una página anterior
+    y su contenido es menos de la cuarta parte del de la sección real. Un duplicado real en la misma página no cumple esto."""
+    cuerpo = lambda n: sum(len(t) for t in n["textos"][1:])
+    return previo["ini"] < posterior["ini"] and cuerpo(previo) * 4 <= cuerpo(posterior)
+
+
 def _armar(bloques, marcas, doc_id, tipo_doc, estrategia, avisos) -> list[Seccion]:
     nodos, pila, en_cola = [], [], False
     for i, b in enumerate(bloques):
@@ -335,7 +368,7 @@ def _armar(bloques, marcas, doc_id, tipo_doc, estrategia, avisos) -> list[Seccio
     descartados, ultimo = set(), {}
     for k, base in enumerate(clave_de):
         previo = ultimo.get(base)
-        if previo is not None and len(nodos[previo]["textos"]) <= 1:
+        if previo is not None and (len(nodos[previo]["textos"]) <= 1 or _es_entrada_de_indice(nodos[previo], nodos[k])):
             descartados.add(previo)
         ultimo[base] = k
     inciertos = _validar(nodos, descartados, avisos) if estrategia == "patron" else set()
