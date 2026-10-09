@@ -58,3 +58,46 @@ Fallos (id, artículo, sección, rango vía 1, rango vía 2):
 - Las secciones largas (varios temas en una, como 4.4 Oficial de Cumplimiento) son las peores: 63,6 %.
 - El umbral 0,50 casi no filtra: 1.341 pares únicos y 9,2 candidatos por artículo en las omisiones.
 - Hallazgo del golden: "III. ASPECTOS GENERALES" se excluía como preámbulo y trae 3.1 y 3.2 (cumplen arts. 31, 33, 36). Se quitó del catálogo.
+
+## Ablación (9 oct 2026, sandbox bge-m3, golden ARLAFT propuesto, n=75 pares con sección)
+Script: `scripts/ablacion_recuperacion.py`. Recall@k = % de pares golden que quedan en el top-k de la vía; "unión" = en el top-k de al menos una vía.
+
+### Sub-chunks de 500 tokens (actual)
+```
+== denso (embeddings) ==
+  vía 1: @5: 45 %  @10: 59 %  @20: 76 %  @30: 85 %  MRR=0.346
+  vía 2: @5: 55 %  @10: 68 %  @20: 80 %  @30: 88 %  MRR=0.407
+  unión de las dos vías @10: 77 %
+  unión de las dos vías @20: 87 %
+== léxico BM25 solo ==
+  vía 1: @5: 35 %  @10: 57 %  @20: 69 %  @30: 79 %  MRR=0.280
+  vía 2: @5: 48 %  @10: 60 %  @20: 76 %  @30: 83 %  MRR=0.369
+  unión de las dos vías @10: 76 %
+  unión de las dos vías @20: 83 %
+== híbrido RRF (denso + BM25) ==
+  vía 1: @5: 47 %  @10: 63 %  @20: 76 %  @30: 89 %  MRR=0.335
+  vía 2: @5: 59 %  @10: 68 %  @20: 85 %  @30: 89 %  MRR=0.425
+  unión de las dos vías @10: 77 %
+  unión de las dos vías @20: 91 %
+```
+
+### Sub-chunks de 150 tokens (experimento; el texto que ve el juez sigue siendo la sección entera)
+```
+== denso (embeddings) ==
+  vía 1: @5: 48 %  @10: 65 %  @20: 76 %  @30: 87 %  MRR=0.350
+  vía 2: @5: 57 %  @10: 72 %  @20: 88 %  @30: 92 %  MRR=0.437
+  unión de las dos vías @10: 84 %
+  unión de las dos vías @20: 93 %
+== léxico BM25 solo ==
+  vía 1: @5: 35 %  @10: 57 %  @20: 69 %  @30: 79 %  MRR=0.280
+  vía 2: @5: 48 %  @10: 60 %  @20: 76 %  @30: 83 %  MRR=0.369
+  unión de las dos vías @10: 76 %
+  unión de las dos vías @20: 83 %
+== híbrido RRF (denso + BM25) ==
+  vía 1: @5: 48 %  @10: 68 %  @20: 76 %  @30: 83 %  MRR=0.324
+  vía 2: @5: 57 %  @10: 75 %  @20: 85 %  @30: 89 %  MRR=0.427
+  unión de las dos vías @10: 84 %
+  unión de las dos vías @20: 89 %
+```
+
+Lectura: BM25 + RRF aporta poco con 500 tokens (unión@20 87→91 %) y nada con 150. Sub-chunks más finos mejoran el denso (unión@10 77→84 %, @20 87→93 %). Reranker: no medido (requiere sentence-transformers, dependencia nueva).
