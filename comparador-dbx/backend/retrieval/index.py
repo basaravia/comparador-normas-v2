@@ -1,7 +1,8 @@
 """Índices FAISS por tipo de documento (docs/08).
 
 Un `Indice` guarda los sub-chunks de las secciones de UN tipo (normativa o manual), sus vectores
-(float32, norma 1) y el mapa `subchunk -> seccion_id`. Con vectores normalizados, el producto
+(float32, norma 1) y el mapa `vector -> seccion_id`. Un sub-chunk que el modelo no admite entero (granite: 512 tokens)
+ocupa una fila por ventana, todas de su sección: el score de sección es el máximo (multi-vector), nunca un promedio. Con vectores normalizados, el producto
 interno de `IndexFlatIP` es el coseno. Los embeddings son los reales del stage (`ModelClient.embed`),
 por lotes de `EMB_BATCH`, con caché en memoria por SHA-256 del texto. Un índice por stage y por modelo
 de embeddings: no se mezclan (OWASP LLM08).
@@ -22,7 +23,7 @@ from backend.retrieval.chunker import subchunkear, texto_a_embeber
 log = logging.getLogger(__name__)
 
 MAX_CACHE = 20000                      # vectores en memoria (acota la RAM: 20 000 x 1024 x 4 B ~ 80 MB)
-_CACHE: dict[str, np.ndarray] = {}     # sha256(modelo + texto) -> vector
+_CACHE: dict[str, np.ndarray] = {}     # sha256(modelo + texto) -> matriz (ventanas x dimensión)
 _DIMS: dict[str, int] = {}             # modelo -> dimensión ya vista (un modelo no cambia de dimensión)
 
 
@@ -44,27 +45,46 @@ def _validar(vectores: np.ndarray, n: int) -> None:
         raise IndiceError("El modelo devolvió vectores con NaN, inf o norma cero")
 
 
-def embeber(textos: list[str], cliente: ModelClient, progreso: Callable[[int, int], None] | None = None) -> np.ndarray:
-    """Vectores de los textos; solo los que no están en la caché llaman al modelo."""
+def embeber_ventanas(textos: list[str], cliente: ModelClient, progreso: Callable[[int, int], None] | None = None) -> list[np.ndarray]:
+    """Una matriz de vectores por texto (1 fila; varias si el modelo no admitió el texto entero y se vectorizó por ventanas).
+    Solo los textos que no están en la caché llaman al modelo."""
     if not textos:
-        return np.empty((0, 0), dtype=np.float32)
+        return []
     modelo = _modelo(cliente)
     claves = [hashlib.sha256(f"{modelo}\x00{t}".encode("utf-8")).hexdigest() for t in textos]
     nuevos = {c: t for c, t in zip(claves, textos) if c not in _CACHE}
-    vectores = {c: _CACHE[c] for c in claves if c in _CACHE}
+    matrices = {c: _CACHE[c] for c in claves if c in _CACHE}
     log.info("Embeddings: %d textos, %d nuevos (el resto sale de la caché)", len(textos), len(nuevos))
     if nuevos:
         pendientes = list(nuevos.values())   # lotes de EMB_BATCH dentro del cliente
-        lote = np.asarray(cliente.embed(pendientes, progreso) if progreso else cliente.embed(pendientes), dtype=np.float32)
-        _validar(lote, len(nuevos))
-        if _DIMS.setdefault(modelo, lote.shape[1]) != lote.shape[1]:
-            raise IndiceError(f"Dimensión {lote.shape[1]} distinta de la ya vista para {modelo} ({_DIMS[modelo]})")
-        vectores.update(zip(nuevos, lote))
-        for c, v in zip(nuevos, lote):
-            _CACHE[c] = v
+        lote = [np.asarray(m, dtype=np.float32) for m in cliente.embed_multi(pendientes, progreso)]
+        if len(lote) != len(nuevos):
+            raise IndiceError(f"El modelo devolvió {len(lote)} resultados para {len(nuevos)} textos")
+        for m in lote:
+            if m.ndim != 2 or len(m) == 0:
+                raise IndiceError(f"El modelo devolvió {m.shape} vectores para un texto")
+            _validar(m, len(m))
+        dim = lote[0].shape[1]
+        if any(m.shape[1] != dim for m in lote):
+            raise IndiceError("El modelo devolvió vectores de dimensiones distintas")
+        if _DIMS.setdefault(modelo, dim) != dim:
+            raise IndiceError(f"Dimensión {dim} distinta de la ya vista para {modelo} ({_DIMS[modelo]})")
+        matrices.update(zip(nuevos, lote))
+        for c, m in zip(nuevos, lote):
+            _CACHE[c] = m
         while len(_CACHE) > MAX_CACHE:          # tope también dentro de un lote grande
             _CACHE.pop(next(iter(_CACHE)))
-    return np.array([vectores[c] for c in claves], dtype=np.float32)
+    return [matrices[c] for c in claves]
+
+
+def embeber(textos: list[str], cliente: ModelClient, progreso: Callable[[int, int], None] | None = None) -> np.ndarray:
+    """Un vector por texto (matriz n x d). Para textos que el modelo admite enteros; los chunks usan `embeber_ventanas`."""
+    if not textos:
+        return np.empty((0, 0), dtype=np.float32)
+    matrices = embeber_ventanas(textos, cliente, progreso)
+    if any(len(m) != 1 for m in matrices):
+        raise IndiceError("Algún texto se vectorizó por ventanas: usa embeber_ventanas")
+    return np.vstack(matrices)
 
 
 def limpiar_cache() -> None:
@@ -125,5 +145,8 @@ def construir_indice(secciones: list[Seccion], cliente: ModelClient, documentos:
             textos.append(texto_a_embeber(sec, sc, documentos.get(sec.doc_id)))
     if not subs:
         raise ValueError("No hay secciones con texto para indexar")
-    log.info("Indexando %d secciones en %d sub-chunks", len(secciones), len(subs))
-    return Indice(subs, embeber(textos, cliente, progreso))
+    matrices = embeber_ventanas(textos, cliente, progreso)
+    filas = [sc for sc, m in zip(subs, matrices) for _ in m]       # una fila por vector: un sub-chunk largo ocupa varias, todas de su sección
+    log.info("Indexando %d secciones: %d sub-chunks, %d vectores (%d sub-chunks en varias ventanas)",
+             len(secciones), len(subs), len(filas), sum(len(m) > 1 for m in matrices))
+    return Indice(filas, np.vstack(matrices))

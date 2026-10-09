@@ -140,9 +140,10 @@ class ModelClient:
             raise clasificar(e) from e
         return r.choices[0].message.content or ""
 
-    def _embed_por_ventanas(self, cliente, modelo: str, texto: str) -> list[float]:
-        """Un texto que el modelo rechaza por largo (granite admite 512 tokens) se vectoriza en ventanas con solape que CUBREN TODO el texto,
-        y se promedian sus vectores (normalizados). No se recorta nada: el chunk no cambia y toda su información cuenta.
+    def _embed_por_ventanas(self, cliente, modelo: str, texto: str) -> np.ndarray:
+        """Un texto que el modelo rechaza por largo (granite admite 512 tokens) se vectoriza en ventanas con solape que CUBREN TODO el texto.
+        Devuelve un vector por ventana (norma 1), SIN promediar: el promedio diluye la información (coseno 0,89-0,95 con el texto entero);
+        el índice guarda cada ventana como fila de la misma sección y el score es el máximo (multi-vector). No se recorta nada.
 
         Empieza con 2 ventanas y sube hasta 8 si hace falta. En un modelo de contexto amplio (bge-m3, Foundry) no se activa."""
         for n in range(2, 9):
@@ -154,33 +155,52 @@ class ModelClient:
                     log.error("Fallo de embeddings %s: %s", modelo, redact(str(e)))
                     raise clasificar(e) from e
                 continue
-            log.info("Embeddings: un texto superaba el límite del modelo; se vectorizó en %d ventanas y se promedió (sin recortar).", n)
+            log.info("Embeddings: un texto superaba el límite del modelo; se vectorizó en %d ventanas (un vector por ventana, sin recortar ni promediar).", n)
             m = np.array([d.embedding for d in r.data], dtype=np.float32)
-            m /= np.linalg.norm(m, axis=1, keepdims=True)
-            return list(m.mean(axis=0))
+            return m / np.linalg.norm(m, axis=1, keepdims=True)
         raise AssertionError("inalcanzable")
 
-    def embed(self, textos: list[str], progreso: Callable[[int, int], None] | None = None) -> np.ndarray:
-        """Embeddings por lotes de `EMB_BATCH`: matriz float32 con cada fila de norma 1.
+    def _un_texto(self, cliente, modelo: str, texto: str) -> np.ndarray:
+        """Un texto suelto: entero si cabe; si el modelo lo rechaza por largo, por ventanas."""
+        try:
+            r = cliente.embeddings.create(model=modelo, input=[texto])
+        except Exception as e:
+            if demasiado_largo(e):
+                return self._embed_por_ventanas(cliente, modelo, texto)
+            log.error("Fallo de embeddings %s: %s", modelo, redact(str(e)))
+            raise clasificar(e) from e
+        m = np.array([r.data[0].embedding], dtype=np.float32)
+        return m / np.linalg.norm(m, axis=1, keepdims=True)
 
+    def embed_multi(self, textos: list[str], progreso: Callable[[int, int], None] | None = None) -> list[np.ndarray]:
+        """Embeddings por lotes de `EMB_BATCH`: una matriz por texto, de norma 1 por fila.
+
+        Casi siempre es 1 fila por texto; si el modelo no admite el texto entero, una fila por ventana (ver `_embed_por_ventanas`).
         `progreso(hechos, total)` se llama tras cada lote (para barras de progreso)."""
         cliente, modelo = self.emb()
-        vectores = []
+        matrices: list[np.ndarray] = []
         for i in range(0, len(textos), self.s.EMB_BATCH):
             lote = textos[i:i + self.s.EMB_BATCH]
             try:
                 r = cliente.embeddings.create(model=modelo, input=lote)
-                vectores += [d.embedding for d in r.data]
+                m = np.array([d.embedding for d in r.data], dtype=np.float32)
+                m = m / np.linalg.norm(m, axis=1, keepdims=True)
+                matrices += [fila[None, :] for fila in m]
             except Exception as e:
-                if demasiado_largo(e):          # un texto del lote no cabe: se vectoriza uno a uno y el largo, por ventanas
-                    vectores += [self._embed_por_ventanas(cliente, modelo, t) for t in lote]
-                else:
+                if not demasiado_largo(e):
                     log.error("Fallo de embeddings %s: %s", modelo, redact(str(e)))
                     raise clasificar(e) from e
+                matrices += [self._un_texto(cliente, modelo, t) for t in lote]   # un texto del lote no cabe: uno a uno
             if progreso:
                 progreso(min(i + self.s.EMB_BATCH, len(textos)), len(textos))
-        m = np.array(vectores, dtype=np.float32)
-        return m / np.linalg.norm(m, axis=1, keepdims=True)
+        return matrices
+
+    def embed(self, textos: list[str], progreso: Callable[[int, int], None] | None = None) -> np.ndarray:
+        """Una fila por texto (norma 1). Para textos cortos (ping, pruebas); para chunks usa `embed_multi`, que admite ventanas."""
+        matrices = self.embed_multi(textos, progreso)
+        if any(len(m) != 1 for m in matrices):
+            raise ValueError("Algún texto superó el contexto del modelo y se vectorizó por ventanas: usa embed_multi")
+        return np.vstack(matrices)
 
     def ping(self) -> dict:
         """Una llamada mínima real al LLM y a los embeddings. Para el health check."""

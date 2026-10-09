@@ -222,3 +222,20 @@ def test_construir_indice_seccion_larga_aporta_varios_subchunks_de_una_seccion()
     larga = " ".join(f"palabra{i}" for i in range(1500))
     ind = construir_indice([seccion("D:1", larga)], ClienteVectores(dim=16))
     assert len(ind) > 1 and set(ind.mapa) == {"D:1"}
+
+
+# --- multi-vector: un texto largo ocupa una fila por ventana, todas de su sección ---------------------------------------------
+
+def test_un_texto_en_ventanas_ocupa_varias_filas_de_la_misma_seccion_sin_promediar():
+    from backend.retrieval.index import embeber_ventanas
+    ventanas = np.array([[1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.float32)
+    c = ClienteVectores(respuesta=lambda textos: [ventanas if t == "largo" else np.eye(4, dtype=np.float32)[2:3] for t in textos])
+    largo, corto = embeber_ventanas(["largo", "corto"], c)
+    assert largo.tolist() == ventanas.tolist() and corto.shape == (1, 4)             # cada ventana conserva su vector
+    assert embeber_ventanas(["largo"], c)[0].shape == (2, 4) and c.llamadas == 1      # la caché guarda la matriz completa
+
+
+def test_embeber_de_un_vector_por_texto_rechaza_las_ventanas():
+    c = ClienteVectores(respuesta=lambda textos: [np.eye(4, dtype=np.float32)[:2] for _ in textos])
+    with pytest.raises(IndiceError, match="ventanas"):
+        embeber(["x"], c)

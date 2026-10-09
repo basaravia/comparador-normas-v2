@@ -221,15 +221,19 @@ def cliente_con(transporte, lote=4):
     return mc
 
 
-def test_embed_un_texto_largo_se_vectoriza_por_ventanas_sin_recortar_nada():
+def test_embed_multi_un_texto_largo_da_un_vector_por_ventana_sin_promediar_ni_recortar():
     t = TransporteConLimite(limite=60)
     corto, largo = "palabra " * 10, " ".join(f"p{i}" for i in range(100))
-    m = cliente_con(t).embed([corto, largo])
-    assert m.shape == (2, 2) and abs(float(np.linalg.norm(m[1])) - 1.0) < 1e-5 and abs(float(np.linalg.norm(m[0])) - 1.0) < 1e-5
-    ventanas = [v for llamada in t.llamadas for v in llamada if v.startswith("p0")]
-    assert " ".join(ventanas).split().count("p99") >= 1                              # la última palabra del texto llegó al modelo
+    corto_m, largo_m = cliente_con(t).embed_multi([corto, largo])
+    assert corto_m.shape == (1, 2) and largo_m.shape == (2, 2)                       # el largo: una fila por ventana
+    assert np.allclose(np.linalg.norm(largo_m, axis=1), 1.0, atol=1e-5)
     todo = set(" ".join(v for llamada in t.llamadas[2:] for v in llamada).split())
     assert {f"p{i}" for i in range(100)} <= todo                                      # ninguna palabra se perdió
+
+
+def test_embed_rechaza_ventanas_porque_devuelve_un_vector_por_texto():
+    with pytest.raises(ValueError, match="embed_multi"):
+        cliente_con(TransporteConLimite(limite=60)).embed([" ".join(f"p{i}" for i in range(100))])
 
 
 def test_embed_con_textos_que_caben_no_usa_ventanas():
@@ -240,16 +244,16 @@ def test_embed_con_textos_que_caben_no_usa_ventanas():
 
 def test_embed_sube_el_numero_de_ventanas_hasta_que_caben():
     t = TransporteConLimite(limite=20)
-    m = cliente_con(t).embed([" ".join(f"p{i}" for i in range(100))])
-    assert m.shape == (1, 2) and max(len(v.split()) for llamada in t.llamadas[-1:] for v in llamada) <= 20
+    (m,) = cliente_con(t).embed_multi([" ".join(f"p{i}" for i in range(100))])
+    assert m.shape == (7, 2) and max(len(v.split()) for llamada in t.llamadas[-1:] for v in llamada) <= 20
 
 
 def test_embed_si_ni_con_8_ventanas_cabe_el_error_se_propaga():
     from backend.core.errors import ComparadorError
     t = TransporteConLimite(limite=1)
     with pytest.raises(ComparadorError):                                              # error de negocio de nuestro código, no una traza del SDK
-        cliente_con(t).embed([" ".join(f"p{i}" for i in range(40))])
-    assert len(t.llamadas) == 1 + 7                                                   # el lote entero y luego 2..8 ventanas
+        cliente_con(t).embed_multi([" ".join(f"p{i}" for i in range(40))])
+    assert len(t.llamadas) == 1 + 1 + 7                                               # el lote, el texto solo y luego 2..8 ventanas
 
 
 def test_embed_otro_error_no_se_toma_por_texto_largo():
@@ -262,5 +266,5 @@ def test_embed_otro_error_no_se_toma_por_texto_largo():
 
 def test_embed_informa_el_progreso_con_textos_largos():
     t, avance = TransporteConLimite(limite=30), []
-    cliente_con(t, lote=2).embed(["a b", " ".join(f"p{i}" for i in range(80)), "c d"], progreso=lambda h, tot: avance.append((h, tot)))
+    cliente_con(t, lote=2).embed_multi(["a b", " ".join(f"p{i}" for i in range(80)), "c d"], progreso=lambda h, tot: avance.append((h, tot)))
     assert avance == [(2, 3), (3, 3)]

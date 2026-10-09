@@ -387,6 +387,8 @@ Decisión del usuario: carátulas, preámbulos, índices, control de versiones, 
 
 ## L3 · Recuperación
 
+> **8 oct 2026 · multi-vector:** si el modelo rechaza un sub-chunk por largo (granite, 512 tokens), se vectoriza por ventanas y **cada ventana es una fila del índice** de la misma sección (score = máximo). Se retira el promedio de ventanas. `ModelClient.embed_multi` y `embeber_ventanas` devuelven una matriz por texto; `embed`/`embeber` quedan para textos cortos. Log de indexado: n.º de sub-chunks y n.º de vectores. Pendiente en L3b: calibrar por stage y ampliar el golden.
+
 **Estado:** APROBADO por `qa-ia` (recall 28/30 = 93,3 %; 100 % sin las 2 filas `por_confirmar`).
 **Criterio (docs/13):** recall en candidatos ≥ 90 % sobre el golden set; se registran los pares antes y después de deduplicar. Evidencia: `notebooks/03_recuperacion.ipynb` (ejecutado de punta a punta, embeddings reales de Ollama `bge-m3` y FAISS real).
 

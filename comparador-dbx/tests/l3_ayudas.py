@@ -47,10 +47,14 @@ class ClienteVectores:
     def emb(self):
         return None, self.modelo
 
-    def embed(self, textos):
+    def embed_multi(self, textos, progreso=None):
+        """Una matriz por texto; `respuesta` puede dar una matriz (1 fila por texto) o una lista de matrices (ventanas)."""
         self.llamadas += 1
         self.textos.append(list(textos))
-        return self.respuesta(textos)
+        r = self.respuesta(textos)
+        if isinstance(r, np.ndarray) and r.ndim == 2:         # un vector por texto
+            return [fila[None, :] for fila in r]
+        return r
 
     def _un_vector_por_texto(self, textos):
         ids = [self._ids.setdefault(t, len(self._ids)) for t in textos]
