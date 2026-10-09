@@ -1,0 +1,82 @@
+id,articulo_id,articulo_identificador,seccion_id,seccion_identificador,seccion_titulo,cobertura_esperada,relevancia,estrato,nota
+G-001,N:T-5/C-2/ART-31,Artículo 31,M:R-3/N-3.1,3.1,,cumple,2,cumple,"Programa aprobado por alta gerencia, oficial gerencial, capacitación, verificación independiente"
+G-002,N:T-5/C-2/ART-31,Artículo 31,M:R-4/N-4.4,4.4,Funciones y responsabilidades del Oficial de Cumplimiento,cumple,2,larga+cumple,"Programa aprobado por alta gerencia, oficial gerencial, capacitación, verificación independiente"
+G-003,N:T-5/C-2/ART-31,Artículo 31,M:R-8/N-8.1,8.1,Capacitación al personal y miembros del Directorio,cumple,2,cumple,"Programa aprobado por alta gerencia, oficial gerencial, capacitación, verificación independiente"
+G-004,N:T-5/C-2/ART-31,Artículo 31,M:R-6,VI,AUDITORÍA,cumple,2,cumple,"Programa aprobado por alta gerencia, oficial gerencial, capacitación, verificación independiente"
+G-005,N:T-5/C-2/ART-31,Artículo 31,M:R-4/N-4.1/N-4.1.1,4.1.1,Directorio,cumple,1,cumple,"Programa aprobado por alta gerencia, oficial gerencial, capacitación, verificación independiente"
+G-006,N:T-5/C-2/ART-31,Artículo 31,M:R-4/N-4.3,4.3,Funciones y responsabilidades de la Unidad de Cumplimiento,cumple,1,cumple,"Programa aprobado por alta gerencia, oficial gerencial, capacitación, verificación independiente"
+G-007,N:T-5/C-2/ART-31,Artículo 31,M:R-5/N-5.5/N-5.5.1,5.5.1,Proceso de selección de personal,cumple,1,cumple,"Programa aprobado por alta gerencia, oficial gerencial, capacitación, verificación independiente"
+G-008,N:T-5/C-2/ART-31,Artículo 31,M:R-4/N-4.1/N-4.1.5,4.1.5,Auditor Interno,cumple,1,cumple,"Programa aprobado por alta gerencia, oficial gerencial, capacitación, verificación independiente"
+G-009,N:T-5/C-2/ART-32,Artículo 32,M:R-3/N-3.4,3.4,,parcial,1,parcial,Programa a nivel de grupo: solo alineación con políticas del Grupo e informe trimestral a la Gerencia Regional
+G-010,N:T-5/C-2/ART-32,Artículo 32,M:R-3/N-3.8,3.8,,parcial,1,parcial,Programa a nivel de grupo: solo alineación con políticas del Grupo e informe trimestral a la Gerencia Regional
+G-011,N:T-5/C-2/ART-32,Artículo 32,M:R-4/N-4.4,4.4,Funciones y responsabilidades del Oficial de Cumplimiento,parcial,1,larga+parcial,Programa a nivel de grupo: solo alineación con políticas del Grupo e informe trimestral a la Gerencia Regional
+G-012,N:T-5/C-2/ART-33,Artículo 33,M:R-3/N-3.2,3.2,,cumple,2,cumple,"Identificación, medición, control y monitoreo"
+G-013,N:T-5/C-2/ART-33,Artículo 33,M:R-3/N-3.1,3.1,,cumple,1,cumple,"Identificación, medición, control y monitoreo"
+G-014,N:T-5/C-2/ART-34,Artículo 34,M:R-5/N-5.4/N-5.4.6/N-5.4.6.5/N-5.4.6.5.1,5.4.6.5.1,Determinación de factores de riesgos,cumple,2,cumple,"Factores cliente, producto, canal, jurisdicción, transaccional"
+G-015,N:T-5/C-2/ART-34,Artículo 34,M:R-5/N-5.4/N-5.4.6/N-5.4.6.5/N-5.4.6.5.2,5.4.6.5.2,Identificación del riesgo,cumple,2,larga+tabla+cumple,"Factores cliente, producto, canal, jurisdicción, transaccional"
+G-016,N:T-5/C-2/ART-35,Artículo 35,M:R-5/N-5.3/N-5.3.5,5.3.5,Lineamiento sobre nuevos productos,cumple,2,cumple,Evaluación de riesgo de nuevos productos y tecnologías antes del lanzamiento
+G-017,N:T-5/C-2/ART-35,Artículo 35,M:R-5/N-5.3/N-5.3.7,5.3.7,Lineamientos sobre Nuevas Tecnologías,cumple,2,cumple,Evaluación de riesgo de nuevos productos y tecnologías antes del lanzamiento
+G-018,N:T-5/C-2/ART-35,Artículo 35,M:R-4/N-4.4,4.4,Funciones y responsabilidades del Oficial de Cumplimiento,cumple,1,larga+cumple,Evaluación de riesgo de nuevos productos y tecnologías antes del lanzamiento
+G-019,N:T-5/C-2/ART-36,Artículo 36,M:R-5/N-5.4/N-5.4.6/N-5.4.6.5/N-5.4.6.5.2,5.4.6.5.2,Identificación del riesgo,cumple,2,larga+tabla+cumple,Actualización semestral de factores de riesgo
+G-020,N:T-5/C-2/ART-36,Artículo 36,M:R-3/N-3.1,3.1,,cumple,1,cumple,Actualización semestral de factores de riesgo
+G-021,N:T-5/C-2/ART-37,Artículo 37,M:R-5/N-5.4/N-5.4.3,5.4.3,Procedimiento de Debida Diligencia Simplificada (DDS),parcial,2,parcial,"El manual permite DDS en cuenta básica, no solo en riesgo bajo; no menciona la prohibición ante sospecha"
+G-022,N:T-5/C-3/ART-38,Artículo 38,M:R-5/N-5.4/N-5.4.3,5.4.3,Procedimiento de Debida Diligencia Simplificada (DDS),cumple,2,cumple,"DD simplificada, normal y ampliada según riesgo"
+G-023,N:T-5/C-3/ART-38,Artículo 38,M:R-5/N-5.4/N-5.4.4,5.4.4,Procedimiento de Debida Diligencia Ampliada (DDA),cumple,2,cumple,"DD simplificada, normal y ampliada según riesgo"
+G-024,N:T-5/C-3/ART-38,Artículo 38,M:R-5/N-5.4/N-5.4.2,5.4.2,Lineamientos generales,cumple,1,cumple,"DD simplificada, normal y ampliada según riesgo"
+G-025,N:T-5/C-3/ART-38,Artículo 38,M:R-5/N-5.4/N-5.4.1,5.4.1,Objetivos,cumple,1,cumple,"DD simplificada, normal y ampliada según riesgo"
+G-026,N:T-5/C-3/ART-39,Artículo 39,M:R-5/N-5.4/N-5.4.1,5.4.1,Objetivos,cumple,2,cumple,Identificación y verificación del cliente
+G-027,N:T-5/C-3/ART-39,Artículo 39,M:R-5/N-5.4/N-5.4.2,5.4.2,Lineamientos generales,cumple,1,cumple,Identificación y verificación del cliente
+G-028,N:T-5/C-3/ART-39,Artículo 39,M:R-5/N-5.4/N-5.4.5/N-5.4.5.1,5.4.5.1,Lineamiento para inicio de relación a través de canales digitales,cumple,1,cumple,Identificación y verificación del cliente
+G-029,N:T-5/C-3/ART-40,Artículo 40,M:R-5/N-5.4/N-5.4.5/N-5.4.5.10,5.4.5.10,Proceso de Debida Diligencia Ampliada (DDA) - Beneficiario Final,parcial,2,parcial,Personas jurídicas: datos de socios y beneficiarios; no detalla potestades ni naturaleza del negocio
+G-030,N:T-5/C-3/ART-40,Artículo 40,M:R-5/N-5.6,5.6,"Lineamiento ""Conocimiento del Accionista""",parcial,1,parcial,Personas jurídicas: datos de socios y beneficiarios; no detalla potestades ni naturaleza del negocio
+G-031,N:T-5/C-3/ART-41,Artículo 41,M:R-5/N-5.4/N-5.4.5/N-5.4.5.10,5.4.5.10,Proceso de Debida Diligencia Ampliada (DDA) - Beneficiario Final,cumple,2,cumple,"Beneficiario final (manual usa 10 %, más estricto que el 25 % de la ley)"
+G-032,N:T-5/C-3/ART-41,Artículo 41,M:R-5/N-5.3/N-5.3.6,5.3.6,Esquemas de priorización para regularización de documentación de Clientes dentro del procedimiento de Debida Diligencia Ampliada,cumple,2,cumple,"Beneficiario final (manual usa 10 %, más estricto que el 25 % de la ley)"
+G-033,N:T-5/C-3/ART-41,Artículo 41,M:R-5/N-5.2,5.2,Definiciones,cumple,1,larga+cumple,"Beneficiario final (manual usa 10 %, más estricto que el 25 % de la ley)"
+G-034,N:T-5/C-3/ART-42,Artículo 42,M:R-5/N-5.2,5.2,Definiciones,parcial,1,larga+parcial,Fideicomisos: solo definición y señales de alerta
+G-035,N:T-5/C-3/ART-42,Artículo 42,M:R-12/N-12.7,12.7,Tesorería - Negocios con fideicomisos,parcial,1,parcial,Fideicomisos: solo definición y señales de alerta
+G-036,N:T-5/C-3/ART-43,Artículo 43,M:R-5/N-5.4/N-5.4.1,5.4.1,Objetivos,cumple,2,cumple,Verificación al inicio de la relación
+G-037,N:T-5/C-3/ART-43,Artículo 43,M:R-5/N-5.4/N-5.4.5/N-5.4.5.1,5.4.5.1,Lineamiento para inicio de relación a través de canales digitales,cumple,1,cumple,Verificación al inicio de la relación
+G-038,N:T-5/C-3/ART-44,Artículo 44,M:R-5/N-5.4/N-5.4.1,5.4.1,Objetivos,cumple,2,cumple,Debida diligencia continua y monitoreo
+G-039,N:T-5/C-3/ART-44,Artículo 44,M:R-5/N-5.4/N-5.4.2,5.4.2,Lineamientos generales,cumple,2,cumple,Debida diligencia continua y monitoreo
+G-040,N:T-5/C-3/ART-44,Artículo 44,M:R-5/N-5.4/N-5.4.6/N-5.4.6.3,5.4.6.3,Monitoreo Prevención de Lavado de Activos y Financiamiento de Delitos,cumple,2,cumple,Debida diligencia continua y monitoreo
+G-041,N:T-5/C-3/ART-44,Artículo 44,M:R-5/N-5.4/N-5.4.6/N-5.4.6.1,5.4.6.1,Validación en Listas de Control - Programas de Sanciones,cumple,1,cumple,Debida diligencia continua y monitoreo
+G-042,N:T-5/C-3/ART-45,Artículo 45,M:R-5/N-5.4/N-5.4.5/N-5.4.5.5,5.4.5.5,Cierre de cuentas de Clientes Regionales,parcial,1,parcial,No hay regla general de no iniciar/terminar la relación ante imposibilidad de DD
+G-043,N:T-5/C-3/ART-45,Artículo 45,M:R-5/N-5.4/N-5.4.5/N-5.4.5.2,5.4.5.2,Clientes a nivel Regional (Referidos),parcial,1,parcial,No hay regla general de no iniciar/terminar la relación ante imposibilidad de DD
+G-044,N:T-5/C-3/ART-45,Artículo 45,M:R-5/N-5.4/N-5.4.1,5.4.1,Objetivos,parcial,1,parcial,No hay regla general de no iniciar/terminar la relación ante imposibilidad de DD
+G-045,N:T-5/C-3/ART-46,Artículo 46,M:R-5/N-5.3/N-5.3.4,5.3.4,Custodia de información y documentación,cumple,2,cumple,Conservación: manual 12 años (ley 10)
+G-046,N:T-5/C-3/ART-46,Artículo 46,M:R-9/N-9.4,9.4,,cumple,1,cumple,Conservación: manual 12 años (ley 10)
+G-047,N:T-5/C-3/ART-47,Artículo 47,M:R-5/N-5.4/N-5.4.5/N-5.4.5.8,5.4.5.8,Personas Expuestas Políticamente (PEP),parcial,2,tabla+parcial,"PEP: aprobación del Gerente Regional, la ley pide alta gerencia"
+G-048,N:T-5/C-3/ART-47,Artículo 47,M:R-5/N-5.3/N-5.3.8,5.3.8,Lineamientos del Grupo,parcial,1,parcial,"PEP: aprobación del Gerente Regional, la ley pide alta gerencia"
+G-049,N:T-5/C-3/ART-47,Artículo 47,M:R-5/N-5.4/N-5.4.4,5.4.4,Procedimiento de Debida Diligencia Ampliada (DDA),parcial,1,parcial,"PEP: aprobación del Gerente Regional, la ley pide alta gerencia"
+G-050,N:T-5/C-3/ART-47,Artículo 47,M:R-5/N-5.4/N-5.4.5/N-5.4.5.10,5.4.5.10,Proceso de Debida Diligencia Ampliada (DDA) - Beneficiario Final,parcial,1,parcial,"PEP: aprobación del Gerente Regional, la ley pide alta gerencia"
+G-051,N:T-5/C-3/ART-48,Artículo 48,M:R-5/N-5.4/N-5.4.5/N-5.4.5.7,5.4.5.7,"Países de Alto Riesgo, paraísos fiscales y países sancionados",cumple,2,cumple,Países GAFI / alto riesgo con DDA
+G-052,N:T-5/C-3/ART-48,Artículo 48,M:R-5/N-5.4/N-5.4.4,5.4.4,Procedimiento de Debida Diligencia Ampliada (DDA),cumple,2,cumple,Países GAFI / alto riesgo con DDA
+G-053,N:T-5/C-3/ART-48,Artículo 48,M:R-5/N-5.3/N-5.3.9,5.3.9,Gestión del riesgo de Financiamiento de la Proliferación de Armas de Destrucción Masiva,cumple,1,cumple,Países GAFI / alto riesgo con DDA
+G-054,N:T-5/C-3/ART-48,Artículo 48,M:R-5/N-5.4/N-5.4.6/N-5.4.6.5/N-5.4.6.5.1,5.4.6.5.1,Determinación de factores de riesgos,cumple,1,cumple,Países GAFI / alto riesgo con DDA
+G-055,N:T-5/C-3/ART-49,Artículo 49,M:R-5/N-5.4/N-5.4.6/N-5.4.6.4,5.4.6.4,Monitoreo de transferencias internacionales,cumple,2,cumple,Datos de originador y beneficiario en transferencias
+G-056,N:T-5/C-3/ART-50,Artículo 50,M:R-5/N-5.4/N-5.4.5/N-5.4.5.2,5.4.5.2,Clientes a nivel Regional (Referidos),parcial,1,parcial,Delegación en terceros: solo clientes referidos regionales
+G-057,N:T-5/C-3/ART-51,Artículo 51,M:R-5/N-5.4/N-5.4.5/N-5.4.5.2,5.4.5.2,Clientes a nivel Regional (Referidos),parcial,1,parcial,Delegación dentro del grupo: solo clientes referidos regionales
+G-058,N:T-5/C-4/ART-52,Artículo 52,,,,omision,0,omision,Registro del sujeto obligado ante la UAFE
+G-059,N:T-5/C-4/ART-53,Artículo 53,M:R-9/N-9.3,9.3,,parcial,2,parcial,"ROS: 9.3 dice 4 días, 5.4.6.3 dice 6 días (la ley fija 5)"
+G-060,N:T-5/C-4/ART-53,Artículo 53,M:R-5/N-5.4/N-5.4.6/N-5.4.6.3,5.4.6.3,Monitoreo Prevención de Lavado de Activos y Financiamiento de Delitos,parcial,2,parcial,"ROS: 9.3 dice 4 días, 5.4.6.3 dice 6 días (la ley fija 5)"
+G-061,N:T-5/C-4/ART-53,Artículo 53,M:R-4/N-4.4,4.4,Funciones y responsabilidades del Oficial de Cumplimiento,parcial,1,larga+parcial,"ROS: 9.3 dice 4 días, 5.4.6.3 dice 6 días (la ley fija 5)"
+G-062,N:T-5/C-4/ART-54,Artículo 54,M:R-9/N-9.1,9.1,,parcial,2,parcial,"Reporte de efectivo: el manual usa umbral USD 12.000 y 12 días, la ley USD 10.000 y 15 días"
+G-063,N:T-5/C-4/ART-54,Artículo 54,M:R-4/N-4.4,4.4,Funciones y responsabilidades del Oficial de Cumplimiento,parcial,1,larga+parcial,"Reporte de efectivo: el manual usa umbral USD 12.000 y 12 días, la ley USD 10.000 y 15 días"
+G-064,N:T-5/C-4/ART-55,Artículo 55,M:R-9/N-9.1,9.1,,parcial,1,parcial,Reporte de operaciones propias del sujeto obligado: no se distingue
+G-065,N:T-5/C-4/ART-56,Artículo 56,M:R-9/N-9.3,9.3,,cumple,2,cumple,Registro de la no existencia de reportes
+G-066,N:T-5/C-4/ART-57,Artículo 57,,,,omision,0,omision,Facultad de la UAFE; no genera obligación en el manual
+G-067,N:T-5/C-5/ART-58,Artículo 58,M:R-5/N-5.1,5.1,Lineamientos generales,cumple,2,cumple,Cuentas nominativas
+G-068,N:T-5/C-5/ART-58,Artículo 58,M:R-5/N-5.4/N-5.4.2,5.4.2,Lineamientos generales,cumple,2,cumple,Cuentas nominativas
+G-069,N:T-5/C-5/ART-59,Artículo 59,M:R-5/N-5.9,5.9,"Lineamiento ""Conocimiento del Corresponsal""",cumple,2,cumple,Prohibición de bancos pantalla
+G-070,N:T-5/C-5/ART-59,Artículo 59,M:R-5/N-5.4/N-5.4.5/N-5.4.5.6,5.4.5.6,Procedimiento para actividades de Alto Riesgo,cumple,2,larga+tabla+cumple,Prohibición de bancos pantalla
+G-071,N:T-5/C-5/ART-60,Artículo 60,M:R-4/N-4.6,4.6,Prohibiciones del Oficial de Cumplimiento,cumple,2,cumple,Reserva sobre los ROS
+G-072,N:T-5/C-5/ART-60,Artículo 60,M:R-4/N-4.4,4.4,Funciones y responsabilidades del Oficial de Cumplimiento,cumple,1,larga+cumple,Reserva sobre los ROS
+G-073,N:T-5/C-5/ART-60,Artículo 60,M:R-5/N-5.4/N-5.4.6/N-5.4.6.3,5.4.6.3,Monitoreo Prevención de Lavado de Activos y Financiamiento de Delitos,cumple,1,cumple,Reserva sobre los ROS
+G-074,N:T-5/C-5/ART-61,Artículo 61,,,,omision,0,omision,Exención de responsabilidad al reportar
+G-075,N:T-5/C-5/ART-62,Artículo 62,,,,omision,0,omision,Secreto bancario no impide cumplir
+G-076,N:T-5/C-5/ART-63,Artículo 63,,,,omision,0,omision,Prohibición de accionista nominal
+G-077,N:T-8/C-1/ART-89,Artículo 89,M:R-5/N-5.3/N-5.3.10/N-5.3.10.2,5.3.10.2,Procedimiento interno,cumple,2,cumple,Monitoreo de listas del CSNU
+G-078,N:T-8/C-1/ART-89,Artículo 89,M:R-5/N-5.4/N-5.4.6/N-5.4.6.1,5.4.6.1,Validación en Listas de Control - Programas de Sanciones,cumple,2,cumple,Monitoreo de listas del CSNU
+G-079,N:T-8/C-1/ART-89,Artículo 89,M:R-5/N-5.3/N-5.3.9,5.3.9,Gestión del riesgo de Financiamiento de la Proliferación de Armas de Destrucción Masiva,cumple,1,cumple,Monitoreo de listas del CSNU
+G-080,N:T-8/C-1/ART-90,Artículo 90,M:R-5/N-5.4/N-5.4.5/N-5.4.5.5,5.4.5.5,Cierre de cuentas de Clientes Regionales,parcial,1,parcial,Inmovilización sin demora no definida; solo cierre inmediato de cuentas en sanciones
+G-081,N:T-8/C-1/ART-90,Artículo 90,M:R-5/N-5.3/N-5.3.9,5.3.9,Gestión del riesgo de Financiamiento de la Proliferación de Armas de Destrucción Masiva,parcial,1,parcial,Inmovilización sin demora no definida; solo cierre inmediato de cuentas en sanciones

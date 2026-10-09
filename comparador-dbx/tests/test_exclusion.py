@@ -17,7 +17,7 @@ def sec(id_, ident, titulo, ruta=(), tipo="manual_control", texto=None, hoja=Tru
     ("REGISTRO DE ELABORACIÓN/ACTUALIZACIÓN", "registro de elaboración"), ("Registro de actualización", "registro de elaboración"),
     ("Índice", "índice"), ("TABLA DE CONTENIDO", "índice"), ("Contenido", "índice"),
     ("INTRODUCCIÓN", "preámbulo"), ("Objetivos", "preámbulo"), ("Alcance del manual", "preámbulo"), ("Antecedentes", "preámbulo"),
-    ("ASPECTOS GENERALES", "preámbulo"), ("Base normativa de aplicación general.", "preámbulo"),
+    ("Base normativa de aplicación general.", "preámbulo"),
     ("ANEXOS", "anexo"), ("Anexo Matriz de Riesgo", "anexo"), ("Apéndice A", "anexo"), ("METODOLOGÍAS ANEXAS", "anexo"), ("MANUAL DE USUARIO", "anexo"),
     ("Portada", "carátula"), ("Documentación de Procesos", "carátula")])
 def test_el_manual_excluye_las_categorias_del_catalogo(titulo, categoria):
@@ -94,3 +94,8 @@ def test_un_capitulo_titulado_anexos_arrastra_a_sus_hijos_y_queda_el_motivo():
     secs = [sec("a", "V", "ANEXOS", hoja=False)] + [sec(f"a{i}", f"5.{i}", f"Control crítico {i}", ruta=["V"]) for i in range(1, 4)]
     c = clasificar_secciones(secs)
     assert all(c[f"a{i}"] == (False, "anexo (hereda de V)") for i in range(1, 4))      # visible en el motivo; el aviso lo da avisos_exclusion
+
+
+def test_aspectos_generales_no_se_excluye_porque_trae_contenido_auditable():
+    """En el ARLAFT real, "III. ASPECTOS GENERALES" contiene 3.1 (administración del riesgo) y 3.2 (etapas): cumplen artículos 31, 33 y 36."""
+    assert motivo_propio(sec("s", "III", "ASPECTOS GENERALES")) is None

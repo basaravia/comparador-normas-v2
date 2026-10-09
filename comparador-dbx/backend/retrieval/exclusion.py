@@ -37,7 +37,7 @@ CATALOGO: list[Regla] = [
     _r("correspondencia con lineamientos", r"\bcorrespondencia con (los )?lineamientos\b", MANUAL, max_palabras=8),
     _r("registro de elaboración", r"\bregistro de (elaboracion|actualizacion)\b|\belaboracion actualizacion\b", MANUAL, max_palabras=6),
     _r("preámbulo", r"^(introduccion|objetivos?( del manual| general| principal| especificos?)?|alcance( del manual)?|antecedentes|presentacion|"
-                    r"generalidades|aspectos generales|marco (general|normativo|conceptual)|base normativa|normativa nacional)\b", MANUAL,
+                    r"generalidades|marco (general|normativo|conceptual)|base normativa|normativa nacional)\b", MANUAL,
        max_profundidad=1, max_palabras=5),     # "Objetivos" o "Base normativa" dentro de un procedimiento (5.4.1, 5.3.10.1) SON cuerpo del manual
     _r("anexo", r"^(anexos?|apendices?)\b|^metodologias anexas$|^manual de usuario$", MANUAL),
     _r("anexo", r"\b(anexo|apendice)s?\b", MANUAL, max_profundidad=1, max_palabras=6),     # "…según el Anexo 3" dentro de un procedimiento no es un anexo
