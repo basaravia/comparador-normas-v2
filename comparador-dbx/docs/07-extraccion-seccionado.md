@@ -44,6 +44,9 @@ Reglas:
 - Los **literales** se mantienen **dentro** del texto del artículo, no se separan `[CALIBRAR]`.
 - Numeración duplicada (ej. dos `ARTÍCULO 12`, error real conocido en una fuente SB): conservar ambos con sufijo `#2` y reportar advertencia. **No fusionar.**
 
+## 2b. Secciones no comparables
+El seccionador emite **todas** las secciones. Qué secciones no sirven para comparar lo decide una clasificación aparte, determinista (sin LLM), en `backend/retrieval/exclusion.py`; **no se añade nada al contrato `Seccion`**. Las reglas son un catálogo de datos (categoría, palabras clave del título, a qué tipo de documento aplica); una sección hereda la exclusión de su ancestro. La tabla de recuperación lleva las columnas `Incluir` y `Motivo`, y solo las incluidas se indexan y se comparan.
+
 ## 3. Esquema de sección
 ```python
 class Seccion(BaseModel):

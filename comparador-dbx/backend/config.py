@@ -67,6 +67,8 @@ class Settings:
     # Extracción
     DOCLING_ARTIFACTS: str = _env("DOCLING_ARTIFACTS")
     MANUALES_DIR: str = _env("MANUALES_DIR")      # carpeta de manuales de control (los MOCK, versionados); relativa a comparador-dbx/
+    EXCLUSION_MAX_PCT: float = float(_env("EXCLUSION_MAX_PCT"))        # [CALIBRAR] alerta si se excluye más de este % de las hojas de un documento
+    EXCLUSION_MAX_HEREDADAS: int = int(_env("EXCLUSION_MAX_HEREDADAS"))  # [CALIBRAR] alerta si una sola exclusión arrastra más secciones
     NORMAS_DIR: str = _env("NORMAS_DIR")          # carpeta de PDFs de normas (no se versiona); relativa a comparador-dbx/
     DOCLING_THREADS: int = int(_env("DOCLING_THREADS"))
     DOCLING_DEVICE: str = _env("DOCLING_DEVICE")    # auto | cpu | cuda | mps

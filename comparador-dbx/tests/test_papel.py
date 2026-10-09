@@ -243,7 +243,8 @@ def test_bloque_via2_al_final_de_la_hoja_2(libro):
     assert [ws.cell(row=r + 2, column=c).value for c in range(1, 7)] == \
         ["M1-c1", "9.1", "Manual Interno.pdf", "Capítulo 9", "15", "Control huérfano 1"]
     assert ws.cell(row=r + 3, column=5).value == "16-17"
-    assert ws.max_row == r + 3 and len(libro[1].sheetnames) == 2
+    assert ws.cell(row=r + 6, column=1).value == annex.TITULO_EXCLUIDAS         # tras la vía 2 va el bloque de excluidas (docs/10)
+    assert ws.max_row == r + 8 and len(libro[1].sheetnames) == 2                # y no hay tercera hoja
 
 
 def test_via2_vacia_dice_ninguno(tmp_path):
@@ -411,3 +412,41 @@ def test_generar_papel_acepta_archivo_en_memoria():
 def test_papel_sin_filas_no_falla(tmp_path):
     conteos, wb, _ = guardar(entrada(filas=[], pares=[], controles_sin_base=[]), tmp_path)
     assert conteos == dict.fromkeys("ALRXP", 0) and wb["Papel de trabajo"].max_row == H
+
+
+# --- Secciones excluidas como no comparables (docs/14 #24, RNF-06) ------------------------------------------------------
+
+def test_el_anexo_lista_las_secciones_excluidas_con_su_motivo(tmp_path):
+    from backend.output.workpaper import SeccionExcluida
+    ex = [SeccionExcluida(documento="MANUAL.pdf", identificador="1", titulo="REVISIÓN Y APROBACIÓN DEL DOCUMENTO", paginas="5-10", motivo="revisión y aprobación"),
+          SeccionExcluida(documento="MANUAL.pdf", identificador="12.1", titulo="Anexo Matriz de riesgo", ruta="XII", paginas="53", motivo="anexo")]
+    ws = guardar(entrada(excluidas=ex), tmp_path)[1]["Anexo técnico"]
+    filas = [[c.value for c in fila] for fila in ws.iter_rows(min_row=1, max_col=6)]
+    i = next(k for k, f in enumerate(filas) if f[0] == annex.TITULO_EXCLUIDAS)
+    assert filas[i + 1] == annex.COLUMNAS_EXCLUIDAS
+    assert filas[i + 2] == ["MANUAL.pdf", "1", "REVISIÓN Y APROBACIÓN DEL DOCUMENTO", None, "5-10", "revisión y aprobación"]
+    assert filas[i + 3][1] == "12.1" and filas[i + 3][5] == "anexo"
+
+
+def test_sin_excluidas_el_bloque_dice_ninguna_y_no_rompe_la_via_2(tmp_path):
+    ws = guardar(entrada(), tmp_path)[1]["Anexo técnico"]
+    valores = [ws.cell(row=r, column=1).value for r in range(1, ws.max_row + 1)]
+    assert annex.TITULO_VIA2 in valores and annex.TITULO_EXCLUIDAS in valores
+    assert valores[valores.index(annex.TITULO_EXCLUIDAS) + 2] == "(ninguna)"
+
+
+def test_un_motivo_o_titulo_que_empieza_como_formula_no_se_ejecuta(tmp_path):
+    from backend.output.workpaper import SeccionExcluida
+    ex = [SeccionExcluida(documento="=cmd|' /C calc'!A1", identificador="+1", titulo='=HYPERLINK("http://x","clic")', motivo="@SUM(A1)")]
+    ws = guardar(entrada(excluidas=ex), tmp_path)[1]["Anexo técnico"]
+    celdas = [c for fila in ws.iter_rows() for c in fila if isinstance(c.value, str) and c.value[:1] in "=+@"]
+    assert all(c.data_type != "f" for c in celdas)
+    assert all(c.data_type != "f" for fila in ws.iter_rows() for c in fila)
+
+
+def test_secciones_excluidas_convierte_la_tabla_de_seleccion():
+    import pandas as pd
+    from backend.output.workpaper import secciones_excluidas
+    df = pd.DataFrame([{"Documento": "M", "Identificador": "XIV", "Título": "MANUAL DE USUARIO", "Ruta": "", "Págs": "55-56", "Motivo": "anexo"}])
+    [x] = secciones_excluidas(df)
+    assert (x.documento, x.identificador, x.paginas, x.motivo) == ("M", "XIV", "55-56", "anexo")

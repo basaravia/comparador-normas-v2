@@ -362,7 +362,32 @@ No se activó `HeadingHierarchyOptions` de Docling: los PDFs de `Normativa2026/`
 
 Efecto medido con Docling real en `L1-XVI-cap-III`: la tabla variable del Art. 4 sale como **una tabla de las págs. 2-3**; el segundo sub-chunk del artículo empieza por texto solapado y no por filas de tabla sueltas. Ninguna figura avisada (solo hay logos y QR).
 
+### L2/L3 · secciones no comparables y selección (8 oct 2026, docs/14 #24, RF-17)
+Decisión del usuario: carátulas, preámbulos, índices, control de versiones, anexos y apéndices **no se comparan**, pero quedan en la tabla con su motivo y el auditor puede corregirlo. Evaluado por el `product-owner` (EN PLAN) y revisado por `appsec`.
+
+| Módulo | Qué hace | API |
+|---|---|---|
+| `backend/retrieval/exclusion.py` | Clasificación **determinista** (sin LLM) por el título de la sección. `CATALOGO` son datos (categoría, regex sobre el título normalizado, tipo de documento, profundidad máxima). Una sección hereda la exclusión de su ancestro. No toca el contrato `Seccion` | `clasificar_secciones(secciones) -> {id: (incluir, motivo)}`, `motivo_propio(seccion)`, `CATALOGO` |
+| `backend/retrieval/seleccion.py` | Selección sobre el DataFrame de la tabla: marcar un padre marca sus hijos (RF-09), buscador por texto, contadores y estimación de pares | `excluir`, `reincluir`, `cambiar`, `ids_seleccionados`, `solo_incluidas`, `excluidas`, `contadores`, `estimar_pares`, `resumen_exclusion` |
+| `backend/retrieval/tabla.py` | La tabla gana `Incluir` (✔/✘), `Motivo` e `Id`; `Rol` pasa a `se compara (hoja)`, `excluida (hoja)` o `agrupa`; `guardar_csv` neutraliza fórmulas | `tabla_recuperacion(...)`, `guardar_csv(...)`, `titulo_visible(...)` |
+| `backend/output/workpaper.py`, `annex.py` | `SeccionExcluida`, `secciones_excluidas(df)` y `EntradaPapel.excluidas`; la Hoja 2 lleva un bloque "Secciones excluidas como no comparables" con su motivo (RNF-06) | `annex.TITULO_EXCLUIDAS` |
+
+**Catálogo** (manuales): carátula, índice, revisión y aprobación / control de versiones, correspondencia con lineamientos, registro de elaboración, preámbulo (introducción, objetivos, alcance, antecedentes, aspectos generales, marco, base normativa) y anexo (anexos, apéndices, metodologías anexas, manual de usuario). **Normas**: solo carátula, índice y considerandos; las disposiciones y los anexos de una norma se incluyen.
+
+**Diferencias con la spec y decisiones técnicas**
+- La interfaz (casillas, buscador, aviso en pantalla) aún no existe: hay funciones y los notebooks 02, 03 y 05. `resumen_exclusion` ya da el texto del aviso de docs/05.
+- **Profundidad:** "preámbulo" y las menciones sueltas de "anexo" solo cuentan en capítulos y sus hijos directos (`len(ruta) <= 1`); así `5.4.1 Objetivos` o `5.3.10.1 Base normativa`, dentro de un procedimiento, **se incluyen**. "Contenido" solo es índice si es el título entero (no "Contenido mínimo de los informes…").
+- **Herencia por ancestro:** todo lo que cuelga de un capítulo excluido se excluye (motivo `anexo (hereda de XII)`). Con numeración repetida (dos `XII`) se resuelve por orden de documento y profundidad.
+- El identificador se quita del título solo si es una palabra completa (la `I` de `I. INTRODUCCIÓN` no se comía la `I` de `INTRODUCCIÓN`).
+- Encabezados y pies de página y las hojas de firmas ya se descartaban al extraer (`limpiar_bloques`, `COLA_DOCUMENTO`).
+- **Reglas estrictas (appsec, 8 oct 2026):** los títulos los escribe el autor del documento, así que cada regla pide el título entero o corto (`max_palabras`): `Introducción de nuevos clientes: obligación de reportar` o `Control de cambios de límites de efectivo` son cuerpo y se incluyen.
+- **Alerta de exclusión masiva o heredada** (`avisos_exclusion`, umbrales `EXCLUSION_MAX_PCT=25` y `EXCLUSION_MAX_HEREDADAS=10` en `defaults.env`): un capítulo titulado "Anexos" arrastra a todos sus hijos y podría esconder un control; si se excluye más del 25 % de las hojas, o una sola exclusión arrastra más de 10 secciones, el auditor ve el aviso y debe confirmarlo antes de comparar. El rastro queda en la tabla y en la Hoja 2.
+
+**Medición con el manual sintético ARLAFT (57 págs):** 99 hojas, **82 incluidas y 17 excluidas** (revisión y aprobación 1, preámbulo 11, anexo 4, registro de elaboración 1). Pendiente validar el catálogo con un manual real.
+
 ## L3 · Recuperación
+
+> **8 oct 2026 · multi-vector:** si el modelo rechaza un sub-chunk por largo (granite, 512 tokens), se vectoriza por ventanas y **cada ventana es una fila del índice** de la misma sección (score = máximo). Se retira el promedio de ventanas. `ModelClient.embed_multi` y `embeber_ventanas` devuelven una matriz por texto; `embed`/`embeber` quedan para textos cortos. Log de indexado: n.º de sub-chunks y n.º de vectores. Pendiente en L3b: calibrar por stage y ampliar el golden.
 
 **Estado:** APROBADO por `qa-ia` (recall 28/30 = 93,3 %; 100 % sin las 2 filas `por_confirmar`).
 **Criterio (docs/13):** recall en candidatos ≥ 90 % sobre el golden set; se registran los pares antes y después de deduplicar. Evidencia: `notebooks/03_recuperacion.ipynb` (ejecutado de punta a punta, embeddings reales de Ollama `bge-m3` y FAISS real).

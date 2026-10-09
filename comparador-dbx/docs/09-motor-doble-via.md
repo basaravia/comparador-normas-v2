@@ -105,6 +105,7 @@ def marca_articulo(pares: list[Par]) -> tuple[str, list[Par]]:
     if par: return "L", par[:1]          # respaldo: 1 sección (decisión 14 #5)
     return "R", sorted(validos, key=score_desc)[:1]   # comentario explica la brecha
 
+# `secciones_sel` son solo las secciones INCLUIDAS (las excluidas como no comparables no son controles sin base: van aparte, con su motivo, en el anexo).
 def controles_sin_base(secciones_sel, pares) -> list[str]:
     # Vía 2: sección del manual sin ningún par con cobertura total/parcial
     # sobre un artículo de naturaleza "obligacion".

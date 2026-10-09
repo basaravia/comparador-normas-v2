@@ -20,6 +20,7 @@
 | RF-14 | Descarga del .xlsx con Hoja 1 (papel) y Hoja 2 (anexo técnico) ([10](10-papel-de-trabajo.md)) | DEBE |
 | RF-15 | Botón "Cargar ejemplo" con documentos pre-procesados, sin ejecutar Docling | DEBE |
 | RF-16 | Botón "Nueva sesión" con confirmación | DEBERÍA |
+| RF-17 | Secciones no comparables (carátula, preámbulo, índice, control de versiones, anexos…): se **identifican automáticamente**, quedan en la tabla con su motivo, **no entran** a la recuperación ni a la doble vía, y el auditor puede reincluir o excluir cualquiera (decisión del usuario, 8 oct 2026; [14](14-puntos-abiertos.md) #24) | DEBE |
 
 ## No funcionales
 

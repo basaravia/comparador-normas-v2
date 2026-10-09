@@ -16,6 +16,8 @@ COLUMNAS = ["ID par", "Artículo", "Sección manual", "Origen", "Similitud v1", 
 ANCHOS = [14, 34, 34, 8, 10, 10, 10, 8, 8, 16, 10, 10, 30, 60, 40]
 COL_COMENTARIO = COLUMNAS.index("Comentario del juez")
 SEP_CELDA = " | "
+TITULO_EXCLUIDAS = "Secciones excluidas como no comparables (carátula, preámbulo, índice, anexos…)"
+COLUMNAS_EXCLUIDAS = ["Documento", "Identificador", "Título", "Ruta", "Páginas", "Motivo"]
 TITULO_VIA2 = "Vía 2 — Controles del manual sin base normativa identificada"
 COLUMNAS_VIA2 = ["ID sección", "Identificador", "Documento", "Ruta", "Páginas", "Texto literal"]
 _ORDEN_COBERTURA = {"total": 2, "parcial": 1, "nula": 0}
@@ -125,3 +127,15 @@ def escribir_anexo(ws, entrada) -> None:
             escribir(ws, i, col, valor, pagina=s.pagina_inicio)
         ws.merge_cells(start_row=i, start_column=6, end_row=i, end_column=len(COLUMNAS))
         ws.row_dimensions[i].height = alto_fila([(s.texto_literal, ancho_texto)])
+
+    # Secciones excluidas (docs/14 #24): rastreables con su motivo, debajo del bloque de la vía 2
+    r = r + 2 + max(1, len(entrada.controles_sin_base)) + 2
+    escribir(ws, r, 1, TITULO_EXCLUIDAS, estilo=estilo_etiqueta)
+    ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
+    for col, nombre in enumerate(COLUMNAS_EXCLUIDAS, start=1):
+        escribir(ws, r + 1, col, nombre, estilo=estilo_encabezado)
+    if not entrada.excluidas:
+        escribir(ws, r + 2, 1, "(ninguna)")
+    for i, x in enumerate(entrada.excluidas, start=r + 2):
+        for col, valor in enumerate([x.documento, x.identificador, x.titulo, x.ruta, x.paginas, x.motivo], start=1):
+            escribir(ws, i, col, valor)
