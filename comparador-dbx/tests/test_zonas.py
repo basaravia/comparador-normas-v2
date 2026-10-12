@@ -58,3 +58,25 @@ def test_reglas_de_git_de_las_zonas(ruta, ignorada, tmp_path):
     shutil.copy(RAIZ.parent / ".gitignore", tmp_path / ".gitignore")
     r = subprocess.run(["git", "check-ignore", "-q", f"comparador-dbx/{ruta}"], cwd=tmp_path, capture_output=True)
     assert (r.returncode == 0) is ignorada, f"{ruta}: {'debería ignorarse' if ignorada else 'debería poder versionarse'}"
+
+
+def test_zona_de_un_archivo_y_exigir_en_zona():
+    assert config.zona_de(RAIZ / "documentos" / "val" / "manuales" / "x.pdf") == "val"
+    assert config.zona_de("documentos/test/normas/n.pdf") == "test"
+    assert config.zona_de("/tmp/x.pdf") is None
+    assert config.exigir_en_zona(RAIZ / "documentos" / "val" / "manuales" / "x.pdf") == "val"
+    with pytest.raises(ValueError, match="fuera de documentos"):
+        config.exigir_en_zona("/tmp/manual_real.pdf")                        # un documento fuera de las zonas no se acepta
+    with pytest.raises(ValueError, match="zona 'val'"):
+        config.exigir_en_zona(RAIZ / "documentos" / "val" / "manuales" / "x.pdf", "test")
+
+
+def test_lo_versionado_en_output_test_no_menciona_documentos_de_val():
+    """Red de seguridad: ningún archivo versionado de output/test/ nombra un documento de documentos/val/ (si hay)."""
+    nombres = {p.stem.lower() for p in (RAIZ / "documentos" / "val").rglob("*") if p.is_file() and len(p.stem) >= 6}
+    if not nombres or shutil.which("git") is None:
+        pytest.skip("sin documentos en val (o sin git)")
+    r = subprocess.run(["git", "ls-files", "output/test"], cwd=RAIZ, capture_output=True, text=True)
+    for ruta in filter(None, r.stdout.splitlines()):
+        texto = (RAIZ / ruta).read_text(encoding="utf-8", errors="ignore").lower()
+        assert not [n for n in nombres if n in texto], f"{ruta} menciona un documento de val: no debe versionarse"

@@ -26,5 +26,5 @@ def main(etiqueta: str, salida: str) -> None:
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser(); p.add_argument("--etiqueta", default=""); p.add_argument("--zona", default="test"); p.add_argument("--salida", default="")
+    p = argparse.ArgumentParser(); p.add_argument("--etiqueta", default=""); p.add_argument("--zona", default="test", choices=["test", "val"]); p.add_argument("--salida", default="")
     a = p.parse_args(); main(a.etiqueta, a.salida or str(carpeta_salida(a.zona) / "comparaciones"))

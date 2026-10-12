@@ -24,7 +24,7 @@ from pathlib import Path
 
 import numpy as np
 
-from backend.config import carpeta_bloques, carpeta_salida, settings
+from backend.config import carpeta_bloques, carpeta_salida, exigir_en_zona, settings
 from backend.core.progreso import configurar_logs, progreso
 from backend.engine.candidatos import candidatos
 from backend.extraction.lector import leer_documento
@@ -69,6 +69,10 @@ def metricas(nombre: str, emb: str, rerank: str, positivas: list[tuple[str, str]
 
 def main(a) -> None:
     configurar_logs()
+    zonas = {exigir_en_zona(a.norma), exigir_en_zona(a.manual)}     # los documentos mandan: si alguno es de val, todo va a val
+    a.zona = a.zona or ("val" if "val" in zonas else "test")
+    if "val" in zonas and a.zona != "val":
+        raise SystemExit("Hay un documento de la zona val: los resultados solo pueden ir a la zona val.")
     salida = Path(a.salida) if a.salida else carpeta_salida(a.zona) / "comparaciones"
     salida.mkdir(parents=True, exist_ok=True)
     emb = modelo_embeddings()
@@ -158,6 +162,6 @@ if __name__ == "__main__":
     p.add_argument("--top-n", type=int, default=20); p.add_argument("--lote", type=int, default=2)
     p.add_argument("--reusar", action="store_true", help="reutiliza el ranking denso guardado (no indexa)")
     p.add_argument("--solo-articulos-etiquetados", action="store_true", help="la vía 2 compite solo con los artículos que aparecen en tu archivo")
-    p.add_argument("--zona", default="", help="test | val (por defecto DOCS_ZONA): decide dónde se guardan la caché de bloques y los resultados")
+    p.add_argument("--zona", default="", help="test | val: dónde se guardan la caché de bloques y los resultados. Por defecto se deduce de los documentos (val si alguno está en documentos/val/)")
     p.add_argument("--salida", default="", help="carpeta de resultados (por defecto output/<zona>/comparaciones)")
     main(p.parse_args())

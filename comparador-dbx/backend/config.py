@@ -156,6 +156,28 @@ def carpeta_salida(zona: str | None = None) -> Path:
     return RAIZ / "output" / _zona(zona)
 
 
+def zona_de(ruta: str | Path) -> str | None:
+    """Zona (`test` o `val`) a la que pertenece un archivo según su ubicación en `documentos/<zona>/`; `None` si está fuera de ambas."""
+    p = Path(os.path.normpath(Path(ruta) if Path(ruta).is_absolute() else RAIZ / ruta))      # normaliza `..` sin seguir enlaces simbólicos
+    for z in ZONAS:
+        if Path(os.path.normpath(RAIZ / "documentos" / z)) in p.parents:
+            return z
+    return None
+
+
+def exigir_en_zona(ruta: str | Path, zona: str | None = None) -> str:
+    """Devuelve la zona de `ruta` y falla si el archivo está fuera de `documentos/test|val/`, o en otra zona que la pedida.
+
+    Evita que un documento real, leído desde otra carpeta, deje resultados en una zona que se versiona.
+    """
+    z = zona_de(ruta)
+    if z is None:
+        raise ValueError(f"{Path(ruta).name} está fuera de documentos/test/ y documentos/val/: muévelo a la zona que corresponda (los reales, a val).")
+    if zona and z != zona:
+        raise ValueError(f"{Path(ruta).name} es de la zona '{z}' pero se pidió '{zona}'.")
+    return z
+
+
 def carpeta_bloques(zona: str | None = None) -> Path:
     """Caché del texto que Docling extrae de cada PDF: `output/<zona>/bloques/` (contiene el texto íntegro: jamás se versiona)."""
     return carpeta_salida(zona) / "bloques"
