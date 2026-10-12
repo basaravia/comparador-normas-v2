@@ -55,7 +55,7 @@ def metricas(nombre: str, emb: str, rerank: str, positivas: list[tuple[str, str]
     union = sum((u is not None and u <= tope) or (v is not None and v <= tope) for u, v in zip(rk1, rk2))
     lo, hi = wilson(union, n)
     fila = {"fecha": datetime.now().isoformat(timespec="seconds"), "etiqueta": a.etiqueta, "configuracion": nombre, "embeddings": emb, "reranker": rerank,
-            "top_n": a.top_n if rerank else None, "tope": tope, "n": n, "union10": union, "union10_pct": round(100 * union / n, 1), "ic95": [round(100 * lo), round(100 * hi)], **extra}
+            "top_n": a.top_n if rerank else None, "tope": tope, "solo_art_etiquetados": a.solo_articulos_etiquetados, "n": n, "union10": union, "union10_pct": round(100 * union / n, 1), "ic95": [round(100 * lo), round(100 * hi)], **extra}
     print(f"\n[{nombre}] n={n}\n  unión top-{tope} de las dos vías: {fmt(union, n)}")
     for via, rk in (("v1", rk1), ("v2", rk2)):
         fila[f"{via}_k"] = {k: round(100 * sum(x is not None and x <= k for x in rk) / n) for k in KS}
@@ -97,15 +97,26 @@ def main(a) -> None:
         densos.write_text(json.dumps({"embeddings": emb, "etiqueta": a.etiqueta, "d1": d1, "d2": d2}), encoding="utf-8")
         print(f"Ranking denso guardado en {densos.name}")
 
-    apn = {int(re.search(r"\d+", por_id[x].identificador).group()): x for x in arts}
+    apn: dict[int, str] = {}
+    for x in sorted(arts):                                   # número de artículo -> id; si el número se repite (capítulos, disposiciones) se usa el primero
+        apn.setdefault(int(re.search(r"\d+", por_id[x].identificador).group()), x)
+    if len(apn) < len(arts):
+        print(f"AVISO: {len(arts) - len(apn)} artículos comparten número con otro (numeración repetida): se usa el primero de cada número.")
     ids_sec: dict[str, list[str]] = {}
     for s in inc:
         ids_sec.setdefault(norm_id(s.identificador), []).append(s.id)
     filas, _ = leer_comparacion(Path(a.archivo), a.col_articulo, a.col_seccion)
     positivas = [(apn[n], ids_sec[i][0]) for n, secs in filas if n in apn for i in secs if len(ids_sec.get(i, [])) == 1]
+    fuera = sorted({n for n, _ in filas if n not in apn})
+    if fuera:
+        print(f"AVISO: artículos de tu archivo que no encuentro en la norma: {fuera}")
     etiquetados = sum(len(secs) for n, secs in filas if n in apn)
     print(f"Pares etiquetados evaluables: {len(positivas)} de {etiquetados} (el resto: sección excluida, no encontrada o con identificador repetido)")
     arts_pos, secs_pos = {p[0] for p in positivas}, {p[1] for p in positivas}
+    if a.solo_articulos_etiquetados:                         # como en una corrida real: el auditor selecciona solo esos artículos
+        universo = {apn[n] for n, _ in filas if n in apn}
+        d2 = {s: [x for x in v if x in universo] for s, v in d2.items()}
+        print(f"La vía 2 compite solo con los {len(universo)} artículos de tu archivo (no con los {len(arts)} de la norma)")
     metricas("solo embeddings", emb, "", positivas, d1, d2, {}, a)
     if not a.reranker:
         return
@@ -145,5 +156,6 @@ if __name__ == "__main__":
     p.add_argument("--reranker", default="", help="Qwen/Qwen3-Reranker-0.6B | BAAI/bge-reranker-v2-m3 | ruta local")
     p.add_argument("--top-n", type=int, default=20); p.add_argument("--lote", type=int, default=2)
     p.add_argument("--reusar", action="store_true", help="reutiliza el ranking denso guardado (no indexa)")
+    p.add_argument("--solo-articulos-etiquetados", action="store_true", help="la vía 2 compite solo con los artículos que aparecen en tu archivo")
     p.add_argument("--salida", default="output/comparaciones")
     main(p.parse_args())

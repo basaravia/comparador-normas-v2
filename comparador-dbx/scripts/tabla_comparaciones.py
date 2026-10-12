@@ -14,7 +14,7 @@ def main(etiqueta: str, salida: str) -> None:
     for r in filas:
         if etiqueta and r["etiqueta"] != etiqueta:
             continue
-        ultimas[(r["etiqueta"], r["embeddings"], r["reranker"], r["configuracion"].split(" (")[0], r["top_n"])] = r
+        ultimas[(r["etiqueta"], r["embeddings"], r["reranker"], r["configuracion"].split(" (")[0], r["top_n"], r.get("solo_art_etiquetados", False))] = r
     print("| conjunto | embeddings | reranker | configuración | n | unión top-K | IC95 | v1 MRR | v2 MRR | v1 k=1/3/5/10 | v2 k=1/3/5/10 | s rerank |")
     print("|---|---|---|---|---|---|---|---|---|---|---|---|")
     for r in sorted(ultimas.values(), key=lambda r: (r["etiqueta"], r["embeddings"], r["reranker"])):
