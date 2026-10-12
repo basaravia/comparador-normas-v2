@@ -155,7 +155,7 @@ class ModelClient:
                     log.error("Fallo de embeddings %s: %s", modelo, redact(str(e)))
                     raise clasificar(e) from e
                 continue
-            log.info("Embeddings: un texto superaba el límite del modelo; se vectorizó en %d ventanas (un vector por ventana, sin recortar ni promediar).", n)
+            log.debug("Embeddings: un texto superaba el límite del modelo; se vectorizó en %d ventanas (un vector por ventana, sin recortar ni promediar).", n)   # el resumen por índice (cuántos sub-chunks en varias ventanas) lo da construir_indice
             m = np.array([d.embedding for d in r.data], dtype=np.float32)
             return m / np.linalg.norm(m, axis=1, keepdims=True)
         raise AssertionError("inalcanzable")
