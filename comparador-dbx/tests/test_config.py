@@ -21,8 +21,8 @@ def correr_python(codigo: str, **env_extra: str) -> subprocess.CompletedProcess:
 # --- Settings -----------------------------------------------------------------
 
 def test_limites_de_ingesta_coinciden_con_rf04():
-    # RF-04: ≤ 20 MB y ≤ 100 páginas.
-    assert settings.MAX_PAGES == 100
+    # RF-04: ≤ 20 MB y ≤ 250 páginas (12 oct 2026; antes 100).
+    assert settings.MAX_PAGES == 250
     assert settings.MAX_MB == 20
 
 
