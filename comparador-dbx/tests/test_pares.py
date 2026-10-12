@@ -92,3 +92,44 @@ def test_listas_vacias_o_desconocidas_abortan_con_err_idx_001_y_no_devuelven_par
 def test_articulo_seleccionado_ausente_del_indice_aborta():
     with pytest.raises(IndiceError, match="A9"):
         construir_pares(indice_a_mano(NORMA), indice_a_mano(MANUAL), {"A1", "A9"}, {"S1"}, C)
+
+
+# --- Reranker opcional (RERANK_ENABLED). Lógica de selección con un puntuador de prueba: el modelo real se mide con scripts/comparar_recuperacion.py ---
+class PuntuadorPrueba:
+    """Puntúa por reglas fijas para comprobar el corte, el orden y que cada par se puntúe una vez; no simula recuperación."""
+    nombre = "prueba"
+
+    def __init__(self, puntajes):
+        self.puntajes, self.llamadas = puntajes, []
+
+    def puntuar(self, pares, progreso=None):
+        self.llamadas.append(list(pares))
+        return [self.puntajes[(q, d)] for q, d in pares]
+
+
+TEXTOS = {"A1": "A1", "A2": "A2", "S1": "S1", "S2": "S2"}
+
+
+def test_rerank_reordena_recorta_y_puntua_cada_par_una_vez():
+    c = cfg(K_SUBCHUNKS=10, SIM_THRESHOLD=0.0, MIN_FLOOR=1, MAX_CANDIDATES=1, RERANK_ENABLED=True, RERANK_TOP_N=2)
+    # el coseno prefiere A1->S1, pero el reranker prefiere A1->S2: debe ganar el reranker
+    pt = PuntuadorPrueba({("A1", "S1"): 0.1, ("A1", "S2"): 0.9, ("A2", "S1"): 0.2, ("A2", "S2"): 0.8})
+    pares, stats = construir_pares(indice_a_mano(NORMA), indice_a_mano(MANUAL), {"A1", "A2"}, {"S1", "S2"}, c, pt, TEXTOS)
+    p = por_clave(pares)
+    assert p[("A1", "S2")].score_rerank == 0.9 and p[("A1", "S2")].rank_v1 == 1
+    assert ("A1", "S1") not in p                                      # recortado a MAX_CANDIDATES=1 por el reranker
+    assert len(pt.llamadas) == 1 and len(pt.llamadas[0]) == len(set(pt.llamadas[0])) == 4
+    assert stats["rerank_puntuados"] == 4
+
+
+def test_rerank_exige_reranker_y_textos_y_top_n_suficiente():
+    from backend.retrieval.reranker import RerankerError
+    c = cfg(K_SUBCHUNKS=10, SIM_THRESHOLD=0.0, MIN_FLOOR=1, MAX_CANDIDATES=2, RERANK_ENABLED=True, RERANK_TOP_N=2)
+    with pytest.raises(RerankerError, match="requiere"):
+        construir_pares(indice_a_mano(NORMA), indice_a_mano(MANUAL), {"A1"}, {"S1"}, c)
+    with pytest.raises(RerankerError, match="RERANK_TOP_N"):
+        construir_pares(indice_a_mano(NORMA), indice_a_mano(MANUAL), {"A1"}, {"S1"}, cfg(RERANK_ENABLED=True, RERANK_TOP_N=1, MAX_CANDIDATES=2), PuntuadorPrueba({}), TEXTOS)
+
+
+def test_sin_rerank_los_pares_no_cambian(escenario):
+    assert all(p.score_rerank is None for p in escenario[0]) and "rerank_puntuados" not in escenario[1]

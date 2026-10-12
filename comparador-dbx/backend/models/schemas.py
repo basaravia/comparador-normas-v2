@@ -56,6 +56,7 @@ class Par(BaseModel):
     rank_v1: Optional[int] = None
     score_v2: Optional[float] = None
     rank_v2: Optional[int] = None
+    score_rerank: Optional[float] = None   # solo con RERANK_ENABLED: puntaje del reranker (0-1); los rangos pasan a ser los del reranker
     veredicto: Optional[Veredicto] = None
     cita_norma_verificada: bool = False
     cita_manual_verificada: bool = False

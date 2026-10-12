@@ -51,3 +51,6 @@ Si defines `BLOQUES_DIR`, los notebooks guardan el **texto íntegro** que Doclin
 - Se crea con permisos privados (carpeta 700, archivos 600). Elige una carpeta tuya, fuera de cualquier carpeta que se sincronice o se suba, y bórrala al terminar (`/tmp` sirve).
 - Nunca la subas a git. La app **no** la usa: no persiste nada (CLAUDE.md, regla 8).
 - Antes de usar la caché se valida el PDF (tipo, tamaño y páginas); una caché dañada o manipulada se ignora y se vuelve a extraer.
+
+## validacion_privada/
+Comparaciones hechas a mano (CSV o XLSX) para validar la recuperación con un manual real. **No se versiona** y no debe salir de la máquina donde está. Las lee la sección 9c de `notebooks/03_recuperacion.ipynb` con `backend/retrieval/validacion.py`; solo se usan identificadores (artículo, sección), nunca texto.

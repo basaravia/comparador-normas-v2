@@ -92,6 +92,13 @@ class Settings:
     MIN_FLOOR: int = int(_env("MIN_FLOOR"))
     MAX_CANDIDATES: int = int(_env("MAX_CANDIDATES"))
 
+    # Reranker (opcional)
+    RERANK_ENABLED: bool = _env("RERANK_ENABLED").lower() == "true"
+    RERANK_MODEL: str = _env("RERANK_MODEL")
+    RERANK_TOP_N: int = int(_env("RERANK_TOP_N"))
+    RERANK_DEVICE: str = _env("RERANK_DEVICE") or "auto"
+    RERANK_BATCH: int = int(_env("RERANK_BATCH"))
+
     # Juez
     LLM_CONCURRENCY: int = int(_env("LLM_CONCURRENCY"))
     LLM_RETRIES: int = int(_env("LLM_RETRIES"))
