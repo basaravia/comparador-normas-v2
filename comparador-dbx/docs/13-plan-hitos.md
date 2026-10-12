@@ -57,3 +57,13 @@ Las escribe y ejecuta el agente `qa-ia` al cerrar cada hito. **Un hito no se cie
 `tests/golden_pairs.csv`, construido desde la matriz de `LEEME-MANUALES-MOCK.md` de la v1: norma LA/FT (arts. 31–48) contra MOCK-DEMO-01/02/03, con la cobertura esperada.
 - `recall@candidatos = pares_golden_en_candidatos / total_golden`.
 - Reportar los fallos con sus scores para ajustar `SIM_THRESHOLD` y `K_SUBCHUNKS`.
+
+## Deuda técnica marcada (limpieza pendiente; usuario, 12 oct 2026: "luego podamos, de momento se deja como está")
+Nada de esto bloquea un hito. Se poda cuando el usuario lo decida (solo él desestima o cancela).
+- **Ramas integradas en `main` que se pueden podar** (la remota y la local): `chore/pool-dev-ia`, `feat/exclusion-secciones`, `feat/l2-extraccion-docling`, `feat/l2-seccionado`, `fix/docling-cve`, `fix/l2-estado-real`, `legacy/equipo-ia` (esta guarda el pool de IA retirado el 7 oct: decidir si se conserva como referencia).
+- **Ramas con trabajo propio sin decidir:** `aux/docling-modelos` y `chore/ci-github-actions` (con sus worktrees `wt-aux-docling` y `wt-chore-ci`).
+- **Qué va a `main` desde `test/qwen3-embedding`, `docs/reranker-qwen3` y `feat/zonas-test-val`** (zonas, 03d, límite de 250 páginas, reranker opcional, `validacion.py`, 03c y scripts de comparación): se decide con los resultados del 03d y del 03c en la máquina de desarrollo. Candidatos a salir: `scripts/ablacion_recuperacion.py` (BM25, no se adopta) y `scripts/medir_recuperacion.py`.
+- **Docs:** falta la fila #25 (reranker) de `docs/14` en la rama de zonas (está en `docs/reranker-qwen3`); las filas #26 y #27 no cierran con `|`.
+- **Endurecimientos opcionales** (guardián): exigir que `--salida` de `comparar_recuperacion.py` quede dentro de `output/<zona>/`; rechazar enlaces simbólicos en `zona_de`; aceptar solo `int` y no `bool` en `resolver()`.
+- **Proceso:** `appsec` y `product-owner` no revisaron los commits de estas ramas (no estaban disponibles) y el tablero (`tablero/datos.js`) no se actualizó en sus pushes.
+- **Medir:** RAM y tiempo de Docling con 250 páginas reales (docs/14 #10 y #27).
