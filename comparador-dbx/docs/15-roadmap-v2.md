@@ -6,6 +6,6 @@ No implementar en el MVP. Diseñar sin bloquear estas evoluciones.
 - **Persistencia:** volúmenes para PDFs; tablas para secciones, embeddings, pares y veredictos; historial de revisiones.
 - **Canonicalización:** antes de embeber, el LLM extrae de cada sección la obligación o el control en forma canónica neutral (ej. "monitoreo mensual de transacciones inusuales"). Reduce la asimetría entre lenguaje deóntico de la norma y lenguaje operativo del manual; sube el recall.
 - **OCR** para escaneados y PDF planos.
-- **Cascada de cómputo:** hash → embeddings + léxico → cross-encoder → juez, con umbrales de tres bandas calibrados contra golden set etiquetado.
+- **Cascada de cómputo:** hash → embeddings + léxico → cross-encoder (el reranker `Qwen3-Reranker-0.6B` opcional ya está en el MVP, docs/08 §Reranking y docs/14 #25) → juez, con umbrales de tres bandas calibrados contra golden set etiquetado.
 - **Edición del seccionado** en UI (fusionar y dividir) y evaluación conjunta de coberturas parciales.
 - **Comparación de versiones** de una normativa (modificados, derogados, añadidos, renumerados).

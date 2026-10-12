@@ -27,5 +27,5 @@ Varias normas contra varios manuales.
 | Cómputo | Todo en el contenedor de la App | Extracción pesada en Jobs; la App orquesta |
 | Persistencia | Ninguna; el Excel es la persistencia | Delta / Unity Catalog, volúmenes, historial |
 | Representación | Embeddings del texto de sub-chunks | Canonicalización de obligaciones y controles |
-| Ranking | Embeddings → juez LLM | Cascada con cross-encoder y umbrales calibrados |
+| Ranking | Embeddings → [reranker `Qwen3-Reranker-0.6B`, opcional por stage, apagado por defecto] → juez LLM | Cascada completa (hash, léxico, cross-encoder) con umbrales de tres bandas calibrados |
 | Seccionado | Automático con bandera de "seccionado incierto" | Corrección manual (fusionar/dividir) |
