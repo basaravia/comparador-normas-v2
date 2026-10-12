@@ -66,10 +66,11 @@ class Settings:
 
     # Extracción
     DOCLING_ARTIFACTS: str = _env("DOCLING_ARTIFACTS")
-    MANUALES_DIR: str = _env("MANUALES_DIR")      # carpeta de manuales de control (los MOCK, versionados); relativa a comparador-dbx/
+    DOCS_ZONA: str = _env("DOCS_ZONA") or "test"  # test (MOCK y normas públicas; lo que se versiona) | val (documentos reales de validación; nunca se versiona)
+    MANUALES_DIR: str = _env("MANUALES_DIR")      # vacío: documentos/<zona>/manuales. Si se define, gana sobre la zona por defecto; relativa a comparador-dbx/
     EXCLUSION_MAX_PCT: float = float(_env("EXCLUSION_MAX_PCT"))        # [CALIBRAR] alerta si se excluye más de este % de las hojas de un documento
     EXCLUSION_MAX_HEREDADAS: int = int(_env("EXCLUSION_MAX_HEREDADAS"))  # [CALIBRAR] alerta si una sola exclusión arrastra más secciones
-    NORMAS_DIR: str = _env("NORMAS_DIR")          # carpeta de PDFs de normas (no se versiona); relativa a comparador-dbx/
+    NORMAS_DIR: str = _env("NORMAS_DIR")          # vacío: documentos/<zona>/normas. Si se define, gana sobre la zona por defecto; relativa a comparador-dbx/
     DOCLING_THREADS: int = int(_env("DOCLING_THREADS"))
     DOCLING_DEVICE: str = _env("DOCLING_DEVICE")    # auto | cpu | cuda | mps
     TABLAS_ATOMICAS: bool = _env("TABLAS_ATOMICAS").lower() == "true"   # true: la tabla no se parte sin su cabecera y se unen las continuadas
@@ -125,19 +126,44 @@ def _carpeta(valor: str) -> Path:
     return ruta if ruta.is_absolute() else RAIZ / ruta
 
 
-def carpeta_normas() -> Path:
-    """Carpeta donde se leen los PDF de las normas (`NORMAS_DIR`; si es relativa, desde `comparador-dbx/`)."""
-    return _carpeta(settings.NORMAS_DIR)
+ZONAS = ("test", "val")
 
 
-def carpeta_manuales() -> Path:
-    """Carpeta donde se leen los manuales de control (`MANUALES_DIR`; los MOCK ficticios están versionados)."""
-    return _carpeta(settings.MANUALES_DIR)
+def _zona(zona: str | None) -> str:
+    z = zona or settings.DOCS_ZONA
+    if z not in ZONAS:
+        raise ValueError(f"Zona '{z}' no válida: usa {' o '.join(ZONAS)}.")
+    return z
 
 
-def manuales_locales() -> list[Path]:
-    """Manuales en `documentos/manuales/` que no son los MOCK de git (p. ej. un manual real o parecido a uno real, solo en local)."""
-    return sorted(p for p in carpeta_manuales().glob("*.pdf") if not p.name.startswith("MOCK-DEMO-"))
+def carpeta_normas(zona: str | None = None) -> Path:
+    """PDF de las normas: `documentos/<zona>/normas/`. `NORMAS_DIR` (si se define) gana cuando no se pide una zona explícita."""
+    return _carpeta(settings.NORMAS_DIR) if settings.NORMAS_DIR and zona is None else RAIZ / "documentos" / _zona(zona) / "normas"
+
+
+def carpeta_manuales(zona: str | None = None) -> Path:
+    """Manuales de control: `documentos/<zona>/manuales/` (los MOCK ficticios, en `test`, van en git). `MANUALES_DIR` gana sin zona explícita."""
+    return _carpeta(settings.MANUALES_DIR) if settings.MANUALES_DIR and zona is None else RAIZ / "documentos" / _zona(zona) / "manuales"
+
+
+def carpeta_comparaciones(zona: str | None = None) -> Path:
+    """Comparaciones hechas a mano para validar (CSV/XLSX): `documentos/<zona>/comparaciones/`. En `val` nunca se versionan."""
+    return RAIZ / "documentos" / _zona(zona) / "comparaciones"
+
+
+def carpeta_salida(zona: str | None = None) -> Path:
+    """Resultados de las pruebas: `output/<zona>/`. `output/test/` se puede versionar (salvo cachés); `output/val/` nunca."""
+    return RAIZ / "output" / _zona(zona)
+
+
+def carpeta_bloques(zona: str | None = None) -> Path:
+    """Caché del texto que Docling extrae de cada PDF: `output/<zona>/bloques/` (contiene el texto íntegro: jamás se versiona)."""
+    return carpeta_salida(zona) / "bloques"
+
+
+def manuales_locales(zona: str | None = None) -> list[Path]:
+    """Manuales de la zona que no son los MOCK de git (p. ej. un manual real o parecido a uno real, solo en local)."""
+    return sorted(p for p in carpeta_manuales(zona).glob("*.pdf") if not p.name.startswith("MOCK-DEMO-"))
 
 
 def es_secreto(nombre: str) -> bool:

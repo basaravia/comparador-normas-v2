@@ -16,7 +16,7 @@ from pathlib import Path
 
 import numpy as np
 
-from backend.config import settings
+from backend.config import carpeta_bloques, settings
 from backend.core.progreso import configurar_logs, progreso
 from backend.engine.candidatos import candidatos
 from backend.extraction.lector import leer_documento
@@ -81,8 +81,8 @@ def evaluar(nombre, positivas, rank_art, rank_sec):
 
 def main(golden, norma, manual, reranker=False):
     configurar_logs()
-    nsecs = leer_documento(Path(norma), "N", "normativa", cache=Path("output/bloques"))
-    msecs = leer_documento(Path(manual), "M", "manual_control", cache=Path("output/bloques"))
+    nsecs = leer_documento(Path(norma), "N", "normativa", cache=carpeta_bloques())
+    msecs = leer_documento(Path(manual), "M", "manual_control", cache=carpeta_bloques())
     clas = clasificar_secciones(msecs)
     incl = [s for s in msecs if s.es_hoja and clas.get(s.id, (True, ""))[0]]
     arts = [s for s in nsecs if s.nivel == "articulo" and s.identificador.startswith("Art")]

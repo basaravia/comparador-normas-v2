@@ -46,7 +46,7 @@ def test_los_avisos_del_seccionado_llegan_a_quien_llama(hacer_pdf, extractor):
 def test_manuales_locales_excluye_los_mock_de_git(tmp_path, monkeypatch):
     for n in ("MOCK-DEMO-01.pdf", "MANUAL-X.pdf", "otro.pdf", "nota.txt"):
         (tmp_path / n).write_bytes(b"%PDF-")
-    monkeypatch.setattr("backend.config.carpeta_manuales", lambda: tmp_path)
+    monkeypatch.setattr("backend.config.carpeta_manuales", lambda zona=None: tmp_path)
     assert [p.name for p in manuales_locales()] == ["MANUAL-X.pdf", "otro.pdf"]
 
 

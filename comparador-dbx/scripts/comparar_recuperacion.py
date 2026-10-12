@@ -8,7 +8,7 @@ Embeddings y rerankers reales (nada simulado). Todas las configuraciones se mide
 **sin umbral** (para no mezclar el efecto del umbral con el del modelo). Con --reranker, cada vía toma el top-N denso, lo puntúa el reranker
 (consulta = artículo, documento = sección entera, sin recortar) y conserva los 10 mejores.
 
-Persistencia (en output/comparaciones/, ignorada por git; solo ids, rangos, puntajes y métricas, nunca texto):
+Persistencia (en output/<zona>/comparaciones/: test se puede versionar, val nunca; solo ids, rangos, puntajes y métricas, nunca texto):
   densos__<embeddings>__<etiqueta>.json   ranking denso completo de cada vía  -> con --reusar no se vuelve a indexar
   puntajes__<reranker>__<etiqueta>.json   puntaje del reranker por par        -> un par ya puntuado no se vuelve a puntuar
   resultados.jsonl                        una línea por configuración medida   -> `python scripts/tabla_comparaciones.py` arma la tabla
@@ -24,7 +24,7 @@ from pathlib import Path
 
 import numpy as np
 
-from backend.config import settings
+from backend.config import carpeta_bloques, carpeta_salida, settings
 from backend.core.progreso import configurar_logs, progreso
 from backend.engine.candidatos import candidatos
 from backend.extraction.lector import leer_documento
@@ -69,10 +69,11 @@ def metricas(nombre: str, emb: str, rerank: str, positivas: list[tuple[str, str]
 
 def main(a) -> None:
     configurar_logs()
-    salida = Path(a.salida); salida.mkdir(parents=True, exist_ok=True)
+    salida = Path(a.salida) if a.salida else carpeta_salida(a.zona) / "comparaciones"
+    salida.mkdir(parents=True, exist_ok=True)
     emb = modelo_embeddings()
-    nsecs = leer_documento(Path(a.norma), "N", "normativa", cache=Path("output/bloques"))
-    msecs = leer_documento(Path(a.manual), "M", "manual_control", cache=Path("output/bloques"))
+    nsecs = leer_documento(Path(a.norma), "N", "normativa", cache=carpeta_bloques(a.zona))
+    msecs = leer_documento(Path(a.manual), "M", "manual_control", cache=carpeta_bloques(a.zona))
     clas = clasificar_secciones(msecs)
     inc = [s for s in msecs if s.es_hoja and clas.get(s.id, (True, ""))[0]]
     arts = {s.id for s in nsecs if s.nivel == "articulo" and s.identificador.startswith("Art")}
@@ -157,5 +158,6 @@ if __name__ == "__main__":
     p.add_argument("--top-n", type=int, default=20); p.add_argument("--lote", type=int, default=2)
     p.add_argument("--reusar", action="store_true", help="reutiliza el ranking denso guardado (no indexa)")
     p.add_argument("--solo-articulos-etiquetados", action="store_true", help="la vía 2 compite solo con los artículos que aparecen en tu archivo")
-    p.add_argument("--salida", default="output/comparaciones")
+    p.add_argument("--zona", default="", help="test | val (por defecto DOCS_ZONA): decide dónde se guardan la caché de bloques y los resultados")
+    p.add_argument("--salida", default="", help="carpeta de resultados (por defecto output/<zona>/comparaciones)")
     main(p.parse_args())

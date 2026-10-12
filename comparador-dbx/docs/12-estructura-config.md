@@ -25,7 +25,7 @@ comparador-dbx/
 │   └── dist/                    # build desplegado
 ├── qa/                         # trazabilidad RF/RNF ↔ pruebas y reportes de evaluación (agente qa-ia)
 ├── tablero/                    # tablero de avance (lo actualiza el product-owner)
-├── documentos/                  # normas/ (NORMAS_DIR, sin versionar) y manuales/ (MANUALES_DIR, solo los MOCK en git): entrada de los notebooks
+├── documentos/                  # zonas test/ (MOCK en git, normas públicas en local) y val/ (reales, nunca en git), cada una con normas/, manuales/ y comparaciones/ (DOCS_ZONA; NORMAS_DIR y MANUALES_DIR las pisan): entrada de los notebooks
 ├── samples/                     # secciones .json + embeddings .npy precomputados (fase D2)
 ├── notebooks/                   # 00_modelos … 06_e2e: validación de cada hito en local (fase L)
 ├── scripts/precompute_samples.py
