@@ -14,13 +14,14 @@
 | RF-08 | Selector dual: izquierda normativas, derecha manuales; cada panel es árbol colapsable agrupado por documento, con casillas y vista previa breve | DEBE |
 | RF-09 | Marcar un nodo padre marca sus hijos; contador por panel; buscador por panel | DEBERÍA |
 | RF-10 | Ejecución de la doble vía sobre la selección con progreso de pares evaluados | DEBE |
-| RF-11 | Por par evaluado: marca, cita literal norma, cita literal manual, comentario y confianza | DEBE |
+| RF-11 | Por par evaluado: estado de cada requisito del artículo (cubierto, parcial, no cubierto), cita literal del manual por requisito, comentario y confianza; por artículo, marca derivada de todas las secciones ([09](09-motor-doble-via.md) §5) | DEBE |
 | RF-12 | Resultados en pantalla filtrables por marca, con vista por artículo (vía 1) o por sección del manual (vía 2) | DEBERÍA |
 | RF-13 | Borrador de conclusión generado y editable antes de exportar, rotulado como propuesta | DEBE |
 | RF-14 | Descarga del .xlsx con Hoja 1 (papel) y Hoja 2 (anexo técnico) ([10](10-papel-de-trabajo.md)) | DEBE |
 | RF-15 | Botón "Cargar ejemplo" con documentos pre-procesados, sin ejecutar Docling | DEBE |
 | RF-16 | Botón "Nueva sesión" con confirmación | DEBERÍA |
 | RF-17 | Secciones no comparables (carátula, preámbulo, índice, control de versiones, anexos…): se **identifican automáticamente**, quedan en la tabla con su motivo, **no entran** a la recuperación ni a la doble vía, y el auditor puede reincluir o excluir cualquiera (decisión del usuario, 8 oct 2026; [14](14-puntos-abiertos.md) #24) | DEBE |
+| RF-18 | **Brechas resaltadas:** cada artículo se descompone en requisitos atómicos (literales, obligatorio o enunciativo) y el papel muestra en **rojo, negrita y subrayado** el texto de los requisitos obligatorios no cubiertos o parciales; lo cubierto no se resalta. En la vía 2 se resaltan los fragmentos del manual sin base normativa. Varias secciones pueden respaldar un artículo ([09](09-motor-doble-via.md) §3 y §5, [10](10-papel-de-trabajo.md)) | DEBE |
 
 ## No funcionales
 

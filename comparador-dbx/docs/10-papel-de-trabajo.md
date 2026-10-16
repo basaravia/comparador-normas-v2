@@ -33,10 +33,10 @@ Es el **entregable de auditoría** y debe respetar el formato del banco.
 | # | Columna | Contenido |
 |---|---|---|
 | 1 | Nombre de la normativa | Libro, capítulo, norma: identificación de la fuente |
-| 2 | Sección / Artículo | Una fila por artículo: ruta completa + identificador y debajo el **texto en claro literal** extraído. Nunca generado. No se combina por sección porque una celda combinada guarda un solo texto y se perdería el literal de cada artículo (decisión del usuario, 7 oct 2026) |
-| 3 | Manual interno | Sección del manual de respaldo (1) con identificador y **cita literal verificada**. Vacío si la marca es R, X o P |
+| 2 | Sección / Artículo | Una fila por artículo: ruta completa + identificador y debajo el **texto en claro literal** extraído, en **texto enriquecido**: los fragmentos de los requisitos obligatorios **no cubiertos o cubiertos parcialmente** van en **rojo, negrita y subrayado** (brechas, docs/09 §5); el resto en negro. Lo cubierto no se resalta (auditoría no aprueba controles). Nunca generado. No se combina por sección porque una celda combinada guarda un solo texto y se perdería el literal de cada artículo (decisión del usuario, 7 oct 2026) |
+| 3 | Manual interno | **Todas** las secciones del manual que respaldan algún requisito (cubierto o parcial), una por línea: identificador, requisitos que respalda (`R1, R3`) y **cita literal verificada**, sin resaltar. Vacío si la marca es R, X o P |
 | 4 | Verificación | Marca codificada A / L / R / X / P, centrada, color suave por marca |
-| 5 | Comentario | Razonamiento del juez: por qué la evidencia satisface la obligación o qué elementos faltan |
+| 5 | Comentario | Por cada brecha: requisito (`R2`) y qué falta según el juez; después el razonamiento general |
 | 6 | Referencias / Evidencias | Archivo y página de la norma; archivo, sección y página del manual; similitud semántica del candidato elegido; aviso si la cita no se verificó |
 
 ### Reglas de formato
@@ -45,6 +45,8 @@ Es el **entregable de auditoría** y debe respetar el formato del banco.
 - `wrap_text=True`, alineación superior, paneles congelados bajo el encabezado de la matriz.
 - Anchos orientativos: 18 / 45 / 45 / 10 / 40 / 28.
 - Colores suaves de marca (configurables): A verde, L ámbar, R rojo, X gris, P azul.
+- **Resaltado de brechas (texto enriquecido, `openpyxl.cell.rich_text.CellRichText`, sin dependencias nuevas):** rojo (`COLOR_BRECHA`, configurable), **negrita y subrayado** para que se lea también impreso en blanco y negro o con daltonismo. Python pinta usando las posiciones verificadas de cada fragmento (docs/09 §4); un fragmento sin verificar no se pinta y la fila lleva la bandera `requiere_revision`. Nunca hay verde: lo cubierto queda en negro.
+- Si una celda se trunca (32.767 caracteres), se conservan los tramos resaltados que caben y el aviso indica que hay brechas fuera del texto visible.
 - Límite de Excel: 32.767 caracteres por celda → truncar con aviso `[texto truncado, ver página N]`.
 - Orden de filas: el orden del documento normativo (no por marca).
 
@@ -59,17 +61,17 @@ Registra **todo** candidato evaluado. Defiende ante el regulador que no hubo sel
 | Origen | v1, v2 o ambas |
 | Similitud v1 / v2 / máxima | Scores coseno |
 | Rango v1 / v2 | Posición en el top-K de cada vía |
-| Naturaleza / Cobertura / Confianza | Salida del juez |
-| Elegido para el papel | `Sí` o `No: <motivo>` (cobertura menor, confianza menor, cobertura nula, informativo, no aplica). Solo A y L tienen un par `Sí`; en R, X y P la columna 3 del papel queda **vacía** (decisión del usuario, 7 oct 2026) |
+| Naturaleza / Requisitos / Confianza | Naturaleza (paso 3a), estado de cada requisito en este par (`R1 cubierto · R2 parcial · R3 no cubierto`) y confianza |
+| Elegido para el papel | `Sí` si respalda al menos un requisito (cubierto o parcial); si no, `No: <motivo>` (sin requisitos cubiertos, informativo, no aplica). Un artículo puede tener **varios** pares `Sí` (usuario, 15 oct 2026; antes uno solo). En R, X y P la columna 3 del papel queda **vacía** |
 | Comentario del juez | Texto completo |
 | Banderas | `cita_no_verificada`, `requiere_revision`, `seccionado_incierto` |
 
-Al final del anexo, bloque **"Vía 2 — Controles del manual sin base normativa identificada"** con las secciones del manual sin pares con cobertura. Va en la Hoja 2, sin tercera hoja.
+Al final del anexo, bloque **"Vía 2 — Controles del manual sin base normativa identificada"**: las secciones sin pares con cobertura y, en las que sí tienen, el texto literal de la sección con los **fragmentos sin base** (los que ningún artículo juzgado respalda, docs/09 §5) en rojo, negrita y subrayado. Va en la Hoja 2, sin tercera hoja.
 Tras ese bloque, otro **"Secciones excluidas como no comparables"** (documento, identificador, ruta, páginas y motivo) para que la exclusión quede rastreable (RNF-06).
 
 ## Borrador de conclusión
 - Prompt: [`backend/prompts/conclusion.md`](../backend/prompts/conclusion.md). **1 sola llamada.**
-- Entrada calculada en Python: conteos por marca, totales, artículos R y L con identificador y `elementos_faltantes`, controles sin base normativa, normativas y manual evaluados.
+- Entrada calculada en Python: conteos por marca, totales, artículos R y L con identificador y sus brechas (requisitos obligatorios no cubiertos o parciales, con lo que falta según el juez), controles sin base normativa, normativas y manual evaluados.
 - Salida: `{"borrador_conclusion": str}`, 120–220 palabras, tono de auditoría, sin cifras distintas a las entregadas.
 - Editable en la pantalla 3 antes de exportar.
 
@@ -77,5 +79,6 @@ Tras ese bloque, otro **"Secciones excluidas como no comparables"** (documento, 
 - Abre sin advertencias de reparación en Excel.
 - Columnas en el orden exacto de la matriz; leyenda presente.
 - Todo texto de norma/manual es subcadena del texto extraído (o está marcado).
+- Todo tramo en rojo corresponde a un fragmento verificado de un requisito obligatorio con estado `parcial` o `no_cubierto` (o, en el bloque vía 2, a un fragmento sin base); ningún tramo cubierto aparece resaltado.
 - Conteos por marca de la Hoja 1 = conteos derivables de la Hoja 2.
 - Ninguna llamada al modelo durante la generación del archivo.
