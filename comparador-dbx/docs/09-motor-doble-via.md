@@ -63,7 +63,7 @@ Dos pasos con el LLM; todo lo demás es Python (decisión del usuario, 15 oct 20
 - Un literal a), b)… es al menos un requisito (sustituye a `elementos_faltantes` como texto libre, docs/14 #6).
 - Artículos `informativo` o `no_aplica_entidad`: sin requisitos; no pasan por el paso 3b (ahorra llamadas).
 - **Controles deterministas de la descomposición** (appsec, 15 oct 2026): (a) si el texto del artículo que no cae en ningún fragmento supera `MAX_TEXTO_SIN_REQUISITO` caracteres no blancos, el artículo queda `requiere_revision`; (b) cada literal a), b)… detectado por regex debe tocar al menos un requisito; (c) como máximo `MAX_REQUISITOS` requisitos; (d) caché del paso 3a por SHA-256 del texto del artículo.
-- Un artículo `obligacion` **debe** traer al menos un requisito obligatorio: si viene vacío o todos enunciativos, 1 reintento del paso 3a; si persiste, el artículo queda `requiere_revision` y **nunca** puede salir A (qa-ia, 15 oct 2026).
+- Un artículo `obligacion` **debe** traer al menos un requisito obligatorio: si viene vacío o todos enunciativos, 1 reintento del paso 3a; si persiste, el artículo sale **R con `requiere_revision`** y **nunca** A (decisión del usuario, 15 oct 2026).
 
 ### 3b. Juicio por par (1 vez por par, como antes)
 - Prompt: [`backend/prompts/juez.md`](../backend/prompts/juez.md).
@@ -87,6 +87,7 @@ class EstadoRequisito(BaseModel):           # paso 3b, uno por requisito y par
     requisito_id: str
     estado: Literal["cubierto", "parcial", "no_cubierto"]
     cita_manual: str | None = None          # literal de la sección que lo respalda (si cubierto o parcial)
+    cita_verificada: bool = False           # la rellena la verificación (§4): ratio >= CITATION_FUZZY_MIN
     falta: str | None = None                # qué le falta (si parcial o no_cubierto); texto del juez, no del documento
 
 class Veredicto(BaseModel):                 # paso 3b, uno por par
@@ -117,6 +118,7 @@ class Par(BaseModel):
    - si ratio < 0.75: `cita_*_verificada=False`, `requiere_revision=True`; celda vacía con aviso.
 3. El texto fuente se **sanea una sola vez** (caracteres ilegales de Excel) antes de verificar; la búsqueda difusa solo corre si falla la exacta. Se verifican así: el `fragmento` de cada requisito (contra el artículo), cada `cita_manual` y cada `fragmentos_sin_base` (contra la sección). La verificación además guarda la **posición** (inicio y fin) del fragmento en el texto literal: con ella se pinta el Excel.
 4. Un fragmento que no se verifica **no se pinta** (ni rojo ni nada) y el par o el artículo queda `requiere_revision=True`; el texto completo sigue en la celda.
+   - **Un estado `cubierto` o `parcial` solo cuenta si su `cita_manual` está verificada** (≥ `CITATION_FUZZY_MIN`, 0,90). Si no, para la marca y el rojo se trata como `no_cubierto` y el par queda `requiere_revision` (decisión del usuario, 15 oct 2026: estricto ante inyección o alucinación, aunque pueda bajar la marca por una paráfrasis legítima).
 5. Si la lista de requisitos de un par no trae todos los ids de 3a, trae ids que no existen o **repite un id** (aunque sea con otro estado): 1 reintento; si persiste, `requiere_revision=True`: los faltantes cuentan como `no_cubierto` y ante un id repetido gana el **peor** estado. Un par sin veredicto válido **no** se convierte en "no cubierto" en silencio: el artículo queda `requiere_revision`.
    - Un fragmento **vacío** nunca cuenta como verificado, y la posición guardada cumple `texto[ini:fin] == fragmento_real`.
    - Si el fragmento aparece **varias veces**, se toma la ocurrencia que empieza después del fragmento del requisito anterior (los requisitos siguen el orden del artículo); si aun así es ambiguo, la primera, con aviso.
@@ -135,7 +137,8 @@ def estado_requisitos(desc: Descomposicion, pares: list[Par]) -> dict[str, tuple
     """Por requisito: el mejor estado entre todas las secciones y los pares que lo respaldan (cubierto o parcial)."""
     out = {}
     for r in desc.requisitos:
-        estados = [(e, p) for p in pares if p.veredicto for e in p.veredicto.requisitos if e.requisito_id == r.id]
+        estados = [(e, p) for p in pares if p.veredicto for e in p.veredicto.requisitos
+                   if e.requisito_id == r.id and (e.estado == "no_cubierto" or e.cita_verificada)]   # sin cita verificada = no cubierto
         mejor = max((e.estado for e, _ in estados), key=ORDEN.get, default="no_cubierto")
         out[r.id] = (mejor, [p for e, p in estados if e.estado != "no_cubierto"])
     return out
@@ -164,6 +167,6 @@ def controles_sin_base(secciones_sel, pares) -> dict[str, list[tuple[int, int]]]
 
 - **Varias secciones, un artículo:** un requisito está cubierto si **alguna** sección lo cubre. El respaldo del artículo son **todas** las secciones que cubren o cubren parcialmente algún requisito, no una sola.
 - **Lo que se resalta es solo la brecha:** el texto de los requisitos obligatorios no cubiertos o cubiertos parcialmente. Lo cubierto **no se resalta**: marcar algo como "cumple" equivale a aprobarlo, y aprobar el control es responsabilidad del dueño del manual y del proceso, no de auditoría (usuario, 15 oct 2026).
-- **Criterio conservador:** dos coberturas parciales del **mismo** requisito en secciones distintas no suman una total: el requisito queda `parcial` (en rojo) y el juez explica qué falta en cada una.
-- **Costo y topes (LLM10):** +1 llamada por artículo (paso 3a, con caché) y una salida más larga por par. Topes en configuración (`[CALIBRAR]`): `MAX_REQUISITOS` (~25), `MAX_FRAGMENTOS_SIN_BASE` (~10), `MAX_TEXTO_SIN_REQUISITO`, `LLM_MAX_TOKENS` por llamada. Se mide contra RNF-11 en la Raspberry.
+- **Criterio conservador (decidido por el usuario, 15 oct 2026):** dos coberturas parciales del **mismo** requisito en secciones distintas no suman una total: el requisito queda `parcial`, se pinta **entero** en rojo igual que uno no cubierto, y el juez explica qué falta en cada una. En L, como en R, solo se pintan los requisitos **obligatorios**.
+- **Costo y topes (LLM10):** +1 llamada por artículo (paso 3a, con caché) y una salida más larga por par. Topes en configuración (`[CALIBRAR]`): `MAX_REQUISITOS` (~25), `MAX_FRAGMENTOS_SIN_BASE` (~10), `MAX_TEXTO_SIN_REQUISITO`, `LLM_MAX_TOKENS` por llamada. Se mide contra RNF-11 en la Raspberry. **Si se excede el presupuesto de tiempo o costo** (decisión del usuario, 15 oct 2026): los artículos o pares sin resolver quedan **vacíos** (sin marca, con `requiere_revision`) y se retoman en una **segunda pasada solo con los pendientes**, solo si los hubiera; nunca se recorta texto ni se baja la calidad para ganar tiempo.
 

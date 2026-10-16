@@ -49,6 +49,7 @@ Es el **entregable de auditoría** y debe respetar el formato del banco.
 - **Resaltado de brechas (texto enriquecido, `openpyxl.cell.rich_text.CellRichText`, sin dependencias nuevas):** rojo (`COLOR_BRECHA`, configurable), **negrita y subrayado** para que se lea también impreso en blanco y negro o con daltonismo. Python pinta usando las posiciones verificadas de cada fragmento (docs/09 §4); un fragmento sin verificar no se pinta y la fila lleva la bandera `requiere_revision`. Nunca hay verde: lo cubierto queda en negro.
 - Si una celda se trunca (32.767 caracteres), se conservan los tramos resaltados que caben y el aviso indica que hay brechas fuera del texto visible.
 - Límite de Excel: 32.767 caracteres por celda → truncar con aviso `[texto truncado, ver página N]`.
+- Un artículo sin resolver (tiempo o costo agotado, o par sin veredicto válido) deja la celda de marca **vacía** con la bandera `requiere_revision`; se retoma en la segunda pasada (docs/09 §5).
 - Orden de filas: el orden del documento normativo (no por marca).
 
 ## Hoja 2 — "Anexo técnico"
