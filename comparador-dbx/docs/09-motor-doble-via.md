@@ -7,6 +7,7 @@ flowchart LR
     R1 --> U{"Unión + dedup<br/>llave (art_id, sec_id)<br/>origen v1 · v2 · ambas"}
     R2 --> U
     N --> D["Descomposición GPT-5.6<br/>1 vez por artículo<br/>naturaleza + requisitos literales"]
+    D -->|"cada requisito = una consulta"| R1
     D --> J
     U --> J["Juez GPT-5.6<br/>1 vez por par<br/>estado de cada requisito"]
     J --> C["Verificación<br/>de citas y fragmentos literales"]
@@ -32,6 +33,12 @@ def candidatos(seccion_origen, indice_destino) -> list[tuple[str, float]]:
     sobre = [x for x in orden if x[1] >= SIM_THRESHOLD][:MAX_CANDIDATES]
     return sobre if len(sobre) >= MIN_FLOOR else orden[:MIN_FLOOR]
 ```
+### 1b. Vía 1 consulta con cada requisito (decisión del usuario, 16 oct 2026, docs/14 #30)
+Un artículo suele mezclar varios requisitos y su vector único los diluye. Por eso la **vía 1** no consulta con el artículo entero sino **con cada requisito obligatorio** que devuelve el paso 3a (§3a, que pasa a ejecutarse **antes** de la recuperación): `candidatos(requisito, indice_manual)` por requisito, y el candidato del artículo es la **unión** de las secciones de todos sus requisitos (mejor score por sección). `MAX_CANDIDATES` se aplica **por requisito**. Artículos `informativo` o `no_aplica_entidad`: sin requisitos, sin consulta. La **vía 2** no cambia (la sección del manual consulta el índice de la norma).
+- **Evidencia** (`qa/eval-golden-requisitos.md`, prototipo `scripts/prototipo_descomposicion.py`, Groq `openai/gpt-oss-120b`, golden de 31 artículos y 71 pares, embeddings bge-m3, sin umbral): recall@candidatos de los pares **59,2 %** con el artículo entero (10 candidatos por artículo), **76,1 %** con el artículo entero y 21 candidatos (control de igual tamaño) y **87,3 %** con los requisitos del LLM (20,7 candidatos por artículo). Con anclas ideales del golden: 76 %.
+- **Límites conocidos:** 88 % de los fragmentos del LLM son literales (≥ 0,90); los demás se verifican y corrigen o quedan `requiere_revision` (§3a). 93 % de las anclas del golden las toca algún requisito del LLM. Un solo modelo, un solo documento, 31 artículos: se repite con el golden completo (31 `por_confirmar` pendientes) antes de dar el criterio por cumplido.
+- Si el paso 3a falla o devuelve un artículo `obligacion` sin requisitos, el artículo **vuelve a consultar con el texto entero** y queda `requiere_revision` (nunca A, §3a).
+
 El **piso** garantiza que ninguna sección desaparezca: si nada supera el umbral, el juez recibe los 3 mejores y declara explícitamente "sin cobertura".
 
 ## 2. Pares únicos (deduplicación) — decisión clave de costo
@@ -57,8 +64,8 @@ Las vías reaparecen **solo al reportar**: vía 1 = agrupar pares por artículo;
 ## 3. Juez auditor normativo
 Dos pasos con el LLM; todo lo demás es Python (decisión del usuario, 15 oct 2026, docs/14 #28). El objetivo es que el auditor vea **qué parte exacta** del artículo no está cubierta por el manual.
 
-### 3a. Descomposición del artículo en requisitos (1 llamada por artículo seleccionado)
-- Prompt: `backend/prompts/requisitos.md` (nuevo). Entrada: texto literal completo del artículo + ruta + documento.
+### 3a. Descomposición del artículo en requisitos (1 llamada por artículo seleccionado, **antes de la recuperación**, §1b)
+- Prompt: `backend/prompts/requisitos.md` (prototipo en la rama `test/golden-requisitos-arlaft`). Entrada: texto literal completo del artículo + ruta + documento.
 - Salida: la **naturaleza** del artículo (se decide aquí, una sola vez, y no por mayoría entre pares) y su lista de **requisitos atómicos**: cada uno con un id (`R1`, `R2`…; **Python renumera R1…Rn por orden de aparición** e ignora los ids del modelo), su **fragmento literal** del artículo y si es **obligatorio** (deber, prohibición, plazo, condición) o enunciativo (definición, finalidad, remisión).
 - Un literal a), b)… es al menos un requisito (sustituye a `elementos_faltantes` como texto libre, docs/14 #6).
 - Artículos `informativo` o `no_aplica_entidad`: sin requisitos; no pasan por el paso 3b (ahorra llamadas).
