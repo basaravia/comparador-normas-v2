@@ -517,6 +517,7 @@ Salida literal de la última ejecución del notebook:
   2. **Dejar la ruta en cada fila (lo actual)** y combinar solo la columna 1. Efecto: una fila por artículo y filtros limpios, sin árbol visual en la columna 2.
 - **Colores de marca fijos:** docs/10 los llama «configurables», pero están en `styles.COLOR_MARCA` (constante); solo `COLOR_PRIMARIO` y `COLOR_FONDO` vienen de la configuración. Decisión del usuario: ¿pasarlos a `defaults.env`?
 - QA-03: con el resumen original, el LLM calculaba porcentajes que no estaban en él y la validación descartaba el borrador. Ahora el resumen trae los porcentajes ya calculados y el prompt prohíbe calcular; 5 de 5 corridas reales válidas (sin relajar la validación).
+- **Spec cambiada después de L5 (15 oct 2026, RF-18 / docs/14 #28):** `aggregate.py` y el papel implementan el criterio anterior (un solo par de respaldo, `elementos_faltantes`, columna 3 con una sección, sin texto enriquecido; docs/14 #5 y #6 antiguos). Queda pendiente hasta implementar RF-18 en L4/L5 (tablero P-22).
 - La columna `Origen` de la Hoja 2 dice `ambas` cuando el par viene de v1 y v2 (docs/10); la similitud máxima ignora scores no finitos.
 - Se editó `backend/prompts/conclusion.md` (mío): resumen entre `<texto_resumen>` como dato (LLM01) y leyenda de las marcas (sin ella el modelo llamó «pendientes» a la P).
 - El encabezado congelado ocupa ~12 filas: es lo que pide docs/10 («bajo el encabezado de la matriz»).

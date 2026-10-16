@@ -17,7 +17,7 @@ comparador-dbx/
 │   ├── engine/                  # candidates.py, pairs.py, judge.py, citations.py, aggregate.py, conclusion.py
 │   ├── output/                  # workpaper.py, annex.py, styles.py
 │   ├── llm/                     # client.py (repo): Groq | Ollama | Docker Model Runner | Foundry por configuración
-│   ├── prompts/                 # clasificador.md, juez.md, conclusion.md
+│   ├── prompts/                 # clasificador.md, requisitos.md (descomposición, docs/09 §3a), juez.md, conclusion.md
 │   └── models/schemas.py        # Documento, Seccion, SubChunk, Par, Veredicto, MetadatosLLM (Seccion sin cambios; SeccionExcluida vive en output/workpaper.py)
 ├── frontend/
 │   ├── src/pages/               # Upload.tsx, Processing.tsx, Selector.tsx, Results.tsx

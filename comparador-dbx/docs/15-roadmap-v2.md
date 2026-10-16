@@ -7,5 +7,5 @@ No implementar en el MVP. Diseñar sin bloquear estas evoluciones.
 - **Canonicalización:** antes de embeber, el LLM extrae de cada sección la obligación o el control en forma canónica neutral (ej. "monitoreo mensual de transacciones inusuales"). Reduce la asimetría entre lenguaje deóntico de la norma y lenguaje operativo del manual; sube el recall.
 - **OCR** para escaneados y PDF planos.
 - **Cascada de cómputo:** hash → embeddings + léxico → cross-encoder → juez, con umbrales de tres bandas calibrados contra golden set etiquetado.
-- **Edición del seccionado** en UI (fusionar y dividir) y evaluación conjunta de coberturas parciales.
+- **Edición del seccionado** en UI (fusionar y dividir) y evaluación conjunta de coberturas **parciales del mismo requisito** en secciones distintas (en el MVP ya se combinan secciones por requisito, docs/09 §5 y docs/14 #28; dos parciales del mismo requisito siguen sin sumar).
 - **Comparación de versiones** de una normativa (modificados, derogados, añadidos, renumerados).

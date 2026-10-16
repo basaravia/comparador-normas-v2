@@ -37,7 +37,7 @@ Es el **entregable de auditoría** y debe respetar el formato del banco.
 | 3 | Manual interno | **Todas** las secciones del manual que respaldan algún requisito (cubierto o parcial), una por línea: identificador, requisitos que respalda (`R1, R3`) y **cita literal verificada**, sin resaltar. Vacío si la marca es R, X o P |
 | 4 | Verificación | Marca codificada A / L / R / X / P, centrada, color suave por marca |
 | 5 | Comentario | Por cada brecha: requisito (`R2`) y qué falta según el juez; después el razonamiento general |
-| 6 | Referencias / Evidencias | Archivo y página de la norma; archivo, sección y página del manual; similitud semántica del candidato elegido; aviso si la cita no se verificó |
+| 6 | Referencias / Evidencias | Archivo y página de la norma; archivo, sección y página del manual; similitud semántica de cada sección de respaldo; aviso si la cita no se verificó |
 
 ### Reglas de formato
 - Árbol en Excel: celdas **combinadas verticalmente** en col. 1 (por normativa y libro/título) cuando agrupan varios artículos; la col. 2 lleva la ruta completa en cada fila; ruta con separador `›` (ej. `Capítulo III › Sección 2 › Art. 15`) y el texto literal en la misma celda tras un salto de línea.
@@ -45,6 +45,7 @@ Es el **entregable de auditoría** y debe respetar el formato del banco.
 - `wrap_text=True`, alineación superior, paneles congelados bajo el encabezado de la matriz.
 - Anchos orientativos: 18 / 45 / 45 / 10 / 40 / 28.
 - Colores suaves de marca (configurables): A verde, L ámbar, R rojo, X gris, P azul.
+- **Entrada única al Excel también para texto enriquecido (appsec, CWE-1236):** toda celda `CellRichText` pasa por una función de `styles.py` (`escribir_enriquecido`, hermana de `escribir`) que aplica `ILLEGAL_CHARACTERS_RE` a cada tramo, trunca, fuerza `data_type="s"`, pone `quotePrefix` si el texto completo empieza por un prefijo de fórmula y descarta tramos vacíos. Sin esto, un carácter de control impide guardar el libro y un texto que empieza por `=` se evalúa al editar la celda. Los textos libres del juez (`falta`, `comentario`) también entran por `escribir`.
 - **Resaltado de brechas (texto enriquecido, `openpyxl.cell.rich_text.CellRichText`, sin dependencias nuevas):** rojo (`COLOR_BRECHA`, configurable), **negrita y subrayado** para que se lea también impreso en blanco y negro o con daltonismo. Python pinta usando las posiciones verificadas de cada fragmento (docs/09 §4); un fragmento sin verificar no se pinta y la fila lleva la bandera `requiere_revision`. Nunca hay verde: lo cubierto queda en negro.
 - Si una celda se trunca (32.767 caracteres), se conservan los tramos resaltados que caben y el aviso indica que hay brechas fuera del texto visible.
 - Límite de Excel: 32.767 caracteres por celda → truncar con aviso `[texto truncado, ver página N]`.
@@ -61,8 +62,8 @@ Registra **todo** candidato evaluado. Defiende ante el regulador que no hubo sel
 | Origen | v1, v2 o ambas |
 | Similitud v1 / v2 / máxima | Scores coseno |
 | Rango v1 / v2 | Posición en el top-K de cada vía |
-| Naturaleza / Requisitos / Confianza | Naturaleza (paso 3a), estado de cada requisito en este par (`R1 cubierto · R2 parcial · R3 no cubierto`) y confianza |
-| Elegido para el papel | `Sí` si respalda al menos un requisito (cubierto o parcial); si no, `No: <motivo>` (sin requisitos cubiertos, informativo, no aplica). Un artículo puede tener **varios** pares `Sí` (usuario, 15 oct 2026; antes uno solo). En R, X y P la columna 3 del papel queda **vacía** |
+| Naturaleza / Requisitos / Confianza | Naturaleza (paso 3a), estado de cada requisito en este par, con `*` en los obligatorios (`R1* cubierto · R2* parcial · R3 no cubierto`), para que la marca se pueda derivar de la Hoja 2; y confianza |
+| Elegido para el papel | `Sí` si respalda al menos un requisito **obligatorio** (cubierto o parcial); si no, `No: <motivo>` (sin requisitos cubiertos, solo requisitos enunciativos, informativo, no aplica). Un artículo puede tener **varios** pares `Sí` (usuario, 15 oct 2026; antes uno solo). En R, X y P la columna 3 del papel queda **vacía** |
 | Comentario del juez | Texto completo |
 | Banderas | `cita_no_verificada`, `requiere_revision`, `seccionado_incierto` |
 
@@ -79,6 +80,8 @@ Tras ese bloque, otro **"Secciones excluidas como no comparables"** (documento, 
 - Abre sin advertencias de reparación en Excel.
 - Columnas en el orden exacto de la matriz; leyenda presente.
 - Todo texto de norma/manual es subcadena del texto extraído (o está marcado).
+- Toda brecha verificada aparece en rojo, y toda fila L o R tiene al menos un tramo en rojo o la bandera `requiere_revision`.
+- La concatenación de los tramos de cada celda enriquecida es idéntica al texto saneado de la celda.
 - Todo tramo en rojo corresponde a un fragmento verificado de un requisito obligatorio con estado `parcial` o `no_cubierto` (o, en el bloque vía 2, a un fragmento sin base); ningún tramo cubierto aparece resaltado.
 - Conteos por marca de la Hoja 1 = conteos derivables de la Hoja 2.
 - Ninguna llamada al modelo durante la generación del archivo.

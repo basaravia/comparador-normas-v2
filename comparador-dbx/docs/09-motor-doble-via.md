@@ -59,13 +59,16 @@ Dos pasos con el LLM; todo lo demás es Python (decisión del usuario, 15 oct 20
 
 ### 3a. Descomposición del artículo en requisitos (1 llamada por artículo seleccionado)
 - Prompt: `backend/prompts/requisitos.md` (nuevo). Entrada: texto literal completo del artículo + ruta + documento.
-- Salida: la **naturaleza** del artículo (se decide aquí, una sola vez, y no por mayoría entre pares) y su lista de **requisitos atómicos**: cada uno con un id estable (`R1`, `R2`…), su **fragmento literal** del artículo y si es **obligatorio** (deber, prohibición, plazo, condición) o enunciativo (definición, finalidad, remisión).
+- Salida: la **naturaleza** del artículo (se decide aquí, una sola vez, y no por mayoría entre pares) y su lista de **requisitos atómicos**: cada uno con un id (`R1`, `R2`…; **Python renumera R1…Rn por orden de aparición** e ignora los ids del modelo), su **fragmento literal** del artículo y si es **obligatorio** (deber, prohibición, plazo, condición) o enunciativo (definición, finalidad, remisión).
 - Un literal a), b)… es al menos un requisito (sustituye a `elementos_faltantes` como texto libre, docs/14 #6).
 - Artículos `informativo` o `no_aplica_entidad`: sin requisitos; no pasan por el paso 3b (ahorra llamadas).
+- **Controles deterministas de la descomposición** (appsec, 15 oct 2026): (a) si el texto del artículo que no cae en ningún fragmento supera `MAX_TEXTO_SIN_REQUISITO` caracteres no blancos, el artículo queda `requiere_revision`; (b) cada literal a), b)… detectado por regex debe tocar al menos un requisito; (c) como máximo `MAX_REQUISITOS` requisitos; (d) caché del paso 3a por SHA-256 del texto del artículo.
+- Un artículo `obligacion` **debe** traer al menos un requisito obligatorio: si viene vacío o todos enunciativos, 1 reintento del paso 3a; si persiste, el artículo queda `requiere_revision` y **nunca** puede salir A (qa-ia, 15 oct 2026).
 
 ### 3b. Juicio por par (1 vez por par, como antes)
 - Prompt: [`backend/prompts/juez.md`](../backend/prompts/juez.md).
 - Entrada por par: texto literal **completo** del artículo y de la sección del manual + **la lista de requisitos del artículo** (3a) + rutas jerárquicas + nombres de documento.
+- La lista de requisitos entra al prompt **delimitada** (`<requisitos>`, con `rellenar_prompt`) y con el **fragmento verificado**, no con el texto crudo del modelo.
 - Para **cada requisito**: `cubierto`, `parcial` o `no_cubierto` **por esta sección**, la cita literal del manual que lo respalda y, si no está cubierto del todo, qué falta.
 - Vía 2: los **fragmentos literales de la sección** que no responden a ningún requisito de este artículo.
 - Concurrencia `asyncio` con semáforo `LLM_CONCURRENCY` (6). Progreso: "Par 128 de 412".
@@ -78,7 +81,7 @@ class Requisito(BaseModel):                 # paso 3a, uno por requisito atómic
 
 class Descomposicion(BaseModel):            # paso 3a, una por artículo
     naturaleza_articulo: Literal["obligacion", "informativo", "no_aplica_entidad"]
-    requisitos: list[Requisito] = []
+    requisitos: list[Requisito] = []        # obligatorio (no vacío) si naturaleza == "obligacion": se valida en el modelo Pydantic
 
 class EstadoRequisito(BaseModel):           # paso 3b, uno por requisito y par
     requisito_id: str
@@ -88,8 +91,8 @@ class EstadoRequisito(BaseModel):           # paso 3b, uno por requisito y par
 
 class Veredicto(BaseModel):                 # paso 3b, uno por par
     requisitos: list[EstadoRequisito]       # todos los requisitos del artículo, sin omitir ninguno
-    fragmentos_sin_base: list[str] = []     # vía 2: literales de la sección que no responden a ningún requisito de este artículo
-    comentario: str
+    fragmentos_sin_base: list[str] = []     # vía 2: literales de la sección que no responden a ningún requisito de este artículo (máx. MAX_FRAGMENTOS_SIN_BASE)
+    comentario: str                         # todos los textos libres (falta, comentario) con max_length en Pydantic
     confianza: float = Field(ge=0, le=1)
 
 class Par(BaseModel):
@@ -112,9 +115,13 @@ class Par(BaseModel):
    - si no: buscar el fragmento más parecido con `difflib.SequenceMatcher` sobre ventanas del texto fuente; si ratio ≥ `CITATION_FUZZY_MIN` (0.90) → **reemplazar por el fragmento real** y marcar verificada.
    - si no y ratio ≥ `CITATION_SHOW_MIN` (0.75): `cita_*_verificada=False`, `requiere_revision=True`; el papel muestra el fragmento real más cercano con aviso.
    - si ratio < 0.75: `cita_*_verificada=False`, `requiere_revision=True`; celda vacía con aviso.
-3. Se verifican así: el `fragmento` de cada requisito (contra el artículo), cada `cita_manual` y cada `fragmentos_sin_base` (contra la sección). La verificación además guarda la **posición** (inicio y fin) del fragmento en el texto literal: con ella se pinta el Excel.
+3. El texto fuente se **sanea una sola vez** (caracteres ilegales de Excel) antes de verificar; la búsqueda difusa solo corre si falla la exacta. Se verifican así: el `fragmento` de cada requisito (contra el artículo), cada `cita_manual` y cada `fragmentos_sin_base` (contra la sección). La verificación además guarda la **posición** (inicio y fin) del fragmento en el texto literal: con ella se pinta el Excel.
 4. Un fragmento que no se verifica **no se pinta** (ni rojo ni nada) y el par o el artículo queda `requiere_revision=True`; el texto completo sigue en la celda.
-5. Si la lista de requisitos de un par no trae todos los ids de 3a, o trae ids que no existen: 1 reintento; si persiste, `requiere_revision=True`.
+5. Si la lista de requisitos de un par no trae todos los ids de 3a, trae ids que no existen o **repite un id** (aunque sea con otro estado): 1 reintento; si persiste, `requiere_revision=True`: los faltantes cuentan como `no_cubierto` y ante un id repetido gana el **peor** estado. Un par sin veredicto válido **no** se convierte en "no cubierto" en silencio: el artículo queda `requiere_revision`.
+   - Un fragmento **vacío** nunca cuenta como verificado, y la posición guardada cumple `texto[ini:fin] == fragmento_real`.
+   - Si el fragmento aparece **varias veces**, se toma la ocurrencia que empieza después del fragmento del requisito anterior (los requisitos siguen el orden del artículo); si aun así es ambiguo, la primera, con aviso.
+   - Fragmentos que se **solapan** se pintan unidos, sin duplicar texto.
+   - Las posiciones se calculan sobre el `texto_literal`; al escribir la celda (ruta antepuesta, caracteres ilegales quitados, truncado) se **trasladan** a ese texto, y la concatenación de los tramos del texto enriquecido es idéntica al texto saneado de la celda.
 6. El texto que llega al Excel **siempre** proviene del documento fuente, nunca del modelo; el resaltado lo decide Python con las posiciones verificadas.
 
 ## 5. Agregación de marcas y brechas (Python, sin tokens)
@@ -139,6 +146,7 @@ def marca_articulo(desc, pares) -> tuple[str, list[Requisito]]:
     est = estado_requisitos(desc, pares)
     oblig = [r for r in desc.requisitos if r.obligatorio]
     brechas = [r for r in oblig if est[r.id][0] != "cubierto"]      # se pintan en rojo (docs/10)
+    if not oblig:                                                    return "R", []   # + requiere_revision (§3a): nunca A sin requisitos
     if not brechas:                                                  return "A", []
     if any(est[r.id][0] != "no_cubierto" for r in oblig):            return "L", brechas
     return "R", brechas                                              # R: solo los requisitos obligatorios van en rojo
@@ -148,11 +156,14 @@ def controles_sin_base(secciones_sel, pares) -> dict[str, list[tuple[int, int]]]
     # Vía 2, por sección:
     # - sin ningún par con algún requisito cubierto o parcial de un artículo "obligacion" -> la sección entera es control sin base;
     # - si no, los tramos (posiciones verificadas) que aparecen en `fragmentos_sin_base` en TODOS los pares de la sección con
-    #   artículos "obligacion" (intersección): ningún artículo juzgado los respalda. Se pintan en rojo en el bloque vía 2.
+    #   artículos "obligacion" (intersección, por rangos de caracteres verificados): ningún artículo juzgado los respalda.
+    #   A la intersección se le restan los tramos usados como `cita_manual` verificada en cualquier par.
+    #   Se pintan en rojo en el bloque vía 2. Un par sin veredicto válido no entra en la intersección y la sección queda en revisión.
+    #   Limitación: un solo par que devuelva [] vacía los fragmentos sin base de la sección (qa-ia mide el recall de la vía 2).
 ```
 
 - **Varias secciones, un artículo:** un requisito está cubierto si **alguna** sección lo cubre. El respaldo del artículo son **todas** las secciones que cubren o cubren parcialmente algún requisito, no una sola.
 - **Lo que se resalta es solo la brecha:** el texto de los requisitos obligatorios no cubiertos o cubiertos parcialmente. Lo cubierto **no se resalta**: marcar algo como "cumple" equivale a aprobarlo, y aprobar el control es responsabilidad del dueño del manual y del proceso, no de auditoría (usuario, 15 oct 2026).
 - **Criterio conservador:** dos coberturas parciales del **mismo** requisito en secciones distintas no suman una total: el requisito queda `parcial` (en rojo) y el juez explica qué falta en cada una.
-- **Costo:** +1 llamada por artículo (paso 3a) y una salida más larga por par. Se mide contra RNF-11.
+- **Costo y topes (LLM10):** +1 llamada por artículo (paso 3a, con caché) y una salida más larga por par. Topes en configuración (`[CALIBRAR]`): `MAX_REQUISITOS` (~25), `MAX_FRAGMENTOS_SIN_BASE` (~10), `MAX_TEXTO_SIN_REQUISITO`, `LLM_MAX_TOKENS` por llamada. Se mide contra RNF-11 en la Raspberry.
 
