@@ -15,6 +15,13 @@ from backend.models.schemas import Descomposicion, DescomposicionLLM, Requisito,
 log = logging.getLogger(__name__)
 PROMPT = Path(__file__).resolve().parent.parent / "prompts" / "requisitos.md"
 LITERAL = re.compile(r"(?m)^\s*([a-z])\)\s")
+DELIMITADOR = re.compile(r"(?i)<\s*/?\s*articulo")
+DEBERES = re.compile(r"(?i)\b(?:deber[áa]n?|deben?|prohíb\w+|prohib\w+|obligator\w+)\b")
+
+
+def neutralizar(texto: str) -> str:
+    """Un PDF podría traer `</articulo>` para salir del bloque de datos del prompt (inyección): se neutraliza el delimitador."""
+    return DELIMITADOR.sub("‹articulo", texto)
 
 
 def armar_descomposicion(articulo: Seccion, d: DescomposicionLLM, s: Settings = settings) -> Descomposicion:
@@ -22,6 +29,9 @@ def armar_descomposicion(articulo: Seccion, d: DescomposicionLLM, s: Settings = 
     texto = articulo.texto_literal
     motivos: list[str] = []
     if d.naturaleza_articulo != "obligacion":
+        if DEBERES.search(texto):                           # el modelo dijo "sin obligaciones" pero el texto trae deberes: no se omite en silencio
+            return Descomposicion(articulo_id=articulo.id, naturaleza_articulo=d.naturaleza_articulo, requiere_revision=True,
+                                  motivos=["El artículo parece imponer deberes pero se clasificó como informativo o ajeno a la entidad."])
         return Descomposicion(articulo_id=articulo.id, naturaleza_articulo=d.naturaleza_articulo)
     propuestos = d.requisitos
     if len(propuestos) > s.MAX_REQUISITOS:
@@ -62,7 +72,7 @@ def descomponer(articulo: Seccion, cliente: ModelClient, cache: dict[str, Descom
     if cache is not None and clave in cache:
         return cache[clave].model_copy(update={"articulo_id": articulo.id})
     sistema = PROMPT.read_text(encoding="utf-8")
-    usuario = f"<articulo>\nRuta: {' > '.join(articulo.ruta)}\n{articulo.texto_literal}\n</articulo>"
+    usuario = f"<articulo>\nRuta: {neutralizar(' > '.join(articulo.ruta))}\n{neutralizar(articulo.texto_literal)}\n</articulo>"
     for intento in (1, 2):
         d = cliente.chat_json(sistema, usuario, DescomposicionLLM)
         if d.naturaleza_articulo != "obligacion" or any(r.obligatorio for r in d.requisitos):

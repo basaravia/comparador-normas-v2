@@ -451,9 +451,10 @@ El criterio de aceptación de docs/13 **no está cumplido**; este tramo entrega 
 | `backend/prompts/requisitos.md` | — | Prompt del paso 3a; el artículo entra delimitado por `<articulo>`. |
 | `backend/models/schemas.py` | `RequisitoLLM`, `DescomposicionLLM`, `Requisito`, `Descomposicion` | Salida del modelo y resultado verificado. |
 
-- **Configuración** (`config/defaults.env`, `[CALIBRAR]`): `MAX_REQUISITOS=25`, `MAX_TEXTO_SIN_REQUISITO=300`.
+- **Configuración** (`config/defaults.env`, `[CALIBRAR]`): `MAX_REQUISITOS=25`, `MAX_TEXTO_SIN_REQUISITO=300`, `MAX_FRAGMENTO_DIFUSO=600`.
+- **Seguridad (appsec, 16 oct 2026):** el delimitador `<articulo>` se neutraliza en el texto y la ruta; un fragmento difuso con otra cifra, número escrito o negación no se acepta como cita (`dudoso`, no se pinta); sin coincidencia exacta, un fragmento de más de `MAX_FRAGMENTO_DIFUSO` caracteres no se compara (costo cuadrático); un artículo que el modelo clasifica como informativo pero trae deberes ("deberá", "prohíbe") queda `requiere_revision`.
 - **Origen:** módulos nuevos; el repo de referencia v6 no los cubre.
-- **Pruebas:** `tests/test_verificacion.py` y `tests/test_descomposicion.py` (13, deterministas, sin LLM). `descomponer` queda sin cubrir hasta el notebook `04_juez` con el modelo real del stage.
+- **Pruebas:** `tests/test_verificacion.py` y `tests/test_descomposicion.py` (17, deterministas, sin LLM). `descomponer` queda sin cubrir hasta el notebook `04_juez` con el modelo real del stage.
 - **Evidencia del diseño:** prototipo `scripts/prototipo_descomposicion.py` (rama `test/golden-requisitos-arlaft`): recall 87,3 % con requisitos del LLM frente a 76,1 % con el artículo entero del mismo tamaño (docs/14 #30).
 - **Pendiente de L4:** vía 1 por requisito (docs/09 §1b, cambia L3); fallback al artículo entero si el paso 3a falla; juez 3b por par; validación §4 y agregación; notebook `04_juez` con Groq.
 - **Diferencias con la spec:** ninguna.

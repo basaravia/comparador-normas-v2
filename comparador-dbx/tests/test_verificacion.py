@@ -2,7 +2,7 @@
 from backend.engine.verificacion import verificar_fragmento
 from l3_ayudas import cfg
 
-C = cfg(CITATION_FUZZY_MIN=0.90, CITATION_SHOW_MIN=0.75)
+C = cfg(CITATION_FUZZY_MIN=0.90, CITATION_SHOW_MIN=0.75, MAX_FRAGMENTO_DIFUSO=600)
 TEXTO = "Art. 5. Las entidades deberán reportar\n las operaciones inusuales a la UIF en un plazo máximo de cuatro días. Además, conservarán los registros."
 
 
@@ -41,3 +41,18 @@ def test_posicion_cumple_texto_inicio_fin_igual_texto_real():
     for f in ("conservarán los registros", "Art. 5. Las entidades"):
         v = verificar_fragmento(f, TEXTO, s=C)
         assert v.verificado and TEXTO[v.inicio:v.fin] == v.texto_real
+
+
+def test_cifra_o_negacion_cambiadas_no_se_aceptan_como_cita():
+    base = "Las entidades deberán reportar las operaciones inusuales a la UIF en un plazo máximo de cuatro días calendario."
+    for alterado in (base.replace("cuatro", "diez"), base.replace("deberán reportar", "no deberán reportar")):
+        v = verificar_fragmento(alterado, base, s=C)
+        assert not v.verificado and v.inicio is None
+    t = "El plazo de reporte es de 4 días y el umbral es 25 por ciento del patrimonio técnico de la entidad."
+    v = verificar_fragmento(t.replace("25", "10"), t, s=C)
+    assert not v.verificado
+
+
+def test_fragmento_gigante_no_se_compara_difuso():
+    v = verificar_fragmento("palabra inventada " * 100, TEXTO * 50, s=C)
+    assert v.estado == "no_encontrado" and v.inicio is None

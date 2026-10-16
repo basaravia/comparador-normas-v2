@@ -11,6 +11,8 @@ from difflib import SequenceMatcher
 from backend.config import Settings, settings
 
 log = logging.getLogger(__name__)
+NUMEROS = set("""un uno una dos tres cuatro cinco seis siete ocho nueve diez once doce trece catorce quince veinte treinta cuarenta cincuenta sesenta
+setenta ochenta noventa cien ciento mil millón millones primero segundo tercero cuarto quinto mitad doble triple""".split())
 
 
 @dataclass(frozen=True)
@@ -66,14 +68,26 @@ def verificar_fragmento(fragmento: str, texto: str, desde: int = 0, s: Settings 
     if i >= 0:
         ini, fin = _original(mapa, texto, i, i + len(f))
         return Verificado("exacto", 1.0, ini, fin, texto[ini:fin])
+    if len(f) > s.MAX_FRAGMENTO_DIFUSO or len(f) > 2 * len(t):      # costo cuadrático de difflib: no se compara y no se pinta
+        return Verificado("no_encontrado", 0.0, None, None, "")
     ini_n, fin_n, ratio = _mas_parecido(f, t)
-    if ratio >= s.CITATION_FUZZY_MIN:
+    if ratio >= s.CITATION_FUZZY_MIN and _mismo_sentido(f, t[ini_n:fin_n]):
         ini, fin = _original(mapa, texto, ini_n, fin_n)
         return Verificado("corregido", ratio, ini, fin, texto[ini:fin])
+    if ratio >= s.CITATION_FUZZY_MIN:                               # parecido alto pero distinta cifra o negación: no se acepta como cita
+        ini, fin = _original(mapa, texto, ini_n, fin_n)
+        return Verificado("dudoso", ratio, None, None, texto[ini:fin])
     if ratio >= s.CITATION_SHOW_MIN:
         ini, fin = _original(mapa, texto, ini_n, fin_n)
         return Verificado("dudoso", ratio, None, None, texto[ini:fin])
     return Verificado("no_encontrado", ratio, None, None, "")
+
+
+def _mismo_sentido(f: str, real: str) -> bool:
+    """Un fragmento difuso solo se corrige al texto real si tiene las mismas cifras y las mismas negaciones (un "no" o un "10" cambian la obligación)."""
+    cifras = lambda x: sorted(re.findall(r"\d+(?:[.,]\d+)?", x) + [w for w in re.findall(r"\w+", x.lower()) if w in NUMEROS])
+    negaciones = lambda x: len(re.findall(r"\b(?:no|nunca|ning[uú]n[ao]?|sin)\b", x.lower()))
+    return cifras(f) == cifras(real) and negaciones(f) == negaciones(real)
 
 
 def _mas_parecido(f: str, t: str) -> tuple[int, int, float]:
