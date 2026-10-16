@@ -14,7 +14,7 @@ comparador-dbx/
 │   ├── ingest/                  # validation.py, pdf_metadata.py, classifier.py
 │   ├── extraction/              # docling_extractor.py (repo), docling_worker.py, sectioner.py, patterns.py, lector.py (PDF → secciones)
 │   ├── retrieval/               # chunker.py (repo), embeddings.py (repo), index.py, tabla.py (tabla de recuperación), exclusion.py (secciones no comparables), seleccion.py
-│   ├── engine/                  # candidates.py, pairs.py, judge.py, citations.py, aggregate.py, conclusion.py
+│   ├── engine/                  # candidatos.py, pares.py, descomposicion.py, verificacion.py, judge.py, aggregate.py, conclusion.py
 │   ├── output/                  # workpaper.py, annex.py, styles.py
 │   ├── llm/                     # client.py (repo): Groq | Ollama | Docker Model Runner | Foundry por configuración
 │   ├── prompts/                 # clasificador.md, requisitos.md (descomposición, docs/09 §3a), juez.md, conclusion.md

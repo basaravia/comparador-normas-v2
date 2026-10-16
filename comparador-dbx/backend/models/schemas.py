@@ -60,3 +60,34 @@ class Par(BaseModel):
     cita_norma_verificada: bool = False
     cita_manual_verificada: bool = False
     requiere_revision: bool = False
+
+
+# --- Paso 3a (docs/09 §3a): descomposición del artículo en requisitos ---
+
+class RequisitoLLM(BaseModel):
+    """Lo que devuelve el modelo: el código lo verifica y renumera."""
+    id: str = ""
+    fragmento: str
+    obligatorio: bool
+
+
+class DescomposicionLLM(BaseModel):
+    naturaleza_articulo: Literal["obligacion", "informativo", "no_aplica_entidad"]
+    requisitos: List[RequisitoLLM] = []
+
+
+class Requisito(BaseModel):
+    id: str                                  # R1…Rn por orden de aparición (lo asigna Python)
+    fragmento: str                           # texto literal del artículo (el real si se verificó)
+    obligatorio: bool
+    verificado: bool = False                 # el fragmento es texto del artículo (docs/09 §4)
+    inicio: Optional[int] = None             # posición en texto_literal; None = no se pinta
+    fin: Optional[int] = None
+
+
+class Descomposicion(BaseModel):
+    articulo_id: str
+    naturaleza_articulo: Literal["obligacion", "informativo", "no_aplica_entidad"]
+    requisitos: List[Requisito] = []
+    requiere_revision: bool = False
+    motivos: List[str] = []                  # en lenguaje de negocio, para el anexo

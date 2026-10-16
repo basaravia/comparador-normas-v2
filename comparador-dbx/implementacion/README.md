@@ -14,7 +14,7 @@ Tablero de avance estilo Jira: [`tablero/index.html`](../tablero/index.html) (ab
 | L1 · Ingesta | ✅ Cumplido | `feat/fase-l-local` · `feat(L1): …` | `notebooks/01_ingesta.ipynb` |
 | L2 · Seccionado | 🚧 En curso (esqueleto, sin evidencia) | `fix/l2-estado-real` | `notebooks/02_seccionado.ipynb` (sin ejecutar) |
 | L3 · Recuperación | 🚧 Entregado a `qa-ia` y `appsec` (sin cerrar) | `feat/l3-recuperacion` | `notebooks/03_recuperacion.ipynb` |
-| L4 · Juez | Pendiente | — | — |
+| L4 · Juez | 🚧 En curso (tramo 1: verificación + paso 3a; criterio de docs/13 sin cumplir) | `feat/l4-verificacion-descomposicion` | `notebooks/04_juez.ipynb` (pendiente) |
 | L5 · Papel | 🔎 Entregado a `qa-ia` y `appsec` (sin cerrar) | `feat/l5-papel` | `notebooks/05_papel.ipynb` |
 | L6 · Extremo a extremo | Pendiente | — | — |
 
@@ -440,6 +440,23 @@ LLM08: un índice por tipo de documento, en memoria, sin persistir; no se mezcla
 ### Origen (repo de referencia v6)
 `chunker.py` ← `backend/src/chunking.py` (corte por párrafos/numerales/literales, solape, estimación de tokens por palabras; sin pandas); `index.py` ← idea de `search_engine.py` (`IndexFlatIP` + vectores L2); `candidatos.py` y `pares.py`: nuevos según docs/09.
 ---
+
+## L4 · Juez (en curso, tramo 1: verificación de fragmentos y paso 3a)
+El criterio de aceptación de docs/13 **no está cumplido**; este tramo entrega solo la base determinista y la descomposición.
+
+| Módulo | API pública | Qué hace |
+|---|---|---|
+| `backend/engine/verificacion.py` | `verificar_fragmento(fragmento, texto, desde, s) -> Verificado` | Busca el fragmento en el `texto_literal` (espacios normalizados): `exacto`; `corregido` si el parecido ≥ `CITATION_FUZZY_MIN` (se reemplaza por el texto real); `dudoso` si ≥ `CITATION_SHOW_MIN` (no se pinta); `no_encontrado`. Devuelve la posición sobre el texto original. Un fragmento vacío nunca se verifica; ante repeticiones toma la ocurrencia posterior a `desde`. |
+| `backend/engine/descomposicion.py` | `armar_descomposicion(articulo, d, s)`, `descomponer(articulo, cliente, cache, s)` | Paso 3a (docs/09 §3a). `armar_descomposicion` es determinista: verifica cada fragmento, renumera R1…Rn (ignora los ids del modelo) y aplica los controles (tope `MAX_REQUISITOS`, texto fuera de todo requisito > `MAX_TEXTO_SIN_REQUISITO`, cada literal a), b)… tocado, obligación con al menos un requisito obligatorio). `descomponer` hace 1 llamada al LLM por artículo con caché SHA-256 y 1 reintento si una obligación viene sin requisitos obligatorios. |
+| `backend/prompts/requisitos.md` | — | Prompt del paso 3a; el artículo entra delimitado por `<articulo>`. |
+| `backend/models/schemas.py` | `RequisitoLLM`, `DescomposicionLLM`, `Requisito`, `Descomposicion` | Salida del modelo y resultado verificado. |
+
+- **Configuración** (`config/defaults.env`, `[CALIBRAR]`): `MAX_REQUISITOS=25`, `MAX_TEXTO_SIN_REQUISITO=300`.
+- **Origen:** módulos nuevos; el repo de referencia v6 no los cubre.
+- **Pruebas:** `tests/test_verificacion.py` y `tests/test_descomposicion.py` (13, deterministas, sin LLM). `descomponer` queda sin cubrir hasta el notebook `04_juez` con el modelo real del stage.
+- **Evidencia del diseño:** prototipo `scripts/prototipo_descomposicion.py` (rama `test/golden-requisitos-arlaft`): recall 87,3 % con requisitos del LLM frente a 76,1 % con el artículo entero del mismo tamaño (docs/14 #30).
+- **Pendiente de L4:** vía 1 por requisito (docs/09 §1b, cambia L3); fallback al artículo entero si el paso 3a falla; juez 3b por par; validación §4 y agregación; notebook `04_juez` con Groq.
+- **Diferencias con la spec:** ninguna.
 
 ## L5 · Papel de trabajo (APROBADO por `qa-ia`)
 

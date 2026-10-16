@@ -97,6 +97,8 @@ class Settings:
     LLM_RETRIES: int = int(_env("LLM_RETRIES"))
     CITATION_FUZZY_MIN: float = float(_env("CITATION_FUZZY_MIN"))
     CITATION_SHOW_MIN: float = float(_env("CITATION_SHOW_MIN"))
+    MAX_REQUISITOS: int = int(_env("MAX_REQUISITOS"))
+    MAX_TEXTO_SIN_REQUISITO: int = int(_env("MAX_TEXTO_SIN_REQUISITO"))
 
     # Sesión
     SESSION_TTL_HOURS: int = int(_env("SESSION_TTL_HOURS"))
