@@ -97,6 +97,8 @@ class Settings:
     # Juez
     LLM_CONCURRENCY: int = int(_env("LLM_CONCURRENCY"))
     LLM_RETRIES: int = int(_env("LLM_RETRIES"))
+    LLM_ESPERA_LIMITE_S: int = int(_env("LLM_ESPERA_LIMITE_S"))
+    LLM_INTENTOS_LIMITE: int = int(_env("LLM_INTENTOS_LIMITE"))
     CITATION_FUZZY_MIN: float = float(_env("CITATION_FUZZY_MIN"))
     CITATION_SHOW_MIN: float = float(_env("CITATION_SHOW_MIN"))
     MAX_FRAGMENTO_DIFUSO: int = int(_env("MAX_FRAGMENTO_DIFUSO"))

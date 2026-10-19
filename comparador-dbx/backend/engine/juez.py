@@ -15,8 +15,6 @@ from backend.llm.client import ModelClient
 from backend.models import Par, Seccion, Veredicto
 
 log = logging.getLogger(__name__)
-ESPERA_LIMITE_S = 20            # espera base ante un límite de tasa del proveedor (429); crece con cada intento
-INTENTOS_LIMITE = 6
 
 
 def _ruta(s: Seccion) -> str:
@@ -43,7 +41,7 @@ def juzgar_par(par: Par, articulo: Seccion, seccion: Seccion, nombres: dict[str,
     usuario = rellenar_prompt(plantilla, doc_norma=nombres.get(articulo.doc_id, articulo.doc_id), ruta_articulo=_ruta(articulo),
                               texto_articulo=articulo.texto_literal, doc_manual=nombres.get(seccion.doc_id, seccion.doc_id),
                               ruta_seccion=_ruta(seccion), texto_seccion=seccion.texto_literal)
-    for intento in range(1, INTENTOS_LIMITE + 1):
+    for intento in range(1, s.LLM_INTENTOS_LIMITE + 1):
         try:
             v: Veredicto = cliente.chat_json(sistema, usuario, Veredicto)
             break
@@ -52,9 +50,9 @@ def juzgar_par(par: Par, articulo: Seccion, seccion: Seccion, nombres: dict[str,
             log.warning("Par %s: el modelo no devolvió un JSON válido", par.id)
             return par
         except LLMUnavailableError as e:
-            if _limite_de_tasa(e) and intento < INTENTOS_LIMITE:
-                log.info("Par %s: límite de tasa del proveedor, espera %d s", par.id, ESPERA_LIMITE_S * intento)
-                time.sleep(ESPERA_LIMITE_S * intento)
+            if _limite_de_tasa(e) and intento < s.LLM_INTENTOS_LIMITE:
+                log.info("Par %s: límite de tasa del proveedor, espera %d s", par.id, s.LLM_ESPERA_LIMITE_S * intento)
+                time.sleep(s.LLM_ESPERA_LIMITE_S * intento)
                 continue
             raise
     cita_n, ok_n = _verificar_cita(v.cita_norma, articulo.texto_literal, s)

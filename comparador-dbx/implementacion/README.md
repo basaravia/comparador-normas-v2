@@ -457,10 +457,12 @@ Rama de **MVP tal cual está** (docs/14 #32): juez por par con el veredicto de d
 | `samples/ejemplo.json` · `scripts/precompute_samples.py` | Ejemplo precargado (Arts. 31–48 de la ley LA/FT + MOCK-DEMO-01): secciones ya extraídas, sin Docling; los embeddings se calculan al comparar (dependen del modelo del stage). |
 | `app.yaml` | `uvicorn backend.main:app --workers 1`, `STAGE=mvp`, variables de Foundry con marcadores `REEMPLAZAR-…` y el token por `valueFrom`. |
 
-- **Configuración nueva** (`config/defaults.env`): `MAX_FRAGMENTO_DIFUSO`, `MAX_DOCS_SESION=8`, `MAX_PARES=600`; `ENV_FILE` (ruta de otro archivo de secretos, se lee en su sitio).
+- **Configuración nueva** (`config/defaults.env`): `MAX_FRAGMENTO_DIFUSO`, `LLM_ESPERA_LIMITE_S=20`, `LLM_INTENTOS_LIMITE=6`, `MAX_DOCS_SESION=8`, `MAX_PARES=600`; `ENV_FILE` (ruta de otro archivo de secretos, se lee en su sitio).
 - **Pruebas:** `tests/test_agregacion.py`, `test_juez.py`, `test_api.py`, `test_verificacion.py` (sin modelo) y `test_integracion_e2e.py` (Groq + `bge-m3` reales sobre el ejemplo: 1 artículo × 3 secciones → Excel).
 - **Medido en la Raspberry (sandbox, Groq `gpt-oss-120b` gratuito):** 4 artículos × 16 secciones = 50 pares en ~10 min (límite de 8000 tokens por minuto del plan gratuito; el juez espera y reintenta). Resultado: 4 × L, consistente con el golden de MOCK-DEMO-01 (parcial). Excel de 20 KB.
 - **Diferencias con la spec:** (1) sin los pasos 3a/3b de RF-18 ni la vía 1 por requisito (decisión #32); (2) un manual por comparación; (3) la indexación se hace al terminar el procesamiento o, si falta un tipo de documento, al comparar; (4) `GET /api/session` devuelve `comparacion_id` solo si la comparación ya terminó.
+- **Diferencias con docs/13 (PO, 19 oct 2026):** L4: no existe `04_juez.ipynb` (lo cubre `06_e2e.ipynb`) y solo se midió MOCK-DEMO-01 (4 × L); falta medir MOCK-DEMO-02 (R) y 03 (A). D1: la App aún no se desplegó ni se probó Docling dentro del contenedor. D2: los embeddings no van precomputados (se calculan al comparar). U0: sin evidencia de la prueba "un auditor completa el flujo sin ayuda". El 88 % de coverage de la lógica determinista no tiene APROBADO de `qa-ia`. La vía 2 al final del anexo ya la entrega L5.
+- **Interfaz:** `frontend/dist/` está versionado; hay que recompilarlo (`npm run build`) cuando cambie `frontend/src`.
 - **Despliegue en Databricks Apps:** ver `docs/16-despliegue.md`.
 
 ## L5 · Papel de trabajo (APROBADO por `qa-ia`)
