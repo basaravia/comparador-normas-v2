@@ -136,6 +136,7 @@ class ComparacionOut(BaseModel):
     pares_juzgados: int = 0
     pares_a_revision: int = 0
     avisos: list[str] = []
+    ajustes: dict[str, float] = {}           # valores de los ajustes (RF-19) con los que se hizo esta comparación
 
 
 class ConclusionIn(BaseModel):
@@ -152,3 +153,24 @@ class HealthOut(BaseModel):
     stage: str
     llm: bool
     mensaje: str = ""
+
+
+class AjusteOut(BaseModel):
+    clave: str
+    etiqueta: str
+    ayuda: str
+    tipo: Literal["entero", "decimal"]
+    valor: float
+    defecto: float
+    minimo: float
+    maximo: float
+    paso: float
+    avanzado: bool = False
+
+
+class AjustesOut(BaseModel):
+    parametros: list[AjusteOut]
+
+
+class AjustesIn(BaseModel):
+    valores: dict[str, float]               # se descartan las claves que no están en la lista blanca (config/ajustes.json)

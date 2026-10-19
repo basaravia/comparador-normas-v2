@@ -112,7 +112,23 @@ export interface ComparacionOut {
   pares_juzgados: number;
   pares_a_revision: number;
   avisos: string[];
+  ajustes: Record<string, number>;     // ajustes (RF-19) con los que se hizo la comparación
 }
 
 export interface SesionOut { documentos: DocumentoOut[]; comparacion_id: string | null }
 export interface HealthOut { estado: "ok" | "degradado"; stage: string; llm: boolean; mensaje: string }
+
+export interface AjusteOut {
+  clave: string;
+  etiqueta: string;
+  ayuda: string;
+  tipo: "entero" | "decimal";
+  valor: number;
+  defecto: number;
+  minimo: number;
+  maximo: number;
+  paso: number;
+  avanzado: boolean;
+}
+export interface AjustesOut { parametros: AjusteOut[] }
+export interface AjustesIn { valores: Record<string, number> }

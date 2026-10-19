@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import { MarkBadge, SIGNIFICADO } from "../components/MarkBadge";
 import { useStore } from "../store";
-import type { FilaVia1, FilaVia2, Marca } from "../tipos";
+import type { AjusteOut, FilaVia1, FilaVia2, Marca } from "../tipos";
 
 const MARCAS: Marca[] = ["A", "L", "R", "X", "P"];
 const COBERTURA = { total: "Cubre del todo", parcial: "Cubre en parte", nula: "No cubre" } as const;
@@ -82,6 +82,41 @@ function Via2({ filas, soloSinBase }: { filas: FilaVia2[]; soloSinBase: boolean 
   );
 }
 
+/** «Ajustes usados en esta comparación» (RF-19): para poder reproducir el resultado. Las etiquetas salen de GET /api/settings. */
+function AjustesUsados({ usados }: { usados: Record<string, number> }) {
+  const [params, setParams] = useState<AjusteOut[] | null>(null);
+  const [error, setError] = useState(false);
+  const claves = Object.keys(usados);
+  if (claves.length === 0) return null;
+  const abrir = (ev: React.SyntheticEvent<HTMLDetailsElement>) => {
+    if (ev.currentTarget.open && !params) api.ajustes().then((r) => setParams(r.parametros)).catch(() => setError(true));
+  };
+  return (
+    <details className="ajustes-usados" onToggle={abrir}>
+      <summary>Ajustes usados en esta comparación</summary>
+      {error && <p className="vacio-texto">No pudimos cargar los nombres de los ajustes.</p>}
+      {!params && !error && <p className="ocupado">Cargando…</p>}
+      {params && (
+        <table className="tabla">
+          <thead><tr><th>Ajuste</th><th>Valor usado</th><th>Valor por defecto</th></tr></thead>
+          <tbody>
+            {params.filter((a) => a.clave in usados).map((a) => {
+              const distinto = usados[a.clave] !== a.defecto;
+              return (
+                <tr key={a.clave}>
+                  <td>{a.etiqueta}</td>
+                  <td><strong>{String(usados[a.clave]).replace(".", ",")}</strong>{distinto && <span className="distinto"> ● Distinto del valor por defecto</span>}</td>
+                  <td>{String(a.defecto).replace(".", ",")}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </details>
+  );
+}
+
 export function Results() {
   const { e, d } = useStore();
   const c = e.comparacion;
@@ -120,6 +155,7 @@ export function Results() {
         </div>
       </section>
       {c.avisos.map((a, i) => <div key={i} className="nota-aviso">ℹ {a}</div>)}
+      <AjustesUsados usados={c.ajustes ?? {}} />
 
       <div className="conmutador" role="tablist">
         <button role="tab" aria-selected={vista === "via1"} className={vista === "via1" ? "activa" : ""} onClick={() => setVista("via1")}>Ver por artículo (vía 1)</button>

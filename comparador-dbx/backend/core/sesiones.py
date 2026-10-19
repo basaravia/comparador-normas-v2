@@ -15,10 +15,17 @@ from typing import Optional
 
 from backend.api.schemas import ComparacionOut, DocumentoOut, ErrorNegocio, JobOut
 from backend.config import Settings, settings
+from backend.core.errors import ComparadorError
 from backend.models import Seccion
 from backend.retrieval.index import Indice
 
 log = logging.getLogger(__name__)
+
+
+class SesionesLlenas(ComparadorError):
+    """Hay `MAX_SESIONES` sesiones vivas: se pide reintentar en un momento (503)."""
+    codigo = "ERR-SES-002"
+    mensaje_negocio = "El servicio está atendiendo a otras personas en este momento. Intenta de nuevo en unos minutos."
 
 
 class SesionPerdida(Exception):
@@ -55,6 +62,7 @@ class Sesion:
     indexados: set[str] = field(default_factory=set)          # ids de los documentos ya incluidos en los índices
     lock: threading.RLock = field(default_factory=threading.RLock)
     contador: int = 0
+    ajustes: dict[str, float] = field(default_factory=dict)        # RF-19: cambios de la sesión sobre los valores por defecto
 
     def nuevo_id(self, prefijo: str) -> str:
         with self.lock:
@@ -84,8 +92,10 @@ def limpiar_expiradas(cfg: Settings = settings) -> None:
 def crear() -> Sesion:
     limpiar_expiradas()
     sid = secrets.token_urlsafe(32)
-    s = Sesion(id=sid, dir=Path(tempfile.mkdtemp(prefix="comparador_")))
     with _LOCK:
+        if len(_SESIONES) >= settings.MAX_SESIONES:
+            raise SesionesLlenas()
+        s = Sesion(id=sid, dir=Path(tempfile.mkdtemp(prefix="comparador_")))
         _SESIONES[sid] = s
     return s
 

@@ -77,3 +77,37 @@ def test_cabeceras_de_seguridad_y_api_sin_cache(web):
 def test_ruta_api_inexistente_no_cae_en_el_frontend(web):
     r = web.get("/api/no-existe")
     assert r.status_code == 404 and r.json()["codigo"] == "ERR-HTTP-404"
+
+
+def test_tope_de_sesiones_vivas_da_503_con_mensaje_de_negocio(web, monkeypatch):
+    from dataclasses import replace
+    from backend.config import settings
+    from backend.core import sesiones
+    monkeypatch.setattr(sesiones, "settings", replace(settings, MAX_SESIONES=0))
+    r = web.get("/api/session")
+    assert r.status_code == 503 and r.json()["codigo"] == "ERR-SES-002" and "otras personas" in r.json()["mensaje"]
+
+
+def test_una_sola_comparacion_a_la_vez_por_sesion(web):
+    from backend.api.schemas import JobOut
+    from backend.core import sesiones
+    web.post("/api/samples/load")
+    sid = web.cookies.get("session_id")
+    n = [h["id"] for h in hojas(web.get("/api/sections/tree", params={"tipo": "normativa"}).json()[0]["nodos"])][:1]
+    m = [h["id"] for h in hojas(web.get("/api/sections/tree", params={"tipo": "manual_control"}).json()[0]["nodos"]) if h["seleccionada"]][:1]
+    s = sesiones.obtener(sid)
+    s.jobs["x"] = JobOut(job_id="x", tipo="comparacion", estado="en_curso")        # una comparación ya en marcha
+    r = web.post("/api/comparisons", json={"articulo_ids": n, "seccion_ids": m})
+    assert r.status_code == 422 and r.json()["codigo"] == "ERR-CMP-007"
+
+
+def test_ajustes_de_sesion_guardar_leer_restablecer_y_rechazo(web):
+    base = {p["clave"]: p for p in web.get("/api/settings").json()["parametros"]}
+    assert base["SIM_THRESHOLD"]["valor"] == base["SIM_THRESHOLD"]["defecto"]
+    r = web.put("/api/settings", json={"valores": {"SIM_THRESHOLD": 0.42, "GROQ_API_KEY": 1}})
+    assert r.status_code == 200 and {p["clave"]: p["valor"] for p in r.json()["parametros"]}["SIM_THRESHOLD"] == 0.42
+    assert {p["clave"]: p["valor"] for p in web.get("/api/settings").json()["parametros"]}["SIM_THRESHOLD"] == 0.42
+    malo = web.put("/api/settings", json={"valores": {"SIM_THRESHOLD": 7}})
+    assert malo.status_code == 422 and malo.json()["codigo"] == "ERR-AJU-001"
+    r = web.delete("/api/settings")
+    assert {p["clave"]: p["valor"] for p in r.json()["parametros"]}["SIM_THRESHOLD"] == base["SIM_THRESHOLD"]["defecto"]

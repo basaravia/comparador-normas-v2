@@ -105,6 +105,7 @@ class Settings:
 
     # Sesión
     SESSION_TTL_HOURS: int = int(_env("SESSION_TTL_HOURS"))
+    MAX_SESIONES: int = int(_env("MAX_SESIONES"))
     MAX_DOCS_SESION: int = int(_env("MAX_DOCS_SESION"))
     MAX_PARES: int = int(_env("MAX_PARES"))
 

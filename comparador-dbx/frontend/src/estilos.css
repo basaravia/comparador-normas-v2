@@ -88,6 +88,22 @@ select, input:not([type=checkbox]), textarea { font: inherit; padding: 6px 8px; 
 .par-total { background: var(--verde-claro); color: var(--verde-osc); } .par-parcial { background: #fff1cf; color: #8a5d00; }
 .conclusion { margin-top: 28px; background: var(--blanco); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px; } .conclusion textarea { resize: vertical; }
 
+/* Ajustes (RF-19) */
+.cabecera > .paso[aria-pressed] { margin-left: auto; } .cabecera > .paso[aria-pressed] + .estado-servicio { margin-left: 0; }
+.nota-info { background: var(--verde-claro); border-radius: 6px; padding: 8px 12px; margin: 0 0 14px; }
+.banner-ok { background: var(--verde-claro); border: 1px solid #9fcdb4; }
+.ajustes-grupo { display: grid; gap: 12px; margin: 12px 0; }
+.ajuste { background: var(--blanco); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 14px; }
+.ajuste.con-aviso { border-color: var(--L); }
+.ajuste label { font-weight: 600; display: block; } .ajuste .ayuda { margin: 2px 0 8px; }
+.ajuste-control { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; } .ajuste-control input { width: 120px; }
+.ajuste-meta { font-size: .85rem; color: var(--gris); } .ajuste-aviso { color: #8a5d00; font-size: .85rem; font-weight: 600; flex-basis: 100%; }
+.distinto { color: var(--verde-osc); font-weight: 600; }
+.avanzado { margin-top: 16px; } .avanzado > summary, .ajustes-usados > summary { cursor: pointer; font-weight: 600; color: var(--verde); padding: 6px 0; }
+.ajustes-usados { margin: 12px 0; background: var(--blanco); border: 1px solid var(--borde); border-radius: var(--radio); padding: 4px 14px 10px; }
+.espaciador { flex: 1; }
+:focus-visible { outline: 3px solid #2f6fb0; outline-offset: 2px; }
+
 @media (max-width: 800px) {
   .duales { grid-template-columns: 1fr; } main { padding: 14px 12px 40px; } .cabecera { padding: 10px 12px; }
   .pie-seleccion { margin: 16px -12px -40px; padding: 12px; } .tabla { font-size: .88rem; } a.boton { margin-left: 0; }

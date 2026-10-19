@@ -21,6 +21,7 @@
 | RF-15 | Botón "Cargar ejemplo" con documentos pre-procesados, sin ejecutar Docling | DEBE |
 | RF-16 | Botón "Nueva sesión" con confirmación | DEBERÍA |
 | RF-17 | Secciones no comparables (carátula, preámbulo, índice, control de versiones, anexos…): se **identifican automáticamente**, quedan en la tabla con su motivo, **no entran** a la recuperación ni a la doble vía, y el auditor puede reincluir o excluir cualquiera (decisión del usuario, 8 oct 2026; [14](14-puntos-abiertos.md) #24) | DEBE |
+| RF-19 | Panel **Ajustes** (menú de la barra superior): el auditor cambia por sesión un conjunto acotado de parámetros de búsqueda y verificación, con etiqueta de negocio, rango validado en el servidor, «Restablecer» y exportar/importar un archivo JSON para reutilizarlos. Cada comparación muestra los ajustes que usó | DEBERÍA |
 
 ## No funcionales
 

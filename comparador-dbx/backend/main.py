@@ -11,7 +11,7 @@ from backend.api.rutas import router
 from backend.config import RAIZ
 from backend.core.errors import ComparadorError, LLMUnavailableError
 from backend.core.progreso import configurar_logs
-from backend.core.sesiones import SesionPerdida
+from backend.core.sesiones import SesionesLlenas, SesionPerdida
 
 configurar_logs()
 log = logging.getLogger(__name__)
@@ -41,6 +41,11 @@ def _json(estado: int, codigo: str, mensaje: str) -> JSONResponse:
 @app.exception_handler(SesionPerdida)
 async def _sesion_perdida(_: Request, __: SesionPerdida):
     return _json(410, "ERR-SES-001", "La sesión se reinició y los documentos ya no están disponibles. Vuelve a cargarlos o usa el ejemplo.")
+
+
+@app.exception_handler(SesionesLlenas)
+async def _llenas(_: Request, e: SesionesLlenas):
+    return _json(503, e.codigo, e.mensaje_negocio)
 
 
 @app.exception_handler(LLMUnavailableError)

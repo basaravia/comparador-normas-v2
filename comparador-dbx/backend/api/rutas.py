@@ -12,7 +12,7 @@ from backend.config import settings
 from backend.core import sesiones
 from backend.core.errors import ComparadorError
 from backend.core.sesiones import Sesion, SesionPerdida
-from backend.engine import servicio
+from backend.engine import ajustes, servicio
 from backend.llm.client import ModelClient
 
 log = logging.getLogger(__name__)
@@ -149,6 +149,21 @@ def descargar(s: Ses, cid: str):
 @router.post("/samples/load", response_model=list[S.DocumentoOut])
 def ejemplo(s: Ses):
     return servicio.cargar_ejemplo(s)
+
+
+@router.get("/settings", response_model=S.AjustesOut)
+def ver_ajustes(s: Ses):
+    return ajustes.listar(s)
+
+
+@router.put("/settings", response_model=S.AjustesOut)
+def guardar_ajustes(s: Ses, cuerpo: S.AjustesIn):
+    return ajustes.guardar(s, cuerpo.valores)
+
+
+@router.delete("/settings", response_model=S.AjustesOut)
+def restablecer_ajustes(s: Ses):
+    return ajustes.restablecer(s)
 
 
 @router.get("/health", response_model=S.HealthOut)

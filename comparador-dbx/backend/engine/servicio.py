@@ -19,6 +19,7 @@ from backend.api.schemas import (ArbolDocOut, ComparacionOut, DocumentoOut, Erro
 from backend.config import RAIZ, Settings, settings
 from backend.core.errors import ComparadorError
 from backend.core.sesiones import Comparacion, Doc, Sesion, error_negocio
+from backend.engine import ajustes
 from backend.engine.agregacion import controles_sin_base, marca_articulo, naturaleza_articulo
 from backend.engine.juez import juzgar_pares
 from backend.engine.pares import construir_pares
@@ -257,17 +258,20 @@ def _seleccion(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str]) 
 def comparar(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str], cliente: ModelClient) -> JobOut:
     """Valida la selección y encola la comparación. Devuelve el job (con `comparacion_id`)."""
     arts, secs, _ = _seleccion(sesion, articulo_ids, seccion_ids)
-    cid = uuid.uuid4().hex
-    comp = Comparacion(out=ComparacionOut(id=cid, estado="en_curso"))
-    job = _job(sesion, "comparacion", comparacion_id=cid, etapa="En cola")
+    cfg = ajustes.efectivos(sesion)                      # los ajustes de la sesión al momento de lanzar la comparación
     with sesion.lock:
+        if any(j.tipo == "comparacion" and j.estado in ("en_cola", "en_curso") for j in sesion.jobs.values()):
+            raise ComparacionError("ERR-CMP-007", "Ya hay una comparación en curso. Espera a que termine para lanzar otra.")
+        cid = uuid.uuid4().hex
+        comp = Comparacion(out=ComparacionOut(id=cid, estado="en_curso"))
+        job = _job(sesion, "comparacion", comparacion_id=cid, etapa="En cola")      # RLock: el job queda registrado antes de soltar el lock
         sesion.comparaciones[cid] = comp
 
     def correr() -> None:
         job.estado = "en_curso"
         t0 = time.perf_counter()
         try:
-            _ejecutar(sesion, comp, arts, secs, job, cliente)
+            _ejecutar(sesion, comp, arts, secs, job, cliente, cfg)
             comp.out.estado, job.estado, job.progreso, job.etapa = "listo", "listo", 1.0, "Comparación lista"
         except Exception as e:
             err = error_negocio(e)
@@ -285,13 +289,13 @@ def _comentario(par) -> tuple[str, list[str]]:
     return (v.comentario, v.elementos_faltantes) if v else ("", [])
 
 
-def _ejecutar(sesion: Sesion, comp: Comparacion, arts: dict[str, Seccion], secs: dict[str, Seccion], job: JobOut, cliente: ModelClient) -> None:
+def _ejecutar(sesion: Sesion, comp: Comparacion, arts: dict[str, Seccion], secs: dict[str, Seccion], job: JobOut, cliente: ModelClient, cfg: Settings) -> None:
     job.etapa, job.progreso = "Preparando la búsqueda de coincidencias", 0.02
     asegurar_indices(sesion, cliente, lambda h, t: setattr(job, "progreso", round(0.02 + 0.2 * h / max(t, 1), 3)))
     job.etapa, job.progreso = "Buscando coincidencias en las dos vías", 0.25
-    pares, stats = construir_pares(sesion.indice_norma, sesion.indice_manual, set(arts), set(secs))
-    if len(pares) > settings.MAX_PARES:
-        raise ComparacionError("ERR-CMP-004", f"La selección genera {len(pares)} comparaciones y el máximo es {settings.MAX_PARES}. Selecciona menos artículos o secciones.")
+    pares, stats = construir_pares(sesion.indice_norma, sesion.indice_manual, set(arts), set(secs), cfg)
+    if len(pares) > cfg.MAX_PARES:
+        raise ComparacionError("ERR-CMP-004", f"La selección genera {len(pares)} comparaciones y el máximo es {cfg.MAX_PARES}. Selecciona menos artículos o secciones.")
     todas = sesion.secciones()
     nombres = {i: d.out.nombre for i, d in sesion.docs.items()}
     job.etapa = "Juzgando cada par artículo–sección"
@@ -299,7 +303,7 @@ def _ejecutar(sesion: Sesion, comp: Comparacion, arts: dict[str, Seccion], secs:
     def cb(h: int, t: int) -> None:
         job.progreso, job.mensaje = round(0.3 + 0.55 * h / max(t, 1), 3), f"Par {h} de {t}"
 
-    asyncio.run(juzgar_pares(pares, todas, nombres, cliente, progreso=cb))
+    asyncio.run(juzgar_pares(pares, todas, nombres, cliente, cfg, progreso=cb))
     job.mensaje, job.etapa, job.progreso = "", "Calculando marcas y armando el papel", 0.86
 
     por_art: dict[str, list] = {}
@@ -336,7 +340,7 @@ def _ejecutar(sesion: Sesion, comp: Comparacion, arts: dict[str, Seccion], secs:
         log.warning("Sin borrador de conclusión: %s", e.codigo)
         comp.out.avisos.append("No pudimos redactar el borrador de la conclusión; escríbelo tú antes de descargar el papel.")
     comp.entrada = entrada
-    comp.out = _resultado(comp.out.id, entrada, secs, pares, comp.out.avisos)
+    comp.out = _resultado(comp.out.id, entrada, secs, pares, comp.out.avisos).model_copy(update={"ajustes": ajustes.valores_usados(cfg)})
 
 
 def _resultado(cid: str, e: EntradaPapel, secs: dict[str, Seccion], pares: list, avisos: list[str]) -> ComparacionOut:

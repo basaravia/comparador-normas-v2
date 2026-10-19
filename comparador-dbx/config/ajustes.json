@@ -1,0 +1,10 @@
+{
+  "SIM_THRESHOLD": {"etiqueta": "Sensibilidad para encontrar coincidencias", "ayuda": "Más bajo trae más candidatos y más ruido; más alto puede dejar fuera coincidencias reales. Depende del modelo de análisis.", "tipo": "decimal", "min": 0.1, "max": 0.8, "paso": 0.01, "avanzado": false},
+  "MAX_CANDIDATES": {"etiqueta": "Candidatos por artículo o sección", "ayuda": "Cuántas secciones relacionadas se revisan como máximo por cada artículo (y artículos por cada sección del manual).", "tipo": "entero", "min": 3, "max": 20, "paso": 1, "avanzado": false},
+  "MAX_PARES": {"etiqueta": "Máximo de comparaciones por corrida", "ayuda": "Tope de pares artículo–sección que se analizan. Solo se puede bajar: controla el costo y el tiempo.", "tipo": "entero", "min": 50, "max": 600, "paso": 10, "avanzado": false},
+  "CITATION_SHOW_MIN": {"etiqueta": "Exigencia mínima para mostrar una cita", "ayuda": "Debajo de este parecido con el documento, la cita no se muestra y queda marcada para revisión.", "tipo": "decimal", "min": 0.6, "max": 0.95, "paso": 0.01, "avanzado": false},
+  "K_SUBCHUNKS": {"etiqueta": "Profundidad de la búsqueda", "ayuda": "Vecinos que se miran por cada fragmento del texto. Más profundo encuentra más, pero es más lento.", "tipo": "entero", "min": 5, "max": 30, "paso": 1, "avanzado": true},
+  "MIN_FLOOR": {"etiqueta": "Mínimo de candidatos garantizados", "ayuda": "Aunque nada supere la sensibilidad, siempre se revisan al menos estos candidatos.", "tipo": "entero", "min": 1, "max": 5, "paso": 1, "avanzado": true},
+  "CITATION_FUZZY_MIN": {"etiqueta": "Exigencia para validar una cita como literal", "ayuda": "Parecido mínimo para aceptar una cita y reemplazarla por el texto exacto del documento. Bajarlo afloja la verificación.", "tipo": "decimal", "min": 0.8, "max": 1.0, "paso": 0.01, "avanzado": true},
+  "LLM_CONCURRENCY": {"etiqueta": "Velocidad del análisis", "ayuda": "Análisis simultáneos. Más rápido, pero el proveedor puede limitar la velocidad y hacer que reintente.", "tipo": "entero", "min": 1, "max": 8, "paso": 1, "avanzado": true}
+}

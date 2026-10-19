@@ -16,6 +16,9 @@ Prefijo `/api`. FastAPI sirve además `frontend/dist` en `/`.
 | `GET /api/comparisons/{id}/excel` | Genera y descarga el .xlsx |
 | `POST /api/samples/load` | Carga los ejemplos precargados en la sesión |
 | `DELETE /api/session` | Reinicia la sesión |
+| `GET /api/settings` | Parámetros ajustables de la sesión: clave, etiqueta, ayuda, valor, defecto, mínimo, máximo, paso, tipo y si es avanzado (lista blanca en `config/ajustes.json`) |
+| `PUT /api/settings` | Body `{valores: {clave: número}}`. Valida lista blanca y rangos (`CITATION_SHOW_MIN` ≤ `CITATION_FUZZY_MIN`; `MAX_PARES` nunca por encima del defecto del stage), descarta claves desconocidas y guarda en la sesión |
+| `DELETE /api/settings` | Restablece los defaults de la sesión |
 | `GET /api/health` | Estado + ping al gateway |
 
 ## Sesión y jobs

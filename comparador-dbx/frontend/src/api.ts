@@ -1,5 +1,5 @@
 import type {
-  ArbolDocOut, ComparacionIn, ComparacionOut, DocumentoOut, DocumentoPatch, ErrorNegocio, HealthOut,
+  AjustesIn, AjustesOut, ArbolDocOut, ComparacionIn, ComparacionOut, DocumentoOut, DocumentoPatch, ErrorNegocio, HealthOut,
   JobOut, SeccionOut, SesionOut, Tipo,
 } from "./tipos";
 
@@ -51,5 +51,8 @@ export const api = {
   comparacion: (id: string) => pedir<ComparacionOut>(`/comparisons/${id}`),
   guardarConclusion: (id: string, texto: string) => pedir<ComparacionOut>(`/comparisons/${id}/conclusion`, json("PUT", { texto })),
   urlExcel: (id: string) => `/api/comparisons/${id}/excel`,
+  ajustes: () => pedir<AjustesOut>("/settings"),
+  guardarAjustes: (p: AjustesIn) => pedir<AjustesOut>("/settings", json("PUT", p)),
+  restablecerAjustes: () => pedir<AjustesOut>("/settings", { method: "DELETE" }),
   ejemplo: () => pedir<DocumentoOut[]>("/samples/load", { method: "POST" }),
 };
