@@ -12,7 +12,7 @@
 window.TABLERO = {
   actualizado: "2026-10-19",
   rama: "feat/mvp-e2e",
-  ultimo_commit: "c41cc17 feat: panel Ajustes por sesión (RF-19), una comparación a la vez y tope de sesiones, agente ux-ui",
+  ultimo_commit: "3e9f93b feat(deploy): notebook 07 de despliegue por SDK en la carpeta del usuario",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -42,7 +42,7 @@ window.TABLERO = {
     { id: "D0", fase: "D", tipo: "hito", estado: "revision", titulo: "API FastAPI + sesión en memoria",
       nota: "API FastAPI (docs/11) con sesión en memoria, una comparación a la vez por sesión y MAX_SESIONES=20 (docs/14 #32); hallazgos de appsec corregidos en f05ad77. Sin APROBADO de qa-ia.", commit: "ca88474" },
     { id: "D1", fase: "D", tipo: "hito", estado: "en_curso", titulo: "App en Databricks Free (app.yaml, < 10 MB)",
-      nota: "app.yaml y docs/16 (despliegue) listos; login de Databricks hecho por el usuario. Falta desplegar y probar Docling dentro del contenedor. Los datos de Foundry los pone el usuario en el deploy (REEMPLAZAR en app.yaml)." },
+      nota: "App desplegada y RUNNING en Databricks Free con 07_desplegar.ipynb (3e9f93b; límite de 3 apps). Identidad por headers x-forwarded-* comprobada con token del CLI (falta probar en navegador). No es hecho: falta health con el LLM real, probar Docling dentro del contenedor y APROBADO de qa-ia. Los datos de Foundry los pone el usuario en el deploy (REEMPLAZAR en app.yaml)." },
     { id: "D2", fase: "D", tipo: "hito", estado: "revision", titulo: "Ejemplos precargados (samples/)",
       nota: "Ejemplo precargado con texto de la ley versionado (OK del usuario). Los embeddings no van precomputados: se calculan al comparar (diferencia anotada).", commit: "ca88474" },
     { id: "U0", fase: "U", tipo: "hito", estado: "revision", titulo: "UI mínima en verde y blanco",
@@ -119,7 +119,15 @@ window.TABLERO = {
     { id: "A-22", fase: "L", tipo: "actividad", estado: "revision", titulo: "Rama feat/mvp-e2e lista para integrar (4 commits sobre main)",
       nota: "ca88474, 5edd263, f05ad77, c41cc17. Sin APROBADO de qa-ia (88 % de coverage de la lógica determinista, bandit limpio). Diferencias con docs/13 anotadas en implementacion/README.md." },
     { id: "P-19", fase: "Demo", tipo: "pendiente", estado: "por_hacer", titulo: "Desplegar en Databricks Apps y probar Docling en el contenedor",
-      nota: "Login hecho. Datos de Foundry: los pone el usuario en el deploy (REEMPLAZAR en app.yaml). Ver docs/16." },
+      nota: "Despliegue hecho (app RUNNING, 3e9f93b). Pendiente: probar Docling en el contenedor y health con LLM real. Datos de Foundry: los pone el usuario (REEMPLAZAR en app.yaml). Ver docs/16." },
+    { id: "P-24", fase: "D", tipo: "pendiente", estado: "por_hacer", titulo: "Comprobar la identidad x-forwarded-* en el navegador",
+      nota: "Comprobada solo con token del CLI; falta abrir la app en navegador (la hace el usuario)." },
+    { id: "P-25", fase: "D", tipo: "pendiente", estado: "por_hacer", titulo: "Health con LLM real y Docling en el contenedor (criterio de D1)",
+      nota: "Sin esta evidencia ni APROBADO de qa-ia, D1 no pasa a hecho." },
+    { id: "A-24", fase: "D", tipo: "actividad", estado: "hecho", titulo: "Notebook 07_desplegar.ipynb: despliegue por SDK en la carpeta del usuario, secreto READ",
+      nota: "Con docs/16 e implementacion/README.md actualizados. La app escribe en la carpeta de su service principal pero no se usa; no hay volumen UC disponible.", commit: "3e9f93b" },
+    { id: "D-46", fase: "D", tipo: "decision", estado: "hecho", titulo: "Regla 8 intacta: sin volumen UC aunque la app escriba en la carpeta de su service principal",
+      nota: "Decidido por el usuario: no se usa esa escritura; estado en memoria y /tmp (CLAUDE.md regla 8).", commit: "3e9f93b" },
     { id: "P-20", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "Medir MOCK-DEMO-02 (R) y MOCK-DEMO-03 (A) con el juez real",
       nota: "Solo se midió MOCK-DEMO-01 (4 x L). Necesario para el criterio de L4 en docs/13." },
     { id: "P-21", fase: "U", tipo: "pendiente", estado: "por_hacer", titulo: "Prueba con un auditor: completar el flujo sin ayuda",
@@ -321,6 +329,7 @@ window.TABLERO = {
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-19", texto: "feat/mvp-e2e (3e9f93b): app desplegada y RUNNING en Databricks Free con 07_desplegar.ipynb (SDK, secreto READ; límite de 3 apps); identidad x-forwarded-* comprobada con token del CLI (falta navegador, P-24); regla 8 intacta por decisión del usuario (D-46). D1 sigue en_curso: falta health con LLM real, Docling en contenedor y APROBADO de qa-ia (P-25); nada pasa a hecho." },
     { fecha: "2026-10-19", texto: "feat/mvp-e2e (c41cc17): MVP tal cual está de punta a punta (docs/14 #32): juez por par, agregación A/L/R/X/P, API FastAPI, interfaz React, ejemplo y app.yaml; 50 pares reales con Groq + bge-m3, 4 x L, Excel generado. Pasan a revision L4, L6, D0, D2 y U0; D1 en curso (falta desplegar). Sin APROBADO de qa-ia (88 % de coverage, bandit limpio): nada en hecho. Panel Ajustes RF-19 (#33), una comparación a la vez y MAX_SESIONES=20; agente ux-ui; riesgo de inyección aceptado como deuda (#34, S-17); poda de ramas y hardening BAJA pospuestos." },
     { fecha: "2026-10-08", texto: "Auditoría del PO sin cambios de código: propuesta de excluir secciones que no sirven para comparar (EN PLAN, extiende P-17, decisiones D-37); desvíos vs docs: fecha de demo vencida (D-38), L5 adelantado con guion (D-39), colores de marca (D-40) y documentación atrasada (A-20); A-16 inexacta (CI sin commit)." },
     { fecha: "2026-10-08", texto: "main (a55ec66): L2 v0.3.1 con tablas atómicas, hojas de firmas fuera, DOCLING_DEVICE=auto y tabla de recuperación (A-19, probado por el usuario en su Mac); nuevas mejoras P-17 (selección y filtro de secciones, pendiente de aprobación) y P-18 (barra de progreso y logger, decidida)." },
