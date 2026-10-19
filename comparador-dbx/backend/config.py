@@ -20,6 +20,8 @@ from dotenv import load_dotenv
 RAIZ = Path(__file__).resolve().parent.parent  # comparador-dbx/
 PROMPTS_DIR = RAIZ / "backend" / "prompts"
 
+if os.environ.get("ENV_FILE"):                       # otro archivo de secretos (p. ej. el config/.env de otro worktree): se lee en su sitio, no se copia
+    load_dotenv(os.environ["ENV_FILE"], override=False)
 load_dotenv(RAIZ / "config" / ".env", override=False)
 STAGES = ("dev", "sandbox", "mvp")
 if os.environ.get("STAGE"):
@@ -97,9 +99,12 @@ class Settings:
     LLM_RETRIES: int = int(_env("LLM_RETRIES"))
     CITATION_FUZZY_MIN: float = float(_env("CITATION_FUZZY_MIN"))
     CITATION_SHOW_MIN: float = float(_env("CITATION_SHOW_MIN"))
+    MAX_FRAGMENTO_DIFUSO: int = int(_env("MAX_FRAGMENTO_DIFUSO"))
 
     # Sesión
     SESSION_TTL_HOURS: int = int(_env("SESSION_TTL_HOURS"))
+    MAX_DOCS_SESION: int = int(_env("MAX_DOCS_SESION"))
+    MAX_PARES: int = int(_env("MAX_PARES"))
 
     # Papel de trabajo
     COLOR_PRIMARIO: str = _env("COLOR_PRIMARIO")

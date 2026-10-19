@@ -15,3 +15,7 @@ transformers==5.19.0    # 9 CVE en 4.57.6
 # Papel de trabajo en Excel (L5, docs/12: pandas y openpyxl permitidas)
 pandas==3.0.6           # arma la tabla del Anexo técnico (Hoja 2) y los conteos
 openpyxl==3.1.5         # escribe el .xlsx del papel de trabajo
+# API y servidor (D0, docs/12)
+fastapi==0.146.0
+uvicorn==0.54.0
+python-multipart==0.0.32   # subida de archivos (multipart) en POST /api/documents

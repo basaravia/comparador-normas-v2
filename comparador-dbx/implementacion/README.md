@@ -14,9 +14,10 @@ Tablero de avance estilo Jira: [`tablero/index.html`](../tablero/index.html) (ab
 | L1 · Ingesta | ✅ Cumplido | `feat/fase-l-local` · `feat(L1): …` | `notebooks/01_ingesta.ipynb` |
 | L2 · Seccionado | 🚧 En curso (esqueleto, sin evidencia) | `fix/l2-estado-real` | `notebooks/02_seccionado.ipynb` (sin ejecutar) |
 | L3 · Recuperación | 🚧 Entregado a `qa-ia` y `appsec` (sin cerrar) | `feat/l3-recuperacion` | `notebooks/03_recuperacion.ipynb` |
-| L4 · Juez | Pendiente | — | — |
+| L4 · Juez (versión MVP: veredicto por par) | 🚧 Entregado, sin cerrar (sin `qa-ia`) | `feat/mvp-e2e` | cubierto por `06_e2e.ipynb` |
 | L5 · Papel | 🔎 Entregado a `qa-ia` y `appsec` (sin cerrar) | `feat/l5-papel` | `notebooks/05_papel.ipynb` |
-| L6 · Extremo a extremo | Pendiente | — | — |
+| L6 · Extremo a extremo | 🚧 Entregado, sin cerrar (sin `qa-ia`) | `feat/mvp-e2e` | `notebooks/06_e2e.ipynb` |
+| D0 · API · D1 · App · D2 · Ejemplo · U0 · UI | 🚧 Entregado en `feat/mvp-e2e`; falta el despliegue en Databricks | `feat/mvp-e2e` | — |
 
 ## Cómo correrlo en local
 
@@ -440,6 +441,27 @@ LLM08: un índice por tipo de documento, en memoria, sin persistir; no se mezcla
 ### Origen (repo de referencia v6)
 `chunker.py` ← `backend/src/chunking.py` (corte por párrafos/numerales/literales, solape, estimación de tokens por palabras; sin pandas); `index.py` ← idea de `search_engine.py` (`IndexFlatIP` + vectores L2); `candidatos.py` y `pares.py`: nuevos según docs/09.
 ---
+
+## MVP de punta a punta (rama `feat/mvp-e2e`, 19 oct 2026)
+Rama de **MVP tal cual está** (docs/14 #32): juez por par con el veredicto de docs/09 §3 (sin la descomposición en requisitos de RF-18 y sin la consulta por requisito, que siguen en `feat/l4-verificacion-descomposicion` y `docs/l4-requisitos-y-brechas`), API, interfaz y despliegue en Databricks Apps.
+
+| Módulo | Qué hace |
+|---|---|
+| `backend/engine/juez.py` | `juzgar_par`, `juzgar_pares` (asyncio + semáforo `LLM_CONCURRENCY`): 1 llamada por par único; verifica `cita_norma` y `cita_manual` contra el texto fuente (reemplaza por el fragmento real si ≥ `CITATION_FUZZY_MIN`) y deja `requiere_revision`. Ante un 429 del proveedor espera y reintenta (hasta 6 veces); un JSON inválido tras el reintento no aborta. |
+| `backend/engine/verificacion.py` | Verificación de fragmentos con posiciones (misma pieza que en `feat/l4-verificacion-descomposicion`; con las correcciones de appsec: cifras y negaciones, tope de comparación difusa). |
+| `backend/engine/agregacion.py` | `marca_articulo` (A/L/R/X/P, docs/09 §5; sin veredictos válidos → R, nunca A), `naturaleza_articulo`, `controles_sin_base`. |
+| `backend/engine/servicio.py` | Encadena ingesta → Docling (cola de 1 worker) → seccionado → índices FAISS → pares → juez → agregación → conclusión → `EntradaPapel`. `subir`, `procesar`, `arbol`, `seccion`, `comparar`, `guardar_conclusion`, `excel`, `cargar_ejemplo`. Un manual por comparación (el papel tiene un solo manual). Tope `MAX_PARES`. |
+| `backend/core/sesiones.py` | Sesiones en memoria por cookie `session_id` (HttpOnly, SameSite=Lax), expiración `SESSION_TTL_HOURS`, directorio temporal por sesión. |
+| `backend/api/` · `backend/main.py` | Endpoints de docs/11 con el contrato de `backend/api/schemas.py`; errores `{codigo, mensaje}` en lenguaje de negocio; 410 si la sesión se perdió; cabeceras de seguridad; sirve `frontend/dist`. |
+| `frontend/` | React 18 + Vite + TS (Carga · Selección · Resultados), verde y blanco. `npm run build` genera `frontend/dist` (versionado). |
+| `samples/ejemplo.json` · `scripts/precompute_samples.py` | Ejemplo precargado (Arts. 31–48 de la ley LA/FT + MOCK-DEMO-01): secciones ya extraídas, sin Docling; los embeddings se calculan al comparar (dependen del modelo del stage). |
+| `app.yaml` | `uvicorn backend.main:app --workers 1`, `STAGE=mvp`, variables de Foundry con marcadores `REEMPLAZAR-…` y el token por `valueFrom`. |
+
+- **Configuración nueva** (`config/defaults.env`): `MAX_FRAGMENTO_DIFUSO`, `MAX_DOCS_SESION=8`, `MAX_PARES=600`; `ENV_FILE` (ruta de otro archivo de secretos, se lee en su sitio).
+- **Pruebas:** `tests/test_agregacion.py`, `test_juez.py`, `test_api.py`, `test_verificacion.py` (sin modelo) y `test_integracion_e2e.py` (Groq + `bge-m3` reales sobre el ejemplo: 1 artículo × 3 secciones → Excel).
+- **Medido en la Raspberry (sandbox, Groq `gpt-oss-120b` gratuito):** 4 artículos × 16 secciones = 50 pares en ~10 min (límite de 8000 tokens por minuto del plan gratuito; el juez espera y reintenta). Resultado: 4 × L, consistente con el golden de MOCK-DEMO-01 (parcial). Excel de 20 KB.
+- **Diferencias con la spec:** (1) sin los pasos 3a/3b de RF-18 ni la vía 1 por requisito (decisión #32); (2) un manual por comparación; (3) la indexación se hace al terminar el procesamiento o, si falta un tipo de documento, al comparar; (4) `GET /api/session` devuelve `comparacion_id` solo si la comparación ya terminó.
+- **Despliegue en Databricks Apps:** ver `docs/16-despliegue.md`.
 
 ## L5 · Papel de trabajo (APROBADO por `qa-ia`)
 

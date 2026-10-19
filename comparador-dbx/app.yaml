@@ -1,0 +1,17 @@
+# Databricks Apps (docs/12, docs/14 #17): el `command` no pasa por shell, así que no lleva --port; uvicorn toma UVICORN_HOST/UVICORN_PORT del entorno.
+# Un solo worker: el estado de sesión vive en memoria (CLAUDE.md regla 6).
+command: ["uvicorn", "backend.main:app", "--workers", "1"]
+env:
+  - name: STAGE
+    value: "mvp"
+  # Azure AI Foundry. Los REEMPLAZAR-… se cambian por los datos reales del workspace; el repo es público y NUNCA lleva endpoints ni tokens reales.
+  - name: FOUNDRY_AI_ENDPOINT
+    value: "REEMPLAZAR-endpoint-de-foundry"
+  - name: FOUNDRY_AI_API_VERSION
+    value: "REEMPLAZAR-api-version"
+  - name: FOUNDRY_AI_DEPLOYMENT
+    value: "REEMPLAZAR-deployment-del-llm"
+  - name: FOUNDRY_AI_EMBED_DEPLOYMENT
+    value: "REEMPLAZAR-deployment-de-embeddings"
+  - name: FOUNDRY_AI_TOKEN
+    valueFrom: "foundry-token"          # recurso de tipo secreto de la App (scope/clave en la consola de Databricks)

@@ -37,6 +37,7 @@ Estado al 1 oct 2026. **Decidido** = ya no se discute; **Calibrar** = valor inic
 |---|---|---|---|
 | 1 | Umbral de similitud | 0,30 | Depende del modelo de embeddings: se calibra por separado para `bge-m3` (dev) y `text-embedding-3-large` (demo) con los MOCK y la Hoja 2 |
 | 2 | Tamaño de sub-chunk | ~500 tokens, 15 % solapamiento | Recall en candidatos con los MOCK |
+| 32 | MVP tal cual está | Decidido (usuario, 19 oct 2026) | Se abre una rama de **MVP para terminar de punta a punta** (`feat/mvp-e2e`, worktree propio) con lo que ya existe: juez por par con el veredicto de docs/09 §3, agregación A/L/R/X/P, API, interfaz y despliegue en Databricks Apps. La descomposición en requisitos, el resaltado de brechas (RF-18) y la consulta por requisito (docs/14 #28, #30) **siguen por fases en su propio worktree** y se incorporan después. |
 | 8 | Detección de escaneo | 0,6 de páginas con texto | Con las normativas de `Normativa2026/` |
 | 9 | Concurrencia | 6 | Se ajusta al **límite de tasa del plan gratuito** (Groq / Databricks Free); en la demo, al del deployment de Foundry |
 | 10 | Rendimiento Docling | — | Tiempo y RAM con 100 páginas, primero en la Raspberry y luego en Databricks. Referencia de la v1: pico de 4,2 GB |

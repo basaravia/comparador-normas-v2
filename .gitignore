@@ -19,7 +19,7 @@ __pycache__/
 *.sqlite
 *.pkl
 models_cache/
-frontend/node_modules/
+node_modules/
 
 # Manual técnico en PDF: solo uso local, no se publica
 Manual_Tecnico_Comparador_Normativo_MVP.pdf
