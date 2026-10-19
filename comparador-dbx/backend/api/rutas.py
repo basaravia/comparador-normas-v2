@@ -69,6 +69,8 @@ def reiniciar(request: Request, response: Response):
 
 @router.post("/documents", response_model=list[S.DocumentoOut])
 def subir(s: Ses, archivos: Annotated[list[UploadFile], File()]):
+    if len(archivos) > settings.MAX_DOCS_SESION - len(s.docs):
+        raise servicio.ComparacionError("ERR-ING-004", f"Puedes cargar hasta {settings.MAX_DOCS_SESION} documentos por sesión. Reinicia la sesión para empezar de nuevo.")
     contenidos = [(a.filename or "documento.pdf", _leer(a)) for a in archivos]
     return servicio.subir_varios(s, contenidos, _cliente)
 

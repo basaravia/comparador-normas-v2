@@ -57,20 +57,26 @@ def subir(sesion: Sesion, nombre: str, contenido: bytes, cliente: ModelClient) -
         if len(sesion.docs) >= settings.MAX_DOCS_SESION:
             raise ComparacionError("ERR-ING-004", f"Puedes cargar hasta {settings.MAX_DOCS_SESION} documentos por sesión. Reinicia la sesión para empezar de nuevo.")
         doc_id = sesion.nuevo_id("D")
-    seguro = nombre_seguro(nombre)
-    carpeta = sesion.dir / doc_id
-    carpeta.mkdir(mode=0o700)
-    ruta = carpeta / seguro
-    ruta.write_bytes(contenido)
-    r = ingerir(ruta, cliente)
-    if not r["ok"]:
-        out = DocumentoOut(id=doc_id, nombre=seguro, estado="error", error=ErrorNegocio(codigo=r["codigo"], mensaje=r["mensaje"]))
-        doc = Doc(out=out)
-    else:
-        meta = Metadatos(**{k: str(v) for k, v in r["metadatos"].items() if k in Metadatos.model_fields})
-        out = DocumentoOut(id=doc_id, nombre=seguro, paginas=r["paginas"], tipo=r["tipo"], tipo_sugerido=r["tipo"] is not None, metadatos=meta,
-                           advertencias=[r["advertencia"]] if r.get("advertencia") else [])
-        doc = Doc(out=out, ruta=ruta, sha256=r["sha256"])
+        seguro = nombre_seguro(nombre)
+        sesion.docs[doc_id] = Doc(out=DocumentoOut(id=doc_id, nombre=seguro))        # cupo reservado dentro del lock: la comprobación de arriba cuenta también las subidas en curso
+    try:
+        carpeta = sesion.dir / doc_id
+        carpeta.mkdir(mode=0o700)
+        ruta = carpeta / seguro
+        ruta.write_bytes(contenido)
+        r = ingerir(ruta, cliente)
+        if not r["ok"]:
+            out = DocumentoOut(id=doc_id, nombre=seguro, estado="error", error=ErrorNegocio(codigo=r["codigo"], mensaje=r["mensaje"]))
+            doc = Doc(out=out)
+        else:
+            meta = Metadatos(**{k: str(v) for k, v in r["metadatos"].items() if k in Metadatos.model_fields})
+            out = DocumentoOut(id=doc_id, nombre=seguro, paginas=r["paginas"], tipo=r["tipo"], tipo_sugerido=r["tipo"] is not None, metadatos=meta,
+                               advertencias=[r["advertencia"]] if r.get("advertencia") else [])
+            doc = Doc(out=out, ruta=ruta, sha256=r["sha256"])
+    except BaseException:
+        with sesion.lock:
+            sesion.docs.pop(doc_id, None)        # libera el cupo reservado
+        raise
     with sesion.lock:
         sesion.docs[doc_id] = doc
     return out

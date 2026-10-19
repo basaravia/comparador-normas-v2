@@ -1,7 +1,7 @@
 """Contrato JSON de la API (docs/11). Lo que ve el frontend; nunca texto técnico ni trazas."""
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 Tipo = Literal["normativa", "manual_control"]
 Marca = Literal["A", "L", "R", "X", "P"]
@@ -40,7 +40,7 @@ class DocumentoPatch(BaseModel):
 
 
 class ProcesarIn(BaseModel):
-    doc_ids: list[str]
+    doc_ids: list[str] = Field(max_length=100)
 
 
 class JobOut(BaseModel):
@@ -90,8 +90,8 @@ class SeccionOut(BaseModel):
 
 
 class ComparacionIn(BaseModel):
-    articulo_ids: list[str]
-    seccion_ids: list[str]
+    articulo_ids: list[str] = Field(max_length=2000)
+    seccion_ids: list[str] = Field(max_length=2000)
 
 
 class FilaVia1(BaseModel):
@@ -139,7 +139,7 @@ class ComparacionOut(BaseModel):
 
 
 class ConclusionIn(BaseModel):
-    texto: str
+    texto: str = Field(max_length=20000)
 
 
 class SesionOut(BaseModel):

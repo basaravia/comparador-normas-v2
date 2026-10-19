@@ -119,7 +119,7 @@ class ModelClient:
                 return esquema.model_validate_json(respuesta)
             except ValidationError as e:
                 # Sin `input`: no repetir al log ni al modelo fragmentos de normas o manuales.
-                errores = json.dumps(e.errors(include_url=False, include_input=False), ensure_ascii=False, default=str)
+                errores = json.dumps([{"campo": err["loc"], "tipo": err["type"]} for err in e.errors(include_url=False, include_input=False)], ensure_ascii=False, default=str)
                 log.warning("JSON inválido del LLM (intento %d): %s", intento, errores[:300])
                 mensajes += [
                     {"role": "assistant", "content": respuesta},
