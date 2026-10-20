@@ -17,6 +17,29 @@ from backend.models import Par, Seccion, Veredicto
 log = logging.getLogger(__name__)
 
 
+class Observador:
+    """Recibe los eventos reales del juez (por defecto no hace nada). `servicio.py` lo usa para el progreso en vivo (docs/ux/mejora-experiencia-v1.md)."""
+
+    def empieza(self, par: Par) -> None: ...
+    def espera(self, par: Par, segundos: int, intento: int, maximo: int) -> None: ...
+    def reanuda(self, par: Par) -> None: ...
+    def termina(self, par: Par, hechos: int, total: int) -> None: ...
+    def cancelado(self) -> bool:
+        return False
+
+
+class Cancelado(Exception):
+    """El auditor canceló la comparación: no se lanzan más llamadas (las que ya van en curso terminan)."""
+
+
+def _dormir(segundos: int, obs: Observador) -> None:
+    """Espera de a 1 s para poder cancelar sin quedarse dormido."""
+    for _ in range(segundos):
+        if obs.cancelado():
+            raise Cancelado()
+        time.sleep(1)
+
+
 def _ruta(s: Seccion) -> str:
     return " › ".join(s.ruta) or s.identificador
 
@@ -35,8 +58,10 @@ def _verificar_cita(cita: str | None, texto: str, s: Settings) -> tuple[str | No
     return (v.texto_real or None), False            # `dudoso`: el fragmento real más cercano; `no_encontrado`: vacío
 
 
-def juzgar_par(par: Par, articulo: Seccion, seccion: Seccion, nombres: dict[str, str], cliente: ModelClient, s: Settings = settings) -> Par:
+def juzgar_par(par: Par, articulo: Seccion, seccion: Seccion, nombres: dict[str, str], cliente: ModelClient, s: Settings = settings,
+               obs: Observador | None = None) -> Par:
     """Juzga un par y devuelve el mismo `Par` con veredicto, citas verificadas y `requiere_revision`. Un JSON inválido tras el reintento no aborta."""
+    obs = obs or Observador()
     sistema, plantilla = cargar_prompt("juez")
     usuario = rellenar_prompt(plantilla, doc_norma=nombres.get(articulo.doc_id, articulo.doc_id), ruta_articulo=_ruta(articulo),
                               texto_articulo=articulo.texto_literal, doc_manual=nombres.get(seccion.doc_id, seccion.doc_id),
@@ -51,8 +76,11 @@ def juzgar_par(par: Par, articulo: Seccion, seccion: Seccion, nombres: dict[str,
             return par
         except LLMUnavailableError as e:
             if _limite_de_tasa(e) and intento < s.LLM_INTENTOS_LIMITE:
-                log.info("Par %s: límite de tasa del proveedor, espera %d s", par.id, s.LLM_ESPERA_LIMITE_S * intento)
-                time.sleep(s.LLM_ESPERA_LIMITE_S * intento)
+                espera = s.LLM_ESPERA_LIMITE_S * intento
+                log.info("Par %s: límite de tasa del proveedor, espera %d s", par.id, espera)
+                obs.espera(par, espera, intento, s.LLM_INTENTOS_LIMITE)
+                _dormir(espera, obs)
+                obs.reanuda(par)
                 continue
             raise
     cita_n, ok_n = _verificar_cita(v.cita_norma, articulo.texto_literal, s)
@@ -64,8 +92,10 @@ def juzgar_par(par: Par, articulo: Seccion, seccion: Seccion, nombres: dict[str,
 
 
 async def juzgar_pares(pares: list[Par], secciones: dict[str, Seccion], nombres: dict[str, str], cliente: ModelClient,
-                       s: Settings = settings, progreso: Callable[[int, int], None] | None = None) -> list[Par]:
+                       s: Settings = settings, progreso: Callable[[int, int], None] | None = None,
+                       obs: Observador | None = None) -> list[Par]:
     """Juzga todos los pares con concurrencia `LLM_CONCURRENCY`. Si el proveedor cae (LLMUnavailableError) se cancela todo y la excepción sube."""
+    obs = obs or Observador()
     sem, hechos, total = asyncio.Semaphore(s.LLM_CONCURRENCY), 0, len(pares)
     t0 = time.perf_counter()
     log.info("Juez: %d pares, concurrencia %d", total, s.LLM_CONCURRENCY)
@@ -73,8 +103,12 @@ async def juzgar_pares(pares: list[Par], secciones: dict[str, Seccion], nombres:
     async def uno(p: Par) -> None:
         nonlocal hechos
         async with sem:
-            await asyncio.to_thread(juzgar_par, p, secciones[p.articulo_id], secciones[p.seccion_id], nombres, cliente, s)
+            if obs.cancelado():
+                raise Cancelado()
+            obs.empieza(p)
+            await asyncio.to_thread(juzgar_par, p, secciones[p.articulo_id], secciones[p.seccion_id], nombres, cliente, s, obs)
         hechos += 1
+        obs.termina(p, hechos, total)
         if progreso:
             progreso(hechos, total)
 

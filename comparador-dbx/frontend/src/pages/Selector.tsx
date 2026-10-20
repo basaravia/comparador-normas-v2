@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
-import { DualTree, hojas } from "../components/DualTree";
+import { hojas, seleccionInicial, seleccionTrasRecarga } from "../arbol.ts";
+import { DualTree } from "../components/DualTree";
 import { useStore } from "../store";
 import type { ArbolDocOut, SeccionOut } from "../tipos";
-
-const inicialSel = (arboles: ArbolDocOut[]) =>
-  new Set(arboles.flatMap((a) => a.nodos.flatMap(hojas)).filter((h) => h.seleccionada && !h.excluida).map((h) => h.id));
 
 export function Selector() {
   const { e, d } = useStore();
@@ -18,7 +16,7 @@ export function Selector() {
     (async () => {
       try {
         const [normas, manuales] = await Promise.all([api.arbol("normativa"), api.arbol("manual_control")]);
-        d({ t: "arboles", normas, manuales, seleccion: new Set([...inicialSel(normas), ...inicialSel(manuales)]) });
+        d({ t: "arboles", normas, manuales, seleccion: seleccionTrasRecarga(e.seleccion, [...(e.normas ?? []), ...(e.manuales ?? [])], normas, manuales) });
       } catch (x) {
         if (x instanceof ApiError && x.sesionPerdida) d({ t: "sesionPerdida" });
         else setError(x instanceof ApiError ? x.message : "No pudimos cargar las secciones.");

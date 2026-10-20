@@ -49,7 +49,23 @@ _RED_BLOQUEADA = ("SSLError", "MaxRetryError", "ConnectionError", "LocalEntryNot
 DISPOSITIVOS = {"auto", "cpu", "cuda", "mps"}                    # `auto`: GPU si hay (CUDA, Metal, ROCm); si no, CPU
 MAX_CACHE = 8                                                   # PDFs en memoria (RAM acotada)
 _CACHE: dict[str, list[dict]] = {}                              # sha256 → bloques
+_ACTUAL: dict[Path, "subprocess.Popen"] = {}                     # PDF que se está leyendo → su subproceso (para cancelar)
+_CANCELADOS: set[Path] = set()
 _COMANDO = [sys.executable, "-m", "backend.extraction.docling_worker"]  # reemplazable en pruebas del control
+
+
+def cancelar(ruta: Path) -> None:
+    """Cancela la lectura de ese PDF: si ya corre, mata su subproceso; si sigue en cola, no arrancará. Solo afecta a ese archivo (ruta propia de la sesión)."""
+    ruta = Path(ruta)
+    _CANCELADOS.add(ruta)
+    proc = _ACTUAL.get(ruta)
+    if proc is not None:
+        _matar(proc, signal.SIGKILL)
+
+
+def olvidar_cancelacion(ruta: Path) -> None:
+    """Quita la marca de cancelación de un PDF (al empezar o terminar un job): un reintento no debe heredar una cancelación vieja."""
+    _CANCELADOS.discard(Path(ruta))
 
 
 def limpiar_cache() -> None:
@@ -70,6 +86,15 @@ def extraer(ruta: Path, progreso: Callable[[int, int], None] | None = None) -> l
 
 
 def _trabajo(ruta: Path, sha256: str, progreso) -> list[dict]:
+    try:
+        return _trabajo_sin_cancelar(ruta, sha256, progreso)
+    finally:
+        _CANCELADOS.discard(ruta)
+
+
+def _trabajo_sin_cancelar(ruta: Path, sha256: str, progreso) -> list[dict]:
+    if ruta in _CANCELADOS:
+        raise ExtraccionError("Lectura cancelada antes de empezar.", "ERR-EXT-005", "Se canceló la lectura del documento.")
     if sha256 in _CACHE:  # otro trabajo encolado antes pudo extraer el mismo PDF
         log.info("Caché de extracción: %s", sha256[:12])
         return _CACHE[sha256]
@@ -149,6 +174,7 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
         # start_new_session: el subproceso tiene su propia sesión y se mata con sus procesos hijos.
         proc = subprocess.Popen(comando, stdout=subprocess.PIPE, stderr=errores, text=True,  # nosec B603
                                 env=entorno, cwd=RAIZ, start_new_session=True)
+        _ACTUAL[ruta] = proc
 
         def cortar():
             vencio.set()
@@ -177,9 +203,13 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
                 proc.wait()
         finally:
             reloj.cancel()
+            _ACTUAL.pop(ruta, None)
             if proc.poll() is None:
                 _matar(proc, signal.SIGKILL)
                 proc.wait()
+
+        if ruta in _CANCELADOS:
+            raise ExtraccionError("Lectura cancelada por el auditor.", "ERR-EXT-005", "Se canceló la lectura del documento.")
 
         if vencio.is_set():
             raise ExtraccionError(f"Docling superó {s.DOCLING_TIMEOUT_S} s y se terminó el proceso.", "ERR-EXT-002",

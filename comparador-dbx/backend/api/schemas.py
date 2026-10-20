@@ -43,10 +43,65 @@ class ProcesarIn(BaseModel):
     doc_ids: list[str] = Field(max_length=100)
 
 
+class ProgresoDoc(BaseModel):
+    """Avance real de la lectura de un documento (docs/ux/mejora-experiencia-v1.md §d). `lote`: páginas [ini, fin] de la tanda que Docling está leyendo."""
+    etapa: str = ""
+    paginas_hechas: int = 0
+    paginas_total: int = 0
+    lote: list[int] = []
+
+
+class IndiceDoc(BaseModel):
+    """Lo que se encontró al armar el índice del documento (conteos reales del seccionado)."""
+    secciones: int = 0
+    articulos: int = 0              # hojas que se comparan
+    excluidas: int = 0
+    por_revisar: int = 0            # secciones detectadas por longitud
+
+
+class FragmentoOut(BaseModel):
+    identificador: str
+    documento: str
+    pagina: int = 0
+    preview: str = Field(default="", max_length=200)      # texto LITERAL del documento (≤160 letras)
+
+
+class ParEnCurso(BaseModel):
+    par_id: str
+    articulo: FragmentoOut
+    seccion: FragmentoOut
+    score: float = 0.0
+    origen: list[str] = []
+    desde_ts: float = 0.0
+
+
+class VeredictoVivo(BaseModel):
+    """Un par ya juzgado, para la vista en vivo. `comentario` es salida del modelo: el frontend lo muestra como texto plano y bajo demanda."""
+    seq: int
+    par_id: str
+    articulo: str
+    seccion: str
+    cobertura: Literal["total", "parcial", "nula", "sin_veredicto"]
+    naturaleza: str = ""
+    confianza: float = 0.0
+    cita_norma_ok: bool = False
+    cita_manual_ok: bool = False
+    requiere_revision: bool = False
+    comentario: str = Field(default="", max_length=300)
+
+
+class EsperaLimite(BaseModel):
+    """El proveedor del modelo pidió esperar (límite de tasa, 429)."""
+    activa: bool = False
+    hasta_ts: float = 0.0
+    intento: int = 0
+    max: int = 0
+
+
 class JobOut(BaseModel):
     job_id: str
     tipo: Literal["procesamiento", "comparacion"]
-    estado: Literal["en_cola", "en_curso", "listo", "error"]
+    estado: Literal["en_cola", "en_curso", "listo", "error", "cancelado"]
     etapa: str = ""                         # texto de negocio: "Extrayendo el texto", "Juzgando pares"…
     doc_actual: str = ""
     progreso: float = 0.0                   # 0-1
@@ -54,6 +109,23 @@ class JobOut(BaseModel):
     errores: list[ErrorNegocio] = []
     documentos: dict[str, str] = {}         # doc_id -> estado (procesamiento)
     comparacion_id: Optional[str] = None    # comparación (cuando tipo == "comparacion")
+    # Progreso detallado (todo real y en memoria; sin llamadas extra al LLM ni a Docling)
+    ahora_ts: float = 0.0                                      # reloj del servidor al responder: el frontend calcula tiempos sin depender de su propio reloj
+    inicio_ts: float = 0.0
+    ultimo_evento_ts: float = 0.0
+    cancelable: bool = False
+    por_documento: dict[str, ProgresoDoc] = {}                 # procesamiento
+    indice: dict[str, IndiceDoc] = {}                          # procesamiento: al terminar el seccionado de cada documento
+    indexacion_hechos: int = 0                                 # procesamiento: lotes de embeddings
+    indexacion_total: int = 0
+    fase: str = ""                                             # comparación: recuperando / juzgando / armando
+    pares_total: int = 0
+    pares_hechos: int = 0
+    pares_en_curso: list[ParEnCurso] = []
+    ultimos_veredictos: list[VeredictoVivo] = []               # anillo de los últimos 20
+    conteo_cobertura: dict[str, int] = {}                      # provisional: total / parcial / nula / sin_veredicto
+    a_revision: int = 0
+    espera_limite: EsperaLimite = EsperaLimite()
 
 
 class NodoOut(BaseModel):
@@ -127,7 +199,7 @@ class FilaVia2(BaseModel):
 
 class ComparacionOut(BaseModel):
     id: str
-    estado: Literal["en_curso", "listo", "error"]
+    estado: Literal["en_curso", "listo", "error", "cancelado"]
     conteos: dict[str, int] = {}
     via1: list[FilaVia1] = []
     via2: list[FilaVia2] = []

@@ -31,10 +31,20 @@ export interface DocumentoOut {
 export interface DocumentoPatch { tipo?: Tipo | null; metadatos?: Partial<Metadatos> | null }
 export interface ProcesarIn { doc_ids: string[] }
 
+export interface ProgresoDoc { etapa: string; paginas_hechas: number; paginas_total: number; lote: number[] }
+export interface IndiceDoc { secciones: number; articulos: number; excluidas: number; por_revisar: number }
+export interface FragmentoOut { identificador: string; documento: string; pagina: number; preview: string }
+export interface ParEnCurso { par_id: string; articulo: FragmentoOut; seccion: FragmentoOut; score: number; origen: string[]; desde_ts: number }
+export interface VeredictoVivo {
+  seq: number; par_id: string; articulo: string; seccion: string; cobertura: "total" | "parcial" | "nula" | "sin_veredicto";
+  naturaleza: string; confianza: number; cita_norma_ok: boolean; cita_manual_ok: boolean; requiere_revision: boolean; comentario: string;
+}
+export interface EsperaLimite { activa: boolean; hasta_ts: number; intento: number; max: number }
+
 export interface JobOut {
   job_id: string;
   tipo: "procesamiento" | "comparacion";
-  estado: "en_cola" | "en_curso" | "listo" | "error";
+  estado: "en_cola" | "en_curso" | "listo" | "error" | "cancelado";
   etapa: string;
   doc_actual: string;
   progreso: number;
@@ -42,6 +52,22 @@ export interface JobOut {
   errores: ErrorNegocio[];
   documentos: Record<string, string>;
   comparacion_id: string | null;
+  ahora_ts: number;
+  inicio_ts: number;
+  ultimo_evento_ts: number;
+  cancelable: boolean;
+  por_documento: Record<string, ProgresoDoc>;
+  indice: Record<string, IndiceDoc>;
+  indexacion_hechos: number;
+  indexacion_total: number;
+  fase: string;
+  pares_total: number;
+  pares_hechos: number;
+  pares_en_curso: ParEnCurso[];
+  ultimos_veredictos: VeredictoVivo[];
+  conteo_cobertura: Record<string, number>;
+  a_revision: number;
+  espera_limite: EsperaLimite;
 }
 
 export interface NodoOut {
@@ -103,7 +129,7 @@ export interface FilaVia2 {
 
 export interface ComparacionOut {
   id: string;
-  estado: "en_curso" | "listo" | "error";
+  estado: "en_curso" | "listo" | "error" | "cancelado";
   conteos: Record<string, number>;
   via1: FilaVia1[];
   via2: FilaVia2[];

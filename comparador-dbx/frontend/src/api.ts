@@ -45,6 +45,8 @@ export const api = {
   editarDoc: (id: string, p: DocumentoPatch) => pedir<DocumentoOut>(`/documents/${id}`, json("PATCH", p)),
   procesar: (doc_ids: string[]) => pedir<JobOut>("/documents/process", json("POST", { doc_ids })),
   job: (id: string) => pedir<JobOut>(`/jobs/${id}`),
+  cancelar: (id: string) => pedir<JobOut>(`/jobs/${id}/cancel`, { method: "POST" }),
+  miniatura: (docId: string, pagina: number) => `/api/documents/${encodeURIComponent(docId)}/pages/${pagina}/thumb`,
   arbol: (tipo: Tipo) => pedir<ArbolDocOut[]>(`/sections/tree?tipo=${tipo}`),
   seccion: (id: string) => pedir<SeccionOut>(`/sections/${encodeURIComponent(id)}`),
   comparar: (p: ComparacionIn) => pedir<JobOut>("/comparisons", json("POST", p)),

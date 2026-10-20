@@ -22,6 +22,8 @@
 | RF-16 | Botón "Nueva sesión" con confirmación | DEBERÍA |
 | RF-17 | Secciones no comparables (carátula, preámbulo, índice, control de versiones, anexos…): se **identifican automáticamente**, quedan en la tabla con su motivo, **no entran** a la recuperación ni a la doble vía, y el auditor puede reincluir o excluir cualquiera (decisión del usuario, 8 oct 2026; [14](14-puntos-abiertos.md) #24) | DEBE |
 | RF-19 | Panel **Ajustes** (menú de la barra superior): el auditor cambia por sesión un conjunto acotado de parámetros de búsqueda y verificación, con etiqueta de negocio, rango validado en el servidor, «Restablecer» y exportar/importar un archivo JSON para reutilizarlos. Cada comparación muestra los ajustes que usó | DEBERÍA |
+| RF-20 | **Progreso en vivo**, solo con eventos reales (nada decorativo que finja razonamiento): paso 1 con etapas, una celda por página del PDF (miniatura de la página ya leída; pulso en la tanda que se está leyendo), tiempo transcurrido, estimado con rango tras la primera medición y «última novedad hace N s», y los conteos reales del índice armado; paso 2 con los pares que se analizan (fragmentos literales, página, similitud, origen), los últimos veredictos (cobertura, confianza, citas verificadas o por revisar; el comentario del modelo solo bajo demanda y como texto plano), conteos provisionales por par y aviso de espera cuando el proveedor limita el uso (429). Aviso al terminar en el título de la pestaña | DEBERÍA |
+| RF-21 | **Cancelar** el procesamiento de documentos (se termina la lectura del PDF en curso; lo ya leído se conserva) o la comparación (no se lanzan más pares; las llamadas al modelo ya enviadas terminan y el resultado parcial se descarta) | DEBERÍA |
 
 ## No funcionales
 

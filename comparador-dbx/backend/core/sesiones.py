@@ -59,6 +59,7 @@ class Sesion:
     comparaciones: dict[str, Comparacion] = field(default_factory=dict)
     indice_norma: Optional[Indice] = None
     indice_manual: Optional[Indice] = None
+    cancelados: set[str] = field(default_factory=set)         # ids de jobs que el auditor canceló
     indexados: set[str] = field(default_factory=set)          # ids de los documentos ya incluidos en los índices
     lock: threading.RLock = field(default_factory=threading.RLock)
     contador: int = 0

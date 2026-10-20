@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" font-family="Arial, Helvetica, sans-serif" font-size="13">
+<title>Paso 2 · Comparando, con eventos reales (v1, baja fidelidad)</title>
+<style>
+.t{fill:#222}.g{fill:#777}.p{fill:#fff;stroke:#bbb}.ver{fill:#1E7B4F}
+.n circle{fill:#1E7B4F}.n text{fill:#fff;font-weight:bold;font-size:12px;text-anchor:middle}
+.btn{fill:#f2f2f2;stroke:#888}.lit{fill:#f4f4f4;stroke:#ccc}
+</style>
+<rect width="1200" height="860" fill="#fafafa"/>
+<rect width="1200" height="44" fill="#1E7B4F"/><text x="16" y="28" fill="#fff" font-size="16" font-weight="bold">Comparador normativo</text>
+<text x="20" y="76" class="t" font-size="18" font-weight="bold">Comparando tus normas con el manual</text>
+
+<!-- stepper -->
+<circle cx="40" cy="116" r="12" class="ver"/><text x="40" y="121" fill="#fff" text-anchor="middle">✔</text><text x="60" y="121" class="t">Buscando candidatos</text>
+<line x1="190" y1="116" x2="250" y2="116" stroke="#bbb"/>
+<circle cx="270" cy="116" r="12" class="ver"/><text x="270" y="121" fill="#fff" text-anchor="middle" font-weight="bold">2</text><text x="290" y="121" class="t" font-weight="bold">Juzgando pares</text>
+<line x1="400" y1="116" x2="460" y2="116" stroke="#bbb"/>
+<circle cx="480" cy="116" r="12" fill="#fff" stroke="#999"/><text x="480" y="121" class="g" text-anchor="middle">3</text><text x="500" y="121" class="g">Verificando citas y armando resultados</text>
+
+<!-- resumen -->
+<rect x="20" y="140" width="1160" height="86" class="p" rx="6"/>
+<text x="36" y="166" class="t" font-size="15"><tspan font-weight="bold">Par 128 de 412</tspan> · 31 %</text>
+<rect x="36" y="178" width="760" height="12" fill="#e5e5e5" rx="6"/><rect x="36" y="178" width="236" height="12" class="ver" rx="6"/>
+<text x="36" y="212" class="g">Transcurrido 4:20 · quedan unos <tspan font-weight="bold" class="t">8 a 12 min</tspan> (rango: depende del límite de uso del servicio de IA)</text>
+<rect x="1040" y="160" width="124" height="32" class="btn" rx="4"/><text x="1102" y="181" class="t" text-anchor="middle">Cancelar</text>
+<text x="1040" y="212" class="g" font-size="11">Se descartan los resultados parciales.</text>
+<rect x="830" y="154" width="190" height="60" fill="#fff8e6" stroke="#c98a00" rx="4"/>
+<text x="840" y="174" class="t" font-weight="bold">⏳ Esperando al servicio de IA</text>
+<text x="840" y="192" class="t" font-size="12">Límite de uso alcanzado.</text>
+<text x="840" y="207" class="t" font-size="12">Reanuda en 18 s (intento 2 de 3)</text>
+
+<!-- en curso -->
+<text x="20" y="256" class="t" font-weight="bold" font-size="15">Ahora se analizan (6 a la vez)</text>
+<rect x="20" y="266" width="560" height="190" class="p" rx="6"/>
+<text x="34" y="288" class="t"><tspan font-weight="bold">Art. 10</tspan> Conocimiento del cliente  ↔  <tspan font-weight="bold">Manual 3.2</tspan> Reporte de operaciones</text>
+<rect x="34" y="298" width="262" height="52" class="lit" rx="3"/><text x="42" y="316" class="g" font-size="11">Norma, pág. 9 (texto literal):</text><text x="42" y="334" class="t" font-size="11">"Las entidades deberán identificar y verificar…"</text>
+<rect x="306" y="298" width="262" height="52" class="lit" rx="3"/><text x="314" y="316" class="g" font-size="11">Manual, pág. 14 (texto literal):</text><text x="314" y="334" class="t" font-size="11">"El oficial de cumplimiento reporta a la UIAF…"</text>
+<text x="34" y="372" class="g">Similitud 0,62 · encontrado desde la norma y desde el manual · en análisis hace 7 s</text>
+<line x1="34" y1="386" x2="566" y2="386" stroke="#ddd"/>
+<text x="34" y="408" class="t"><tspan font-weight="bold">Art. 11</tspan> Debida diligencia ampliada ↔ <tspan font-weight="bold">Manual 4.1</tspan> Clientes PEP</text>
+<text x="34" y="428" class="g" font-size="12">… 4 pares más en análisis (clic en uno para ver sus textos completos)</text>
+<text x="34" y="446" class="g" font-size="11">Los textos son los del documento, nunca reescritos por el modelo.</text>
+
+<!-- veredictos -->
+<text x="610" y="256" class="t" font-weight="bold" font-size="15">Últimos veredictos del juez</text>
+<rect x="610" y="266" width="570" height="300" class="p" rx="6"/>
+<text x="624" y="288" class="g" font-size="11">Par</text><text x="840" y="288" class="g" font-size="11">Cobertura del par</text><text x="960" y="288" class="g" font-size="11">Confianza</text><text x="1040" y="288" class="g" font-size="11">Citas</text>
+<line x1="624" y1="294" x2="1166" y2="294" stroke="#ddd"/>
+<text x="624" y="316" class="t">Art. 9 ↔ Manual 3.1</text><text x="840" y="316" class="ver" style="fill:#1E7B4F" font-weight="bold">● Total</text><text x="960" y="316" class="t">0,91</text><text x="1040" y="316" class="ver" style="fill:#1E7B4F">✔ verificadas</text>
+<text x="624" y="344" class="t">Art. 8 ↔ Manual 3.4</text><text x="840" y="344" class="t" font-weight="bold">◐ Parcial</text><text x="960" y="344" class="t">0,74</text><text x="1040" y="344" class="ver" style="fill:#1E7B4F">✔ verificadas</text>
+<text x="624" y="362" class="g" font-size="11">Comentario del juez: "Cubre la identificación pero no la frecuencia de actualización."</text>
+<text x="624" y="390" class="t">Art. 7 ↔ Manual 2.2</text><text x="840" y="390" class="t" font-weight="bold">○ Nula</text><text x="960" y="390" class="t">0,88</text><text x="1040" y="390" style="fill:#8a5a00">⚠ revisar cita</text>
+<text x="624" y="418" class="t">Art. 6 ↔ Manual 3.2</text><text x="840" y="418" class="ver" style="fill:#1E7B4F" font-weight="bold">● Total</text><text x="960" y="418" class="t">0,83</text><text x="1040" y="418" class="ver" style="fill:#1E7B4F">✔ verificadas</text>
+<text x="624" y="446" class="g">… se muestran los últimos 20; el resto estará completo en Resultados.</text>
+<text x="624" y="548" class="g" font-size="11">El juez entrega un veredicto con citas; no mostramos razonamiento interno porque el modelo no lo produce.</text>
+
+<!-- conteos -->
+<rect x="20" y="584" width="1160" height="70" class="p" rx="6"/>
+<text x="36" y="608" class="t" font-weight="bold">Hasta ahora (provisional, por par)</text>
+<text x="36" y="634" class="t">● Total <tspan font-weight="bold">52</tspan>     ◐ Parcial <tspan font-weight="bold">31</tspan>     ○ Nula <tspan font-weight="bold">38</tspan>     ⚠ A revisión <tspan font-weight="bold">9</tspan></text>
+<text x="640" y="634" class="g">Las marcas A / L / R / X / P por artículo se calculan al final.</text>
+
+<rect x="20" y="672" width="1160" height="96" class="p" rx="6"/>
+<text x="36" y="696" class="t" font-weight="bold">Otros estados</text>
+<text x="36" y="718" class="g">Buscando candidatos (inicio, segundos): "Buscando en el manual los textos más parecidos a cada artículo (412 pares)". Sin lista aún.</text>
+<text x="36" y="738" class="g">Servicio de IA caído: banner de docs/05 "No pudimos conectarnos…" + [Reintentar]; los pares ya juzgados no se conservan en el MVP.</text>
+<text x="36" y="758" class="g">Terminado: pasa solo a Resultados y el título de la pestaña indica "✔ Comparación lista".</text>
+
+<g class="n">
+<circle cx="390" cy="116" r="0"/>
+<circle cx="800" cy="152" r="10"/><text x="800" y="156">1</text>
+<circle cx="1030" cy="152" r="10"/><text x="1030" y="156">2</text>
+<circle cx="565" cy="256" r="10"/><text x="565" y="260">3</text>
+<circle cx="1165" cy="256" r="10"/><text x="1165" y="260">4</text>
+<circle cx="1160" cy="540" r="10"/><text x="1160" y="544">5</text>
+<circle cx="1160" cy="600" r="10"/><text x="1160" y="604">6</text>
+<circle cx="1010" cy="340" r="0"/>
+<circle cx="810" cy="196" r="0"/>
+</g>
+<g class="n"><circle cx="820" cy="176" r="0"/></g>
+</svg>

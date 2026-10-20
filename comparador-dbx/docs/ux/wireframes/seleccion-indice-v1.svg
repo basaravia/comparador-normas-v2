@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" font-family="Arial, Helvetica, sans-serif" font-size="13">
+<title>Selección como índice del documento (v1, baja fidelidad)</title>
+<style>
+.t{fill:#222}.g{fill:#777}.b{fill:none;stroke:#999}.p{fill:#fff;stroke:#bbb}.ver{fill:#1E7B4F}.rojo{fill:#B3261E}
+.n circle{fill:#1E7B4F}.n text{fill:#fff;font-weight:bold;font-size:12px;text-anchor:middle}
+.cb{fill:#fff;stroke:#444;stroke-width:1.5}.ck{fill:none;stroke:#1E7B4F;stroke-width:2.5}
+.btn{fill:#f2f2f2;stroke:#888}
+</style>
+<rect width="1200" height="800" fill="#fafafa"/>
+<rect width="1200" height="44" fill="#1E7B4F"/>
+<text x="16" y="28" fill="#fff" font-size="16" font-weight="bold">Comparador normativo</text>
+<text x="420" y="28" fill="#fff">Carga · </text><text x="480" y="28" fill="#fff" font-weight="bold" text-decoration="underline">Selección</text><text x="560" y="28" fill="#fff">· Resultados · Ajustes</text>
+
+<text x="20" y="72" class="t" font-size="18" font-weight="bold">Elige qué comparar: marca títulos, capítulos o artículos</text>
+<text x="20" y="92" class="g">Cada panel es el índice del documento. Marcar un título marca todo lo que contiene.</text>
+
+<!-- panel normativa -->
+<rect x="20" y="106" width="575" height="620" class="p" rx="6"/>
+<text x="34" y="130" class="t" font-weight="bold" font-size="15">Normativas</text>
+<!-- toolbar -->
+<rect x="34" y="140" width="190" height="28" class="p" rx="4"/><text x="44" y="159" class="g">🔍 Buscar en el índice…</text>
+<rect x="232" y="140" width="100" height="28" class="btn" rx="4"/><text x="244" y="159" class="t">Expandir todo</text>
+<rect x="338" y="140" width="76" height="28" class="btn" rx="4"/><text x="350" y="159" class="t">Contraer</text>
+<rect x="420" y="140" width="76" height="28" class="btn" rx="4"/><text x="429" y="159" class="t">Nivel ▾ 3</text>
+<rect x="502" y="140" width="84" height="28" class="btn" rx="4"/><text x="510" y="159" class="t">☐ Solo marcados</text>
+<text x="34" y="190" class="t">12 de 40 artículos marcados</text>
+<line x1="34" y1="198" x2="580" y2="198" stroke="#ddd"/>
+
+<!-- documento -->
+<text x="34" y="222" class="t" font-weight="bold">▾</text>
+<rect x="52" y="210" width="15" height="15" class="cb"/><path d="M55 218 L58 222 L64 213" class="ck"/>
+<text x="76" y="222" class="t" font-weight="bold">Ley 1234 · Prevención de LA/FT</text><text x="566" y="222" class="g" text-anchor="end">40 art.</text>
+<!-- titulo I -->
+<text x="52" y="250" class="t">▾</text><rect x="70" y="238" width="15" height="15" class="cb"/><rect x="73" y="244" width="9" height="3" fill="#1E7B4F"/>
+<text x="94" y="250" class="t" font-weight="bold">TÍTULO I · Disposiciones generales</text><text x="470" y="250" class="g">· · · · · · pág. 3</text><text x="566" y="250" class="g" text-anchor="end">3/5</text>
+<text x="70" y="278" class="t">▾</text><rect x="88" y="266" width="15" height="15" class="cb"/><path d="M91 274 L94 278 L100 269" class="ck"/>
+<text x="112" y="278" class="t" font-weight="bold">Capítulo I · Objeto y ámbito</text><text x="470" y="278" class="g">· · · · · · pág. 3</text><text x="566" y="278" class="g" text-anchor="end">2/2</text>
+<rect x="106" y="288" width="15" height="15" class="cb"/><path d="M109 296 L112 300 L118 291" class="ck"/>
+<text x="130" y="300" class="t"><tspan font-weight="bold">Art. 1</tspan> Objeto</text><text x="470" y="300" class="g">pág. 3</text>
+<text x="130" y="316" class="g" font-size="11">"La presente ley tiene por objeto establecer…"</text>
+<rect x="106" y="324" width="15" height="15" class="cb"/><path d="M109 332 L112 336 L118 327" class="ck"/>
+<text x="130" y="336" class="t"><tspan font-weight="bold">Art. 2</tspan> Ámbito de aplicación</text><text x="470" y="336" class="g">pág. 4</text>
+<text x="70" y="364" class="t">▸</text><rect x="88" y="352" width="15" height="15" class="cb"/>
+<text x="112" y="364" class="t" font-weight="bold">Capítulo II · Definiciones</text><text x="470" y="364" class="g">· · · · · · pág. 5</text><text x="566" y="364" class="g" text-anchor="end">0/3</text>
+<!-- titulo II -->
+<text x="52" y="392" class="t">▾</text><rect x="70" y="380" width="15" height="15" class="cb"/><rect x="73" y="386" width="9" height="3" fill="#1E7B4F"/>
+<text x="94" y="392" class="t" font-weight="bold">TÍTULO II · Obligaciones de las entidades</text><text x="470" y="392" class="g">· · · · · · pág. 8</text><text x="566" y="392" class="g" text-anchor="end">9/35</text>
+<text x="70" y="420" class="t">▾</text><rect x="88" y="408" width="15" height="15" class="cb"/><rect x="91" y="414" width="9" height="3" fill="#1E7B4F"/>
+<text x="112" y="420" class="t" font-weight="bold">Capítulo I · Debida diligencia</text><text x="566" y="420" class="g" text-anchor="end">1/4</text>
+<rect x="106" y="430" width="15" height="15" class="cb"/><path d="M109 438 L112 442 L118 433" class="ck"/>
+<text x="130" y="442" class="t"><tspan font-weight="bold">Art. 10</tspan> Conocimiento del cliente</text><text x="470" y="442" class="g">pág. 9</text>
+<rect x="106" y="452" width="15" height="15" class="cb"/>
+<text x="130" y="464" class="t"><tspan font-weight="bold">Art. 11</tspan> Debida diligencia ampliada <tspan class="rojo" style="fill:#8a5a00">⚠ revísala</tspan></text><text x="470" y="464" class="g">pág. 10</text>
+<text x="70" y="492" class="t">▸</text><rect x="88" y="480" width="15" height="15" class="cb"/>
+<text x="112" y="492" class="t" font-weight="bold">Capítulo II · Reporte de operaciones</text><text x="566" y="492" class="g" text-anchor="end">8/31</text>
+<text x="52" y="520" class="t">▸</text><rect x="70" y="508" width="15" height="15" class="cb"/>
+<text x="94" y="520" class="t" font-weight="bold">TÍTULO III · Sanciones</text><text x="566" y="520" class="g" text-anchor="end">0/0</text>
+<text x="34" y="560" class="g">Flechas ↑↓ mueven · → abre · ← cierra · Espacio marca · * abre hermanos</text>
+<text x="34" y="580" class="g">Sangría + línea guía por nivel; chevrons de 24 px; cada fila ≥ 28 px.</text>
+
+<!-- panel manual -->
+<rect x="610" y="106" width="575" height="620" class="p" rx="6"/>
+<text x="624" y="130" class="t" font-weight="bold" font-size="15">Manuales de control</text>
+<rect x="624" y="140" width="190" height="28" class="p" rx="4"/><text x="634" y="159" class="g">🔍 Buscar en el índice…</text>
+<rect x="822" y="140" width="100" height="28" class="btn" rx="4"/><text x="834" y="159" class="t">Expandir todo</text>
+<rect x="928" y="140" width="76" height="28" class="btn" rx="4"/><text x="940" y="159" class="t">Contraer</text>
+<text x="624" y="190" class="t">20 de 37 secciones marcadas</text>
+<line x1="624" y1="198" x2="1170" y2="198" stroke="#ddd"/>
+<text x="624" y="222" class="t" font-weight="bold">▾</text><rect x="642" y="210" width="15" height="15" class="cb"/><rect x="645" y="216" width="9" height="3" fill="#1E7B4F"/>
+<text x="666" y="222" class="t" font-weight="bold">Manual de prevención LA/FT</text><text x="1156" y="222" class="g" text-anchor="end">37 secc.</text>
+<g opacity="0.55"><rect x="660" y="238" width="15" height="15" class="cb"/><text x="684" y="250" class="t">1 · Índice</text></g>
+<text x="684" y="266" class="rojo" style="fill:#B3261E" font-size="11">No se comparará: índice · [Incluir]</text>
+<text x="660" y="296" class="t">▾</text><rect x="678" y="284" width="15" height="15" class="cb"/><rect x="681" y="290" width="9" height="3" fill="#1E7B4F"/>
+<text x="702" y="296" class="t" font-weight="bold">3 · Procedimientos de control</text><text x="1156" y="296" class="g" text-anchor="end">6/9</text>
+<rect x="696" y="308" width="15" height="15" class="cb"/><path d="M699 316 L702 320 L708 311" class="ck"/>
+<text x="720" y="320" class="t"><tspan font-weight="bold">3.2</tspan> Reporte de operaciones</text><text x="1060" y="320" class="g">pág. 14</text>
+<text x="720" y="336" class="g" font-size="11">"El oficial de cumplimiento reporta a la UIAF dentro de…"</text>
+
+<!-- vista previa -->
+<rect x="610" y="580" width="575" height="136" class="p" rx="6"/>
+<text x="624" y="602" class="t" font-weight="bold">Vista previa · Manual · 3.2 Reporte de operaciones · pág. 14</text>
+<text x="624" y="624" class="g">Texto literal de la sección (solo lectura). Clic en un artículo o sección la abre aquí</text>
+<text x="624" y="642" class="g">sin perder tu lugar en el índice. Esc la cierra.</text>
+
+<!-- pie -->
+<rect x="0" y="744" width="1200" height="56" fill="#fff" stroke="#ccc"/>
+<text x="20" y="777" class="t">Vas a comparar <tspan font-weight="bold">12 artículos</tspan> de 1 normativa contra <tspan font-weight="bold">20 secciones</tspan> de 1 manual (≈ 240 pares a revisar).</text>
+<rect x="1060" y="754" width="124" height="36" class="ver" rx="5"/><text x="1122" y="777" fill="#fff" text-anchor="middle" font-weight="bold">Comparar</text>
+
+<!-- llamadas -->
+<g class="n">
+<circle cx="372" cy="119" r="10"/><text x="372" y="123">1</text>
+<circle cx="582" cy="190" r="10"/><text x="582" y="194">2</text>
+<circle cx="44" cy="238" r="10"/><text x="44" y="242">3</text>
+<circle cx="536" cy="252" r="10"/><text x="536" y="256">4</text>
+<circle cx="104" cy="398" r="10"/><text x="104" y="402">5</text>
+<circle cx="660" cy="272" r="10"/><text x="660" y="276">6</text>
+<circle cx="560" cy="560" r="10"/><text x="560" y="564">7</text>
+<circle cx="1000" cy="605" r="10"/><text x="1000" y="609">8</text>
+</g>
+</svg>

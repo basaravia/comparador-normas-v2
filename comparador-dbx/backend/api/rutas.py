@@ -97,7 +97,17 @@ def job(s: Ses, job_id: str):
     j = s.jobs.get(job_id)
     if j is None:
         raise servicio.ComparacionError("ERR-JOB-404", "No encontramos esa tarea. Puede que la sesión se haya reiniciado.")
-    return j
+    return j.model_copy(update={"ahora_ts": time.time()})
+
+
+@router.get("/documents/{doc_id}/pages/{pagina}/thumb")
+def miniatura(s: Ses, doc_id: str, pagina: int):
+    return Response(servicio.miniatura(s, doc_id, pagina), media_type="image/png")      # /api va con no-store (middleware); el caché es del servidor
+
+
+@router.post("/jobs/{job_id}/cancel", response_model=S.JobOut)
+def cancelar(s: Ses, job_id: str):
+    return servicio.cancelar(s, job_id)
 
 
 @router.get("/sections/tree", response_model=list[S.ArbolDocOut])

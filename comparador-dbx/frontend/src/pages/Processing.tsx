@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { api, ApiError } from "../api";
-import { ESTADOS } from "../components/DocTable";
+import { ProgresoComparacion, ProgresoProcesamiento, useReloj } from "../components/ProgresoVivo";
 import { useStore } from "../store";
 
 /** Progreso de un job (procesamiento de documentos o comparación). Sondea cada 1,5 s. */
@@ -17,7 +17,8 @@ export function Processing({ tipo }: { tipo: "procesamiento" | "comparacion" }) 
       try {
         const j = await api.job(id);
         d({ t: "job", job: j });
-        if (j.estado === "error") clearInterval(t);
+        if (j.estado === "error" || j.estado === "cancelado") clearInterval(t);
+        if (j.estado === "cancelado" && tipo === "procesamiento") d({ t: "documentos", documentos: (await api.sesion()).documentos });
         if (j.estado === "listo" && !fin.current) {
           fin.current = true;
           if (tipo === "procesamiento") {
@@ -36,6 +37,19 @@ export function Processing({ tipo }: { tipo: "procesamiento" | "comparacion" }) 
     return () => clearInterval(t);
   }, [job?.job_id, tipo, d]);
 
+  const ahora = useReloj(job);
+
+  // Aviso al terminar si la persona cambió de pestaña: queda en el título hasta que vuelve.
+  useEffect(() => {
+    const base = document.title;
+    if (job && (job.estado === "listo" || job.estado === "error") && document.hidden) {
+      document.title = `${job.estado === "listo" ? "✔ Listo" : "⚠ Revisa"} · ${base}`;
+      const volver = () => { if (!document.hidden) { document.title = base; document.removeEventListener("visibilitychange", volver); } };
+      document.addEventListener("visibilitychange", volver);
+      return () => { document.title = base; document.removeEventListener("visibilitychange", volver); };
+    }
+  }, [job?.estado]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!job) return <div className="pagina"><p>No hay ningún proceso en curso.</p></div>;
   const pct = Math.round(Math.min(Math.max(job.progreso, 0), 1) * 100);
   const error = job.estado === "error";
@@ -48,18 +62,19 @@ export function Processing({ tipo }: { tipo: "procesamiento" | "comparacion" }) 
       </div>
       <p className="progreso-texto"><strong>{pct} %</strong> · {job.etapa || "En cola"}
         {job.doc_actual && <> · {job.doc_actual}</>}</p>
-      {job.mensaje && <p className="progreso-mensaje">{job.mensaje}</p>}
 
-      {tipo === "procesamiento" && (
-        <table className="tabla docs">
-          <thead><tr><th>Documento</th><th>Estado</th></tr></thead>
-          <tbody>
-            {e.documentos.filter((x) => job.documentos[x.id]).map((x) => (
-              <tr key={x.id}><td className="nombre">{x.nombre}</td>
-                <td><span className={`estado estado-${job.documentos[x.id]}`}>{ESTADOS[job.documentos[x.id]] ?? job.documentos[x.id]}</span></td></tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="visually-hidden" role="status" aria-live="polite">{job.etapa}</div>
+      {tipo === "procesamiento"
+        ? <ProgresoProcesamiento job={job} documentos={e.documentos} ahora={ahora} />
+        : <ProgresoComparacion job={job} ahora={ahora} />}
+
+      {job.estado === "cancelado" && (
+        <>
+          <div className="banner banner-aviso">{job.etapa}</div>
+          <button className="secundario" onClick={() => { fin.current = false; d({ t: "job", job: null }); d({ t: "paso", paso: tipo === "procesamiento" ? "carga" : "seleccion" }); }}>
+            Volver
+          </button>
+        </>
       )}
 
       {error && (

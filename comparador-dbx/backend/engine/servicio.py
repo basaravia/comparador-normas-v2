@@ -9,26 +9,29 @@ import re
 import threading
 import time
 import uuid
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from pathlib import Path
 from typing import Callable
 
-from backend.api.schemas import (ArbolDocOut, ComparacionOut, DocumentoOut, ErrorNegocio, FilaVia1, FilaVia2, JobOut, Metadatos,
+import pymupdf
+
+from backend.api.schemas import (EsperaLimite, FragmentoOut, IndiceDoc, ParEnCurso, ProgresoDoc, VeredictoVivo, ArbolDocOut, ComparacionOut, DocumentoOut, ErrorNegocio, FilaVia1, FilaVia2, JobOut, Metadatos,
                                  NodoOut, ParVia2, SeccionOut)
 from backend.config import RAIZ, Settings, settings
 from backend.core.errors import ComparadorError
 from backend.core.sesiones import Comparacion, Doc, Sesion, error_negocio
 from backend.engine import ajustes
 from backend.engine.agregacion import controles_sin_base, marca_articulo, naturaleza_articulo
-from backend.engine.juez import juzgar_pares
+from backend.engine.juez import Cancelado, Observador, juzgar_pares
 from backend.engine.pares import construir_pares
 from backend.extraction import docling_extractor
 from backend.extraction.sectioner import parsear_bloques
 from backend.ingest.classifier import ingerir
 from backend.ingest.validation import nombre_seguro
 from backend.llm.client import ModelClient
-from backend.models import Documento, Seccion
+from backend.models import Documento, Par, Seccion
 from backend.output.conclusion import generar_borrador
 from backend.output.workpaper import EntradaPapel, FilaPapel, SeccionExcluida, generar_papel
 from backend.retrieval.exclusion import clasificar_secciones
@@ -91,7 +94,8 @@ def subir_varios(sesion: Sesion, archivos: list[tuple[str, bytes]], cliente: Mod
 # ───────────────────────── procesamiento ─────────────────────────
 
 def _job(sesion: Sesion, tipo: str, **campos) -> JobOut:
-    j = JobOut(job_id=uuid.uuid4().hex, tipo=tipo, estado="en_cola", **campos)
+    ahora = time.time()
+    j = JobOut(job_id=uuid.uuid4().hex, tipo=tipo, estado="en_cola", inicio_ts=ahora, ultimo_evento_ts=ahora, cancelable=True, **campos)
     with sesion.lock:
         sesion.jobs[j.job_id] = j
     return j
@@ -108,21 +112,37 @@ def _arbol_avisos(doc: Doc) -> list[str]:
     return avisos
 
 
+def _avance(job: JobOut, doc_id: str, **campos) -> None:
+    """Actualiza el progreso de un documento reemplazando el dict (el job se serializa desde otro hilo)."""
+    actual = job.por_documento.get(doc_id, ProgresoDoc())
+    job.por_documento = {**job.por_documento, doc_id: actual.model_copy(update=campos)}
+    job.ultimo_evento_ts = time.time()
+
+
 def _procesar_doc(doc: Doc, job: JobOut, base: float, peso: float) -> None:
     o = doc.out
     job.doc_actual = o.nombre
+    tanda = settings.DOCLING_CHUNK_PAGES
 
     def cb(hechos: int, total: int) -> None:
         job.progreso = round(base + peso * 0.8 * hechos / max(total, 1), 3)
+        _avance(job, o.id, paginas_hechas=hechos, paginas_total=total, lote=[hechos + 1, min(hechos + tanda, total)] if hechos < total else [])
 
     o.estado = "extrayendo"; job.documentos[o.id] = o.estado; job.etapa = "Extrayendo el texto"
+    _avance(job, o.id, etapa="Leyendo el texto", paginas_hechas=0, paginas_total=o.paginas, lote=[1, min(tanda, o.paginas)] if o.paginas else [])
     bloques = docling_extractor.extraer(doc.ruta, cb)
     o.estado = "seccionando"; job.documentos[o.id] = o.estado; job.etapa = "Detectando artículos y secciones"
+    _avance(job, o.id, etapa="Armando el índice", paginas_hechas=o.paginas, paginas_total=o.paginas, lote=[])
     avisos: list[str] = []
     doc.secciones = parsear_bloques(bloques, o.id, o.tipo, pdf=doc.ruta, avisos=avisos)
     doc.clasificacion = clasificar_secciones(doc.secciones)
     doc.avisos_arbol = _arbol_avisos(doc)
     o.advertencias = [*o.advertencias, *avisos][:10]
+    hojas = [s for s in doc.secciones if s.es_hoja]
+    job.indice = {**job.indice, o.id: IndiceDoc(secciones=len(doc.secciones), articulos=sum(doc.clasificacion.get(s.id, (True, ""))[0] for s in hojas),
+                                                excluidas=sum(not doc.clasificacion.get(s.id, (True, ""))[0] for s in hojas),
+                                                por_revisar=sum(s.seccionado_incierto for s in doc.secciones))}
+    _avance(job, o.id, etapa="Listo para comparar")
     job.progreso = round(base + peso * 0.9, 3)
 
 
@@ -143,6 +163,13 @@ def asegurar_indices(sesion: Sesion, cliente: ModelClient, progreso: Callable[[i
     log.info("Índices listos en %.0f s", time.perf_counter() - t0)
 
 
+def _indexando(job: JobOut, n: int, hechos: int, total: int, cancelado: bool = False) -> None:
+    if cancelado:
+        raise Cancelado()
+    job.progreso = round((n + hechos / max(total, 1)) / (n + 1), 3)
+    job.indexacion_hechos, job.indexacion_total, job.ultimo_evento_ts = hechos, total, time.time()
+
+
 def procesar(sesion: Sesion, doc_ids: list[str], cliente: ModelClient) -> JobOut:
     """Encola extracción + seccionado + indexación de los documentos. Devuelve el job (poll con `GET /api/jobs/{id}`)."""
     with sesion.lock:
@@ -154,33 +181,46 @@ def procesar(sesion: Sesion, doc_ids: list[str], cliente: ModelClient) -> JobOut
             if d.out.tipo is None:
                 raise ComparacionError("ERR-DOC-002", f"Elige el tipo de «{d.out.nombre}» (normativa o manual de control) antes de procesar.")
             docs.append(d)
-        job = _job(sesion, "procesamiento", documentos={d.out.id: "en_cola" for d in docs})
+        job = _job(sesion, "procesamiento", documentos={d.out.id: "en_cola" for d in docs},
+                   por_documento={d.out.id: ProgresoDoc(etapa="En cola", paginas_total=d.out.paginas) for d in docs})
         for d in docs:
             d.out.estado = "en_cola"
 
     def correr() -> None:
         job.estado = "en_curso"
         t0, n = time.perf_counter(), len(docs)
+        for d in docs:
+            docling_extractor.olvidar_cancelacion(d.ruta)        # sin marcas viejas de una cancelación anterior
         for k, d in enumerate(docs):
-            try:
-                _procesar_doc(d, job, k / (n + 1), 1 / (n + 1))
-                d.out.estado = "listo"
-            except Exception as e:                           # un documento con error no detiene a los demás
-                err = error_negocio(e)
-                d.out.estado, d.out.error = "error", err
-                job.errores.append(ErrorNegocio(codigo=err.codigo, mensaje=f"«{d.out.nombre}»: {err.mensaje}"))
+            if job.job_id in sesion.cancelados:               # cancelado: lo que no se leyó vuelve a "cargado" para poder reintentarlo
+                d.out.estado = "cargado"
+            else:
+                try:
+                    _procesar_doc(d, job, k / (n + 1), 1 / (n + 1))
+                    d.out.estado = "listo"
+                except Exception as e:                           # un documento con error no detiene a los demás
+                    err = error_negocio(e)
+                    if getattr(e, "codigo", "") == "ERR-EXT-005":        # lectura cancelada por el auditor: no es un error del documento
+                        d.out.estado = "cargado"
+                    else:
+                        d.out.estado, d.out.error = "error", err
+                        job.errores.append(ErrorNegocio(codigo=err.codigo, mensaje=f"«{d.out.nombre}»: {err.mensaje}"))
             job.documentos[d.out.id] = d.out.estado
+            if d.out.estado == "cargado":
+                _avance(job, d.out.id, etapa="Cancelado", lote=[])
         ok = [d for d in docs if d.out.estado == "listo"]
         with sesion.lock:
             tipos = {d.out.tipo for d in sesion.docs.values() if d.out.estado == "listo"}
-        if ok and tipos == {"normativa", "manual_control"}:      # con un solo tipo todavía no hay qué indexar: se hará al comparar
+        if ok and tipos == {"normativa", "manual_control"} and job.job_id not in sesion.cancelados:      # con un solo tipo todavía no hay qué indexar: se hará al comparar
             job.etapa, job.doc_actual = "Preparando la búsqueda de coincidencias", ""
             for d in ok:
                 d.out.estado = job.documentos[d.out.id] = "indexando"
             try:
                 with sesion.lock:
                     sesion.indexados, sesion.indice_norma, sesion.indice_manual = set(), None, None      # reconstruir con los documentos nuevos
-                asegurar_indices(sesion, cliente, lambda h, t: setattr(job, "progreso", round((n + h / max(t, 1)) / (n + 1), 3)))
+                asegurar_indices(sesion, cliente, lambda h, t: _indexando(job, n, h, t, job.job_id in sesion.cancelados))
+                nuevo = "listo"
+            except Cancelado:                                # los documentos ya leídos se conservan; la búsqueda se rehace al comparar
                 nuevo = "listo"
             except Exception as e:
                 err = error_negocio(e)
@@ -190,9 +230,14 @@ def procesar(sesion: Sesion, doc_ids: list[str], cliente: ModelClient) -> JobOut
                 d.out.estado = job.documentos[d.out.id] = nuevo
                 if nuevo == "error":
                     d.out.error = job.errores[-1]
-        job.progreso = 1.0
-        job.estado = "listo" if any(d.out.estado == "listo" for d in docs) else "error"
-        job.etapa = "Documentos listos" if job.estado == "listo" else "No se pudo procesar ningún documento"
+        job.progreso, job.cancelable = 1.0, False
+        for d in docs:
+            docling_extractor.olvidar_cancelacion(d.ruta)        # la cancelación ya se aplicó (o llegó tarde): no se arrastra al reintento
+        if job.job_id in sesion.cancelados:
+            job.estado, job.etapa = "cancelado", "Procesamiento cancelado. Los documentos ya leídos se conservan."
+        else:
+            job.estado = "listo" if any(d.out.estado == "listo" for d in docs) else "error"
+            job.etapa = "Documentos listos" if job.estado == "listo" else "No se pudo procesar ningún documento"
         log.info("Procesamiento: %d documentos en %.0f s", n, time.perf_counter() - t0)
 
     _PROCESO.submit(correr)
@@ -255,6 +300,108 @@ def _seleccion(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str]) 
     return arts, secs, [*manuales.values()]
 
 
+def _fragmento(s: Seccion, nombres: dict[str, str]) -> FragmentoOut:
+    return FragmentoOut(identificador=s.identificador, documento=nombres.get(s.doc_id, ""), pagina=s.pagina_inicio, preview=" ".join(s.texto_literal.split())[:160])
+
+
+class _ObsJob(Observador):
+    """Traslada los eventos reales del juez al job (pares en curso, últimos veredictos, conteos, espera por límite de tasa). Todo en memoria."""
+
+    def __init__(self, job: JobOut, sesion: Sesion, todas: dict[str, Seccion], nombres: dict[str, str]):
+        self.job, self.sesion, self.todas, self.nombres = job, sesion, todas, nombres
+        self.lock = threading.Lock()
+        self.en_curso: dict[str, ParEnCurso] = {}
+        self.seq = 0
+
+    def _toca(self) -> None:
+        self.job.ultimo_evento_ts = time.time()
+
+    def empieza(self, par: Par) -> None:
+        a, m = self.todas[par.articulo_id], self.todas[par.seccion_id]
+        score = max((x for x in (par.score_v1, par.score_v2) if x is not None), default=0.0)
+        with self.lock:
+            self.en_curso[par.id] = ParEnCurso(par_id=par.id, articulo=_fragmento(a, self.nombres), seccion=_fragmento(m, self.nombres),
+                                               score=round(float(score), 3), origen=sorted(par.origen), desde_ts=time.time())
+            self.job.pares_en_curso = list(self.en_curso.values())
+        self._toca()
+
+    def espera(self, par: Par, segundos: int, intento: int, maximo: int) -> None:
+        self.job.espera_limite = EsperaLimite(activa=True, hasta_ts=time.time() + segundos, intento=intento, max=maximo)
+        self._toca()
+
+    def reanuda(self, par: Par) -> None:
+        self.job.espera_limite = EsperaLimite()
+        self._toca()
+
+    def termina(self, par: Par, hechos: int, total: int) -> None:
+        v = par.veredicto
+        a, m = self.todas[par.articulo_id], self.todas[par.seccion_id]
+        cobertura = v.cobertura if v else "sin_veredicto"
+        with self.lock:
+            self.en_curso.pop(par.id, None)
+            self.seq += 1
+            vivo = VeredictoVivo(seq=self.seq, par_id=par.id, articulo=a.identificador, seccion=m.identificador, cobertura=cobertura,
+                                 naturaleza=v.naturaleza_articulo if v else "", confianza=round(v.confianza, 2) if v else 0.0,
+                                 cita_norma_ok=par.cita_norma_verificada, cita_manual_ok=par.cita_manual_verificada,
+                                 requiere_revision=par.requiere_revision, comentario=(v.comentario[:300] if v else ""))
+            self.job.ultimos_veredictos = [*self.job.ultimos_veredictos, vivo][-20:]
+            self.job.conteo_cobertura = {**self.job.conteo_cobertura, cobertura: self.job.conteo_cobertura.get(cobertura, 0) + 1}
+            self.job.a_revision += int(par.requiere_revision)
+            self.job.pares_en_curso = list(self.en_curso.values())
+            self.job.pares_hechos, self.job.pares_total = hechos, total
+        self._toca()
+
+    def cancelado(self) -> bool:
+        return self.job.job_id in self.sesion.cancelados
+
+
+ANCHO_MINIATURA = 150
+_MINIATURAS: "OrderedDict[tuple[str, str, int], bytes]" = OrderedDict()     # LRU en memoria (~16 KB c/u): acota el coste de pedir muchas páginas
+MAX_MINIATURAS = 64
+_RENDER = threading.Semaphore(2)                                             # a lo más 2 renders de PyMuPDF a la vez (2 CPU)
+_LOCK_MINIATURAS = threading.Lock()
+
+
+def miniatura(sesion: Sesion, doc_id: str, pagina: int) -> bytes:
+    """PNG pequeño de una página del PDF de la sesión (se renderiza al pedirlo, no se guarda). Para la tira de páginas del paso 1."""
+    with sesion.lock:
+        d = sesion.docs.get(doc_id)
+    if d is None or d.ruta is None or not 1 <= pagina <= d.out.paginas:
+        raise ComparacionError("ERR-DOC-001", "No encontramos esa página. Puede que la sesión se haya reiniciado.")
+    clave = (sesion.id, doc_id, pagina)
+    with _LOCK_MINIATURAS:
+        if clave in _MINIATURAS:
+            _MINIATURAS.move_to_end(clave)
+            return _MINIATURAS[clave]
+    with _RENDER, pymupdf.open(d.ruta) as pdf:
+        p = pdf[pagina - 1]
+        z = min(1.0, ANCHO_MINIATURA / max(p.rect.width, 1))
+        png = p.get_pixmap(matrix=pymupdf.Matrix(z, z), alpha=False).tobytes("png")
+    with _LOCK_MINIATURAS:
+        _MINIATURAS[clave] = png
+        while len(_MINIATURAS) > MAX_MINIATURAS:
+            _MINIATURAS.popitem(last=False)
+    return png
+
+
+def cancelar(sesion: Sesion, job_id: str) -> JobOut:
+    """Cancela un job en curso. Procesamiento: mata la lectura del PDF actual (lo ya leído se conserva). Comparación: no se lanzan más pares;
+    las llamadas al modelo que ya van en vuelo terminan (no se pueden interrumpir) y el resultado parcial se descarta."""
+    with sesion.lock:
+        job = sesion.jobs.get(job_id)
+        if job is None:
+            raise ComparacionError("ERR-JOB-404", "No encontramos esa tarea. Puede que la sesión se haya reiniciado.")
+        if job.estado not in ("en_cola", "en_curso"):
+            return job
+        sesion.cancelados.add(job_id)
+        job.etapa, job.cancelable = "Cancelando…", False
+        pendientes = [sesion.docs[i] for i, est in job.documentos.items() if est in ("en_cola", "extrayendo") and i in sesion.docs]
+    for d in pendientes:
+        if d.ruta:
+            docling_extractor.cancelar(d.ruta)
+    return job
+
+
 def comparar(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str], cliente: ModelClient) -> JobOut:
     """Valida la selección y encola la comparación. Devuelve el job (con `comparacion_id`)."""
     arts, secs, _ = _seleccion(sesion, articulo_ids, seccion_ids)
@@ -273,11 +420,15 @@ def comparar(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str], cl
         try:
             _ejecutar(sesion, comp, arts, secs, job, cliente, cfg)
             comp.out.estado, job.estado, job.progreso, job.etapa = "listo", "listo", 1.0, "Comparación lista"
+        except Cancelado:
+            comp.out.estado, job.estado, job.etapa = "cancelado", "cancelado", "Comparación cancelada"
+            job.pares_en_curso, job.espera_limite = [], EsperaLimite()
         except Exception as e:
             err = error_negocio(e)
             comp.out.estado, job.estado = "error", "error"
             job.errores.append(err)
             job.mensaje = err.mensaje
+        job.cancelable = False
         log.info("Comparación: %d artículos x %d secciones en %.0f s", len(arts), len(secs), time.perf_counter() - t0)
 
     _COMPARACION.submit(correr)
@@ -290,21 +441,29 @@ def _comentario(par) -> tuple[str, list[str]]:
 
 
 def _ejecutar(sesion: Sesion, comp: Comparacion, arts: dict[str, Seccion], secs: dict[str, Seccion], job: JobOut, cliente: ModelClient, cfg: Settings) -> None:
-    job.etapa, job.progreso = "Preparando la búsqueda de coincidencias", 0.02
-    asegurar_indices(sesion, cliente, lambda h, t: setattr(job, "progreso", round(0.02 + 0.2 * h / max(t, 1), 3)))
+    job.etapa, job.progreso, job.fase = "Preparando la búsqueda de coincidencias", 0.02, "recuperando"
+    def indexando(h: int, t: int) -> None:
+        if job.job_id in sesion.cancelados:                 # tras cada lote de embeddings: así Cancelar actúa también aquí
+            raise Cancelado()
+        job.progreso, job.ultimo_evento_ts = round(0.02 + 0.2 * h / max(t, 1), 3), time.time()
+
+    asegurar_indices(sesion, cliente, indexando)
     job.etapa, job.progreso = "Buscando coincidencias en las dos vías", 0.25
+    if job.job_id in sesion.cancelados:
+        raise Cancelado()
     pares, stats = construir_pares(sesion.indice_norma, sesion.indice_manual, set(arts), set(secs), cfg)
     if len(pares) > cfg.MAX_PARES:
         raise ComparacionError("ERR-CMP-004", f"La selección genera {len(pares)} comparaciones y el máximo es {cfg.MAX_PARES}. Selecciona menos artículos o secciones.")
     todas = sesion.secciones()
     nombres = {i: d.out.nombre for i, d in sesion.docs.items()}
-    job.etapa = "Juzgando cada par artículo–sección"
+    job.etapa, job.fase, job.pares_total = "Juzgando cada par artículo–sección", "juzgando", len(pares)
+    obs = _ObsJob(job, sesion, todas, nombres)
 
     def cb(h: int, t: int) -> None:
         job.progreso, job.mensaje = round(0.3 + 0.55 * h / max(t, 1), 3), f"Par {h} de {t}"
 
-    asyncio.run(juzgar_pares(pares, todas, nombres, cliente, cfg, progreso=cb))
-    job.mensaje, job.etapa, job.progreso = "", "Calculando marcas y armando el papel", 0.86
+    asyncio.run(juzgar_pares(pares, todas, nombres, cliente, cfg, progreso=cb, obs=obs))
+    job.mensaje, job.etapa, job.progreso, job.fase = "", "Calculando marcas y armando el papel", 0.86, "armando"
 
     por_art: dict[str, list] = {}
     for p in pares:
