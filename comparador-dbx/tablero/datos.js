@@ -12,7 +12,7 @@
 window.TABLERO = {
   actualizado: "2026-10-19",
   rama: "feat/mvp-e2e",
-  ultimo_commit: "3e9f93b feat(deploy): notebook 07 de despliegue por SDK en la carpeta del usuario",
+  ultimo_commit: "bc1e61c feat(ux): selección como índice, progreso en vivo y cancelar (RF-20, RF-21; docs/14 #35)",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -46,7 +46,7 @@ window.TABLERO = {
     { id: "D2", fase: "D", tipo: "hito", estado: "revision", titulo: "Ejemplos precargados (samples/)",
       nota: "Ejemplo precargado con texto de la ley versionado (OK del usuario). Los embeddings no van precomputados: se calculan al comparar (diferencia anotada).", commit: "ca88474" },
     { id: "U0", fase: "U", tipo: "hito", estado: "revision", titulo: "UI mínima en verde y blanco",
-      nota: "Interfaz React (Carga, Selección, Resultados) y panel Ajustes por sesión RF-19 (docs/14 #33). Falta la prueba 'un auditor completa el flujo sin ayuda'.", commit: "c41cc17" },
+      nota: "Interfaz React (Carga, Selección, Resultados) y panel Ajustes por sesión RF-19 (docs/14 #33). Mejora docs/14 #35 en bc1e61c: árbol como índice (RF-08/RF-09), progreso en vivo y cancelar (RF-20, RF-21), miniaturas con caché. Probado con Docling, bge-m3 y Groq reales (164 s para 2 PDFs; 12 pares; 429 real). Falta la prueba 'un auditor completa el flujo sin ayuda', la revisión visual del usuario y APROBADO de qa-ia (hoy OBSERVACIONES).", commit: "bc1e61c" },
     { id: "DEMO", fase: "Demo", tipo: "hito", estado: "por_hacer", titulo: "Ensayo con Foundry y documentos reales" },
 
     // ── Pendientes y verificaciones ──
@@ -128,6 +128,18 @@ window.TABLERO = {
       nota: "Con docs/16 e implementacion/README.md actualizados. La app escribe en la carpeta de su service principal pero no se usa; no hay volumen UC disponible.", commit: "3e9f93b" },
     { id: "D-46", fase: "D", tipo: "decision", estado: "hecho", titulo: "Regla 8 intacta: sin volumen UC aunque la app escriba en la carpeta de su service principal",
       nota: "Decidido por el usuario: no se usa esa escritura; estado en memoria y /tmp (CLAUDE.md regla 8).", commit: "3e9f93b" },
+    { id: "D-47", fase: "U", tipo: "decision", estado: "hecho", titulo: "Selección como índice, progreso en vivo y cancelar (docs/14 #35)",
+      nota: "Decidido por el usuario (19 oct 2026): el auditor se desconectaba con solo la barra. Dentro del MVP: cancelar en los dos pasos, miniaturas de página, comentario del juez en vivo bajo demanda, aviso de fin solo en el título de la pestaña. Diseño del agente ux-ui (docs/ux/); el PO evaluó: RF-08/09 en plan, resto aprobable.", commit: "bc1e61c" },
+    { id: "D-48", fase: "U", tipo: "decision", estado: "descartado", titulo: "PDF con cajas marcadas en vivo, animación de pensando y SSE",
+      nota: "Descartado por el usuario: Docling no entrega geometría ni texto hasta terminar y el modelo no razona en voz alta (regla 4 prohíbe simular); se eligió progreso con eventos reales (celda por página, miniaturas) y polling de 1,5 s. SSE queda para después." },
+    { id: "A-25", fase: "U", tipo: "actividad", estado: "revision", titulo: "Backend de progreso, observador del juez, cancelar y miniaturas; árbol índice y pantallas de progreso",
+      nota: "En bc1e61c: campos de progreso, observador del juez, cancelar (procesamiento 0,5 s, comparación 2,5 s), miniaturas con caché, árbol índice. qa-ia OBSERVACIONES: backend ok con 16 pruebas; el frontend no tenía runner de componentes y se añadió node:test para la lógica pura (5 pruebas). appsec OBSERVACIONES aplicadas (marca de cancelación y límite de miniaturas); PO DESVÍO MENOR corregido.", commit: "bc1e61c" },
+    { id: "P-26", fase: "U", tipo: "pendiente", estado: "por_hacer", titulo: "Prueba de integración de cancelar comparación (-m integracion)",
+      nota: "Pendiente de qa-ia: falta con modelos reales antes de cerrar D1/U0." },
+    { id: "P-27", fase: "U", tipo: "pendiente", estado: "por_hacer", titulo: "Revisión visual de la interfaz nueva por el usuario",
+      nota: "La hace el usuario: árbol índice, pantallas de progreso, cancelar y miniaturas." },
+    { id: "D-49", fase: "U", tipo: "decision", estado: "por_hacer", titulo: "Runner de componentes del frontend: vitest + testing-library (fuera de docs/12)",
+      nota: "Decide el usuario: añadir esas dependencias exige actualizar docs/12; mientras tanto se usa node:test para la lógica pura." },
     { id: "P-20", fase: "L", tipo: "pendiente", estado: "por_hacer", titulo: "Medir MOCK-DEMO-02 (R) y MOCK-DEMO-03 (A) con el juez real",
       nota: "Solo se midió MOCK-DEMO-01 (4 x L). Necesario para el criterio de L4 en docs/13." },
     { id: "P-21", fase: "U", tipo: "pendiente", estado: "por_hacer", titulo: "Prueba con un auditor: completar el flujo sin ayuda",
@@ -329,6 +341,7 @@ window.TABLERO = {
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-19", texto: "feat/mvp-e2e (bc1e61c): selección como índice, progreso en vivo y cancelar (RF-20, RF-21; docs/14 #35, D-47); descartados cajas en vivo, animación y SSE (D-48). Probado con Docling, bge-m3 y Groq reales (164 s, 12 pares, 429 real). appsec y qa-ia con OBSERVACIONES aplicadas, PO DESVÍO MENOR corregido; U0 y D1 siguen sin APROBADO de qa-ia; pendientes P-26 (integración de cancelar), P-27 (revisión visual) y D-49 (runner del frontend)." },
     { fecha: "2026-10-19", texto: "feat/mvp-e2e (3e9f93b): app desplegada y RUNNING en Databricks Free con 07_desplegar.ipynb (SDK, secreto READ; límite de 3 apps); identidad x-forwarded-* comprobada con token del CLI (falta navegador, P-24); regla 8 intacta por decisión del usuario (D-46). D1 sigue en_curso: falta health con LLM real, Docling en contenedor y APROBADO de qa-ia (P-25); nada pasa a hecho." },
     { fecha: "2026-10-19", texto: "feat/mvp-e2e (c41cc17): MVP tal cual está de punta a punta (docs/14 #32): juez por par, agregación A/L/R/X/P, API FastAPI, interfaz React, ejemplo y app.yaml; 50 pares reales con Groq + bge-m3, 4 x L, Excel generado. Pasan a revision L4, L6, D0, D2 y U0; D1 en curso (falta desplegar). Sin APROBADO de qa-ia (88 % de coverage, bandit limpio): nada en hecho. Panel Ajustes RF-19 (#33), una comparación a la vez y MAX_SESIONES=20; agente ux-ui; riesgo de inyección aceptado como deuda (#34, S-17); poda de ramas y hardening BAJA pospuestos." },
     { fecha: "2026-10-08", texto: "Auditoría del PO sin cambios de código: propuesta de excluir secciones que no sirven para comparar (EN PLAN, extiende P-17, decisiones D-37); desvíos vs docs: fecha de demo vencida (D-38), L5 adelantado con guion (D-39), colores de marca (D-40) y documentación atrasada (A-20); A-16 inexacta (CI sin commit)." },
