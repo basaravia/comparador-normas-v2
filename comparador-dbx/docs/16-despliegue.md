@@ -14,6 +14,7 @@ El código está directo en el notebook; los parámetros son widgets: `app`, `se
 - Identifica solo al usuario que ejecuta (`current_user.me()`) y sube el código a **su** carpeta, `/Workspace/Users/<tu-correo>/<app>`, nunca a la raíz del workspace. Si indicas `ruta`, debe estar dentro de esa carpeta o el notebook se detiene.
 - Sube el código sin `node_modules`, `output`, `documentos`, `notebooks`, `tests` ni archivos `.env*`, `.pem` o `.key`.
 - `apps.get` valida si la app existe (la crea o actualiza sus recursos) y le da un recurso secreto `foundry-token` con permiso **READ** sobre `secreto_scope`/`secreto_clave` (reemplaza el paso 3 manual de arriba).
+- Si la app está detenida (la Free las apaga y no admite despliegues), el notebook la inicia con `start_and_wait` antes de desplegar.
 - `deploy_and_wait` (`SNAPSHOT`) despliega y el notebook imprime la URL.
 
 La App instala `requirements.txt` sola. Docling descarga sus modelos la primera vez (necesita salida a internet del contenedor); si la extracción en vivo no es estable, usa **Cargar ejemplo** (no ejecuta Docling).
