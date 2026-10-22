@@ -7,7 +7,7 @@
 | RF-01 | Carga múltiple de PDFs en una sola zona de arrastre o selector | DEBE |
 | RF-02 | Tabla con una fila por archivo: nombre, tipo (desplegable normativa/manual), metadatos opcionales editables, estado | DEBE |
 | RF-03 | Preselección automática de tipo y metadatos desde nombre, 2 primeras páginas y metadatos nativos ([06](06-ingesta-metadatos.md)) | DEBE |
-| RF-04 | Validación: solo PDF, ≤ 20 MB y ≤ 100 páginas; rechazo explícito de escaneados con mensaje de negocio | DEBE |
+| RF-04 | Validación: solo PDF, ≤ 20 MB y ≤ 250 páginas; rechazo explícito de escaneados con mensaje de negocio | DEBE |
 | RF-05 | Un único botón "Procesar": extracción + seccionado + indexación, con progreso por documento y etapa | DEBE |
 | RF-06 | Seccionado flexible: Artículo, ART., Sección, SEC., numerales jerárquicos, romanos, letras, viñetas; fallback tipográfico y por longitud ([07](07-extraccion-seccionado.md)) | DEBE |
 | RF-07 | Cada sección conserva texto literal, ruta jerárquica, páginas inicio/fin y bandera de seccionado incierto | DEBE |
@@ -39,5 +39,5 @@
 | RNF-08 Costo | Excel y agregación sin tokens. Cada par se juzga una vez |
 | RNF-09 Usabilidad | Máximo 3 pantallas de interacción; metadatos opcionales; único campo obligatorio: tipo |
 | RNF-10 Resiliencia de demo | Ejemplos precargados disponibles aunque Docling o el contenedor estén lentos |
-| RNF-11 Rendimiento | 100 páginas extraídas en minutos; 50×40 secciones comparadas en < 15 min `[CALIBRAR]` |
+| RNF-11 Rendimiento | 100 páginas extraídas en minutos; el tope de 250 páginas puede tardar hasta `DOCLING_TIMEOUT_S` (3000 s; ≈ 39 min en la Raspberry, sin medir en Databricks) `[CALIBRAR]`; 50×40 secciones comparadas en < 15 min `[CALIBRAR]` |
 | RNF-12 Seguridad | Autenticación de Databricks Apps; sin credenciales en código; los documentos solo salen hacia el gateway |

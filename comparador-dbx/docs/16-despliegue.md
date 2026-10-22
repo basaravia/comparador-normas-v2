@@ -21,7 +21,7 @@ La App instala `requirements.txt` sola. Docling descarga sus modelos la primera 
 ## Comprobaciones
 - `GET <url>/api/health` → `{"estado":"ok","llm":true}` (hace un ping real al LLM y a embeddings; se cachea 60 s).
 - "Cargar ejemplo" → Selección → Comparar 2–3 artículos → Resultados → Descargar `.xlsx`.
-- Con un PDF propio: tarda lo que tarde Docling (máximo `MAX_PAGES` páginas y `MAX_MB` MB).
+- Con un PDF propio: tarda lo que tarde Docling (máximo `MAX_PAGES`=250 páginas y `MAX_MB`=20 MB; `DOCLING_TIMEOUT_S`=3000 s por documento).
 
 ## Hallazgos de la prueba en Databricks Free (19 oct 2026)
 - **Carpeta del service principal:** al desplegar en modo `SNAPSHOT`, Databricks crea `/Users/<id-del-service-principal>/src` (copia del código). No la crea el notebook; al borrar la app se borra la carpeta. El código fuente sigue en la carpeta del usuario que despliega.

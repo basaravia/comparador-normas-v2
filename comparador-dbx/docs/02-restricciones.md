@@ -9,7 +9,7 @@ Restricciones **duras**. Condicionan toda la arquitectura del MVP.
 | **Sin volúmenes** de Unity Catalog ni **SQL Warehouse** | Sin persistencia: memoria + filesystem efímero (`/tmp` / directorio de la app). Un reinicio pierde la sesión |
 | Cómputo **Medium (~6 GB RAM)**; Docling llevó la CPU casi al tope en la prueba previa | Extracción en cola de **1 worker**, OCR desactivado, hilos acotados, cada PDF se extrae una vez por sesión (caché SHA-256) |
 | Paquete de la app de **10 MB** como máximo | Solo código, `frontend/dist` y `samples/` livianos; nada de PDFs grandes ni modelos |
-| Documentos de hasta **~100 páginas** | Límite duro: 100 páginas y 20 MB por archivo; FAISS plano en memoria basta |
+| Documentos de hasta **250 páginas** (docs/14 #36) | Límite duro: 250 páginas y 20 MB por archivo; FAISS plano en memoria basta |
 | Opera un **auditor**, no el arquitecto | UI mínima, progreso visible, errores en lenguaje de negocio, ejemplos precargados |
 | Modelos en **Azure AI Foundry**, llamados directo como en la v1 | GPT-5.6 (juez, metadatos, conclusión) y text-embedding-3-large en la demo; DMR (dev) y Groq + Ollama (sandbox) en desarrollo. Proveedor por configuración ([14](14-puntos-abiertos.md) punto 14) |
 

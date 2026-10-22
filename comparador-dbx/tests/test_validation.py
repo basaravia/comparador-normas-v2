@@ -15,7 +15,7 @@ TEXTO_50 = "x" * 50   # justo el mínimo de caracteres para que una página cuen
 TEXTO_49 = "x" * 49
 # Mensajes literales de docs/05 (tabla de errores).
 MSJ_ESCANEADO = "Este documento parece ser una imagen escaneada. Por ahora solo podemos leer PDFs con texto seleccionable."
-MSJ_LIMITES = "El archivo supera el máximo de 100 páginas o 20 MB. Divídelo o consulta con el equipo de soporte."
+MSJ_LIMITES = "El archivo supera el máximo de 250 páginas o 20 MB. Divídelo o consulta con el equipo de soporte."
 RAIZ = Path(__file__).resolve().parent.parent  # comparador-dbx/
 
 
@@ -56,7 +56,7 @@ def test_justo_max_pages_se_acepta(hacer_pdf):
 def test_max_pages_mas_uno_se_rechaza(hacer_pdf):
     v = validar_pdf(hacer_pdf(textos=["Texto de relleno suficiente para contar " * 3] * (settings.MAX_PAGES + 1)))
     assert not v.ok and v.codigo == "ERR-ING-002"
-    assert v.mensaje == MSJ_LIMITES  # con MAX_PAGES=100 y MAX_MB=20 (RF-04)
+    assert v.mensaje == MSJ_LIMITES  # con MAX_PAGES=250 y MAX_MB=20 (RF-04)
 
 
 # --- Tamaño: MAX_MB (se usa MAX_MB=1 para no escribir 20 MB en disco) -----------------
