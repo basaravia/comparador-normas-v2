@@ -12,7 +12,7 @@
 window.TABLERO = {
   actualizado: "2026-10-22",
   rama: "feat/mvp-e2e",
-  ultimo_commit: "23b1b21 feat(limites): MAX_PAGES 100→250 y DOCLING_TIMEOUT_S 1500→3000 (RF-04, docs/14 #36)",
+  ultimo_commit: "74a0ea4 fix(despliegue): el notebook 07 inicia la app si está detenida antes de desplegar",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -42,7 +42,7 @@ window.TABLERO = {
     { id: "D0", fase: "D", tipo: "hito", estado: "revision", titulo: "API FastAPI + sesión en memoria",
       nota: "API FastAPI (docs/11) con sesión en memoria, una comparación a la vez por sesión y MAX_SESIONES=20 (docs/14 #32); hallazgos de appsec corregidos en f05ad77. Sin APROBADO de qa-ia.", commit: "ca88474" },
     { id: "D1", fase: "D", tipo: "hito", estado: "en_curso", titulo: "App en Databricks Free (app.yaml, < 10 MB)",
-      nota: "App desplegada y RUNNING en Databricks Free con 07_desplegar.ipynb (3e9f93b; límite de 3 apps). Identidad por headers x-forwarded-* comprobada con token del CLI (falta probar en navegador). No es hecho: falta health con el LLM real, probar Docling dentro del contenedor y APROBADO de qa-ia. Los datos de Foundry los pone el usuario en el deploy (REEMPLAZAR en app.yaml). 22 oct: el usuario pidió redesplegar con las últimas features (árbol índice, progreso, cancelar, miniaturas) y el límite de 250 páginas (A-26)." },
+      nota: "App desplegada y RUNNING en Databricks Free con 07_desplegar.ipynb (3e9f93b; límite de 3 apps). Identidad por headers x-forwarded-* comprobada con token del CLI (falta probar en navegador). No es hecho: falta health con el LLM real, probar Docling dentro del contenedor y APROBADO de qa-ia. Los datos de Foundry los pone el usuario en el deploy (REEMPLAZAR en app.yaml). 22 oct: el usuario pidió redesplegar con las últimas features (árbol índice, progreso, cancelar, miniaturas) y el límite de 250 páginas (A-26). Hecho: redesplegado en la app Free del usuario (RUNNING, SUCCEEDED), pero sin Foundry no puede comparar ahí; el criterio de D1 (health con LLM real, Docling en contenedor) sigue sin evidencia y falta APROBADO de qa-ia." },
     { id: "D2", fase: "D", tipo: "hito", estado: "revision", titulo: "Ejemplos precargados (samples/)",
       nota: "Ejemplo precargado con texto de la ley versionado (OK del usuario). Los embeddings no van precomputados: se calculan al comparar (diferencia anotada).", commit: "ca88474" },
     { id: "U0", fase: "U", tipo: "hito", estado: "revision", titulo: "UI mínima en verde y blanco",
@@ -121,7 +121,11 @@ window.TABLERO = {
     { id: "P-19", fase: "Demo", tipo: "pendiente", estado: "por_hacer", titulo: "Desplegar en Databricks Apps y probar Docling en el contenedor",
       nota: "Despliegue hecho (app RUNNING, 3e9f93b). Pendiente: probar Docling en el contenedor y health con LLM real. Datos de Foundry: los pone el usuario (REEMPLAZAR en app.yaml). Ver docs/16." },
     { id: "A-26", fase: "D", tipo: "actividad", estado: "revision", titulo: "Límite a 250 páginas, DOCLING_TIMEOUT_S 3000 y redespliegue con las últimas features",
-      nota: "Pedido del usuario el 22 oct 2026 (docs/14 #36): MAX_PAGES 100 a 250 y DOCLING_TIMEOUT_S 1500 a 3000 (23b1b21); subir y redesplegar con árbol índice, progreso en vivo, cancelar y miniaturas (bc1e61c, afd8524, aprobados por el guardián). Commits locales por publicar: 5 (3 ya aprobados por el guardián más el de límites). Redespliegue pendiente tras el push.", commit: "23b1b21" },
+      nota: "Pedido del usuario el 22 oct 2026 (docs/14 #36): MAX_PAGES 100 a 250 y DOCLING_TIMEOUT_S 1500 a 3000 (23b1b21); subir y redesplegar con árbol índice, progreso en vivo, cancelar y miniaturas (bc1e61c, afd8524, aprobados por el guardián). Commits locales por publicar: 5 (3 ya aprobados por el guardián más el de límites). Redespliegue hecho el 22 oct: app Free RUNNING, SUCCEEDED (sin Foundry, comparar no corre ahí). Sigue en revisión: sin APROBADO de qa-ia.", commit: "23b1b21" },
+    { id: "A-27", fase: "D", tipo: "actividad", estado: "hecho", titulo: "Notebook 07: inicia la app si está detenida antes de desplegar",
+      nota: "Corrección del despliegue (docs/16): si la app Free está detenida, el notebook 07 la inicia y luego despliega. Redesplegada con el límite de 250 páginas y el progreso en vivo.", commit: "74a0ea4" },
+    { id: "P-29", fase: "Demo", tipo: "pendiente", estado: "por_hacer", titulo: "Probar en el entorno MVP (Azure, Foundry) re-ejecutando el notebook 07",
+      nota: "Pedido del usuario el 22 oct: en Free no hay Foundry y comparar no corre; la prueba de comparación de punta a punta se hace en el workspace Azure con el stage mvp. Aún no ejecutada; la hace el usuario. Ver docs/16." },
     { id: "P-28", fase: "D", tipo: "pendiente", estado: "por_hacer", titulo: "Medir tiempo y RAM de Docling con 250 páginas (Pi y Databricks)",
       nota: "docs/14 punto 10: primero en la Raspberry y luego en Databricks. Referencia de la v1: pico de 4,2 GB. Sin esta medición el límite de 250 páginas y el timeout de 3000 s (~39 min en la Pi) son hipótesis." },
     { id: "S-18", fase: "D", tipo: "seguridad", estado: "por_hacer", titulo: "Tope de páginas por sesión (MAX_PAGES_SESION ~500)",
@@ -349,6 +353,7 @@ window.TABLERO = {
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-22", texto: "feat/mvp-e2e (74a0ea4): MVP redesplegado en la app Free del usuario (250 páginas y progreso en vivo; RUNNING, SUCCEEDED; sin Foundry no compara ahí); el notebook 07 inicia la app si está detenida (A-27); el usuario probará en Azure re-ejecutando el 07 (P-29). Abiertas para el usuario: S-18, D-50 (RNF-11 y MAX_MB=20); pendientes P-28, P-26, P-27. Nada descartado. Sin APROBADO de qa-ia: D1 y U0 siguen sin cerrar." },
     { fecha: "2026-10-22", texto: "feat/mvp-e2e (23b1b21): límite a 250 páginas y DOCLING_TIMEOUT_S 3000 (docs/14 #36, A-26); 5 commits locales por publicar (bc1e61c y afd8524 ya aprobados por el guardián); redespliegue pedido por el usuario tras el push. Abiertas para el usuario: S-18 (tope por sesión, appsec) y D-50 (criterio RNF-11, MAX_MB); P-28 medir Docling con 250 páginas. Sin APROBADO de qa-ia: D1 y U0 siguen sin cerrar." },
     { fecha: "2026-10-19", texto: "feat/mvp-e2e (bc1e61c): selección como índice, progreso en vivo y cancelar (RF-20, RF-21; docs/14 #35, D-47); descartados cajas en vivo, animación y SSE (D-48). Probado con Docling, bge-m3 y Groq reales (164 s, 12 pares, 429 real). appsec y qa-ia con OBSERVACIONES aplicadas, PO DESVÍO MENOR corregido; U0 y D1 siguen sin APROBADO de qa-ia; pendientes P-26 (integración de cancelar), P-27 (revisión visual) y D-49 (runner del frontend)." },
     { fecha: "2026-10-19", texto: "feat/mvp-e2e (3e9f93b): app desplegada y RUNNING en Databricks Free con 07_desplegar.ipynb (SDK, secreto READ; límite de 3 apps); identidad x-forwarded-* comprobada con token del CLI (falta navegador, P-24); regla 8 intacta por decisión del usuario (D-46). D1 sigue en_curso: falta health con LLM real, Docling en contenedor y APROBADO de qa-ia (P-25); nada pasa a hecho." },
