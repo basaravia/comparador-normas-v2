@@ -2,7 +2,7 @@ import type { ArbolDocOut, NodoOut } from "./tipos.ts";
 
 /** Hojas (artículos o secciones comparables) de un nodo. */
 export function hojas(n: NodoOut): NodoOut[] {
-  return n.hoja || n.hijos.length === 0 ? [n] : n.hijos.flatMap(hojas);
+  return n.hoja ? [n] : n.hijos.flatMap(hojas);     // un título sin artículos detectados no es hoja: no se puede comparar
 }
 
 const todasLasHojas = (arboles: ArbolDocOut[]) => arboles.flatMap((a) => a.nodos.flatMap(hojas));

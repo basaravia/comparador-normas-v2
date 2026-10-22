@@ -65,13 +65,14 @@ function Nodo({ n, c, nivel }: { n: NodoOut; c: Ctx; nivel: number }) {
         {rama
           ? <button className="plegar" tabIndex={-1} onClick={() => c.alternarRama(n.id)} aria-label={abierto ? "Contraer" : "Expandir"}>{abierto ? "▾" : "▸"}</button>
           : <span className="plegar vacio" />}
-        <input type="checkbox" tabIndex={-1} checked={estado === "todas"} aria-label={`Marcar ${n.identificador}`}
+        <input type="checkbox" tabIndex={-1} checked={estado === "todas"} disabled={meta.length === 0} aria-label={`Marcar ${n.identificador}`}
           ref={(el) => { if (el) el.indeterminate = estado === "algunas"; }} onChange={alternar} />
         <div className="nodo-texto" onClick={abrir}>
           <span className="nodo-id">{n.identificador}</span>
           {n.titulo && <span className="nodo-titulo"> {n.titulo}</span>}
           {n.incierto && <span className="incierto" title="Esta sección se detectó por longitud; revísala"> ⚠</span>}
           {!rama && n.preview && <div className="nodo-preview">{n.preview}</div>}
+          {meta.length === 0 && <div className="nodo-motivo">No se detectaron artículos en este título</div>}
           {n.excluida && n.motivo && <div className="nodo-motivo">No se comparará: {n.motivo}</div>}
         </div>
         <span className="nodo-meta">

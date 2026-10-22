@@ -43,3 +43,9 @@ test("sesión perdida y reinicio vuelven al estado inicial", () => {
   assert.equal(reducir(e, { t: "sesionPerdida" }).paso, "carga");
   assert.equal(reducir(e, { t: "reiniciar" }).seleccion.size, 0);
 });
+
+test("un título sin artículos detectados no es hoja: nunca se envía a comparar (el backend lo rechaza con 422)", () => {
+  const vacio = nodo("T6", { hoja: false });
+  assert.deepEqual(hojas(vacio), []);
+  assert.deepEqual(hojas(nodo("T1", { hoja: false, hijos: [vacio, nodo("A1")] })).map((h) => h.id), ["A1"]);
+});
