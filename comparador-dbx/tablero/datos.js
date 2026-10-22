@@ -12,7 +12,7 @@
 window.TABLERO = {
   actualizado: "2026-10-22",
   rama: "feat/mvp-e2e",
-  ultimo_commit: "74a0ea4 fix(despliegue): el notebook 07 inicia la app si está detenida antes de desplegar",
+  ultimo_commit: "b5c8bf5 fix(ui): los títulos sin artículos detectados no se envían a comparar (422 ERR-CMP-002)",
   demo: "Demo MVP en workspace Azure de pago (stage mvp, Foundry)",
 
   fases: [
@@ -124,14 +124,26 @@ window.TABLERO = {
       nota: "Pedido del usuario el 22 oct 2026 (docs/14 #36): MAX_PAGES 100 a 250 y DOCLING_TIMEOUT_S 1500 a 3000 (23b1b21); subir y redesplegar con árbol índice, progreso en vivo, cancelar y miniaturas (bc1e61c, afd8524, aprobados por el guardián). Commits locales por publicar: 5 (3 ya aprobados por el guardián más el de límites). Redespliegue hecho el 22 oct: app Free RUNNING, SUCCEEDED (sin Foundry, comparar no corre ahí). Sigue en revisión: sin APROBADO de qa-ia.", commit: "23b1b21" },
     { id: "A-27", fase: "D", tipo: "actividad", estado: "hecho", titulo: "Notebook 07: inicia la app si está detenida antes de desplegar",
       nota: "Corrección del despliegue (docs/16): si la app Free está detenida, el notebook 07 la inicia y luego despliega. Redesplegada con el límite de 250 páginas y el progreso en vivo.", commit: "74a0ea4" },
+    { id: "P-30", fase: "Demo", tipo: "pendiente", estado: "revision", titulo: "422 ERR-CMP-002 «La selección no es válida» al seleccionar en el entorno MVP",
+      nota: "El usuario lo vio al probar en MVP. Hipótesis SIN verificar con la norma real: los títulos sin artículos detectados se enviaban como hojas. Corregido en b5c8bf5 (hojas(), casilla deshabilitada, prueba). Falta que el usuario confirme en MVP. Si persiste con solo artículos: revisar el cuerpo del 422 y el seccionado de esa norma (el TÍTULO VI salió sin artículos).", commit: "b5c8bf5" },
+    { id: "A-28", fase: "U", tipo: "actividad", estado: "por_hacer", titulo: "Propuesta del usuario: borrar el PDF de /tmp al terminar bien el procesamiento",
+      nota: "En estudio, SIN implementar. Si el procesamiento falla o se cancela, el PDF se conserva. Pendiente que el usuario decida la retención (24, 48 o 72 h) y si las miniaturas se generan solo durante el procesamiento o se pre-renderizan." },
+    { id: "A-29", fase: "U", tipo: "actividad", estado: "por_hacer", titulo: "Propuesta del usuario: aviso emergente «el PDF no queda guardado»",
+      nota: "En estudio, SIN implementar. Diseño en docs/ux/aviso-pdf-no-guardado.md (sin rastrear en git). Pendiente que el usuario decida la frecuencia del aviso." },
+    { id: "A-30", fase: "U", tipo: "actividad", estado: "por_hacer", titulo: "Propuesta del usuario: varias cargas en la misma sesión",
+      nota: "En estudio, SIN implementar. Es cambio de alcance respecto a docs/14 #32 (una comparación a la vez por sesión): requiere decisión del usuario y actualizar los docs antes de codificar." },
+    { id: "A-31", fase: "D", tipo: "actividad", estado: "por_hacer", titulo: "Propuesta del usuario: sesión por usuario con x-forwarded-email",
+      nota: "En estudio, SIN implementar. Controles obligatorios de appsec: TRUST_PROXY_IDENTITY, hash del correo, 401 si falta la cabecera, TTL por inactividad con expulsión y prueba de aislamiento entre usuarios. Se vincula con P-24 y S-18." },
+    { id: "V-15", fase: "V2", tipo: "pendiente", estado: "por_hacer", titulo: "TOBE: persistencia que sobreviva a apagados",
+      nota: "Pedido del usuario: documentarla en docs/15-roadmap-v2.md (aún no escrito; lo hace el agente principal). Contrasta con la regla de CLAUDE.md de no persistir infraestructura en el MVP." },
     { id: "P-29", fase: "Demo", tipo: "pendiente", estado: "por_hacer", titulo: "Probar en el entorno MVP (Azure, Foundry) re-ejecutando el notebook 07",
       nota: "Pedido del usuario el 22 oct: en Free no hay Foundry y comparar no corre; la prueba de comparación de punta a punta se hace en el workspace Azure con el stage mvp. Aún no ejecutada; la hace el usuario. Ver docs/16." },
     { id: "P-28", fase: "D", tipo: "pendiente", estado: "por_hacer", titulo: "Medir tiempo y RAM de Docling con 250 páginas (Pi y Databricks)",
       nota: "docs/14 punto 10: primero en la Raspberry y luego en Databricks. Referencia de la v1: pico de 4,2 GB. Sin esta medición el límite de 250 páginas y el timeout de 3000 s (~39 min en la Pi) son hipótesis." },
     { id: "S-18", fase: "D", tipo: "seguridad", estado: "por_hacer", titulo: "Tope de páginas por sesión (MAX_PAGES_SESION ~500)",
-      nota: "appsec OBSERVACIONES: con 250 páginas una sesión puede ocupar la cola de Docling (1 worker) hasta ~6,7 h. Recomienda MAX_PAGES_SESION ~500. DECISIÓN DEL USUARIO, aún sin respuesta; no está descartada ni aceptada." },
+      nota: "appsec OBSERVACIONES: con 250 páginas una sesión puede ocupar la cola de Docling (1 worker) hasta ~6,7 h. Recomienda MAX_PAGES_SESION ~500. DECISIÓN DEL USUARIO: el usuario aceptó descartarla, pero queda registrada como pedida por el usuario, a implementar junto con las propuestas de sesión por usuario (S-20 / A-28 a A-31); NO está descartada hasta que el usuario lo confirme." },
     { id: "D-50", fase: "D", tipo: "decision", estado: "por_hacer", titulo: "RNF-11 con 250 páginas: criterio de tiempo y MAX_MB",
-      nota: "Pregunta abierta al usuario: RNF-11 queda redactado sobre el tope; ¿criterio «100 págs en minutos» o «250 págs dentro del timeout (~39 min en la Pi)»? ¿Es aceptable esa espera en la demo? Confirmar también que MAX_MB=20 se conserva." },
+      nota: "Pregunta abierta al usuario: RNF-11 queda redactado sobre el tope; ¿criterio «100 págs en minutos» o «250 págs dentro del timeout (~39 min en la Pi)»? ¿Es aceptable esa espera en la demo? MAX_MB=20 y MAX_PAGES=250 CONFIRMADOS por el usuario el 22 oct. Sigue abierto el criterio de tiempo de RNF-11." },
     { id: "P-24", fase: "D", tipo: "pendiente", estado: "por_hacer", titulo: "Comprobar la identidad x-forwarded-* en el navegador",
       nota: "Comprobada solo con token del CLI; falta abrir la app en navegador (la hace el usuario)." },
     { id: "P-25", fase: "D", tipo: "pendiente", estado: "por_hacer", titulo: "Health con LLM real y Docling en el contenedor (criterio de D1)",
@@ -353,6 +365,7 @@ window.TABLERO = {
 
   // Historial breve: una línea por push (lo más reciente arriba).
   historial: [
+    { fecha: "2026-10-22", texto: "feat/mvp-e2e (b5c8bf5): corrección del 422 ERR-CMP-002 al seleccionar títulos sin artículos (hipótesis sin verificar, P-30; pendiente confirmar en MVP). Usuario confirmó MAX_MB=20 y MAX_PAGES=250 (D-50). Propuestas en estudio sin implementar: borrar PDF de /tmp, aviso emergente, varias cargas, sesión por usuario (A-28 a A-31); S-18 pedida por el usuario para implementar con ellas, no descartada aún. TOBE de persistencia en V2 (V-15). Nada se desestimó ni canceló." },
     { fecha: "2026-10-22", texto: "feat/mvp-e2e (74a0ea4): MVP redesplegado en la app Free del usuario (250 páginas y progreso en vivo; RUNNING, SUCCEEDED; sin Foundry no compara ahí); el notebook 07 inicia la app si está detenida (A-27); el usuario probará en Azure re-ejecutando el 07 (P-29). Abiertas para el usuario: S-18, D-50 (RNF-11 y MAX_MB=20); pendientes P-28, P-26, P-27. Nada descartado. Sin APROBADO de qa-ia: D1 y U0 siguen sin cerrar." },
     { fecha: "2026-10-22", texto: "feat/mvp-e2e (23b1b21): límite a 250 páginas y DOCLING_TIMEOUT_S 3000 (docs/14 #36, A-26); 5 commits locales por publicar (bc1e61c y afd8524 ya aprobados por el guardián); redespliegue pedido por el usuario tras el push. Abiertas para el usuario: S-18 (tope por sesión, appsec) y D-50 (criterio RNF-11, MAX_MB); P-28 medir Docling con 250 páginas. Sin APROBADO de qa-ia: D1 y U0 siguen sin cerrar." },
     { fecha: "2026-10-19", texto: "feat/mvp-e2e (bc1e61c): selección como índice, progreso en vivo y cancelar (RF-20, RF-21; docs/14 #35, D-47); descartados cajas en vivo, animación y SSE (D-48). Probado con Docling, bge-m3 y Groq reales (164 s, 12 pares, 429 real). appsec y qa-ia con OBSERVACIONES aplicadas, PO DESVÍO MENOR corregido; U0 y D1 siguen sin APROBADO de qa-ia; pendientes P-26 (integración de cancelar), P-27 (revisión visual) y D-49 (runner del frontend)." },
