@@ -215,9 +215,21 @@ class ConclusionIn(BaseModel):
     texto: str = Field(max_length=20000)
 
 
+class TrabajoActivo(BaseModel):
+    id: str                                 # siempre el job_id que sondea GET /api/jobs/{id}
+    tipo: Literal["procesamiento", "comparacion"]
+    comparacion_id: Optional[str] = None    # solo en comparaciones: el de GET /api/comparisons/{id}
+
+
 class SesionOut(BaseModel):
     documentos: list[DocumentoOut] = []
     comparacion_id: Optional[str] = None
+    trabajo_activo: Optional[TrabajoActivo] = None
+    usuario: str = "Sesión local"           # correo normalizado con TRUST_PROXY_IDENTITY
+    retencion_horas: int = 0
+    max_documentos: int = 0
+    iniciada_ts: float = 0.0                # epoch (s) de creación de la sesión en el servidor
+    sesion_nueva: bool = False              # True solo si llegó una cookie desconocida y se abrió una sesión nueva
 
 
 class HealthOut(BaseModel):

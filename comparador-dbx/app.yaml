@@ -4,6 +4,12 @@ command: ["uvicorn", "backend.main:app", "--workers", "1"]
 env:
   - name: STAGE
     value: "mvp"
+  # Sesión por usuario (docs/14 #37): el proxy de Databricks entrega el correo en x-forwarded-email. NO encender sin comprobar lo de docs/16 (cabecera falsificada y puerto directo).
+  # Apagada hasta esa comprobación (condición D1 de appsec): mientras tanto la sesión sigue por cookie. Se cambia a "true" solo tras verificarlo.
+  - name: TRUST_PROXY_IDENTITY
+    value: "false"
+  - name: LIMPIAR_TMP_AL_ARRANCAR
+    value: "true"
   # Azure AI Foundry. Los REEMPLAZAR-… se cambian por los datos reales del workspace; el repo es público y NUNCA lleva endpoints ni tokens reales.
   - name: FOUNDRY_AI_ENDPOINT
     value: "REEMPLAZAR-endpoint-de-foundry"

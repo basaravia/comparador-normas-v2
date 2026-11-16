@@ -85,7 +85,9 @@ function Nodo({ n, c, nivel }: { n: NodoOut; c: Ctx; nivel: number }) {
   );
 }
 
-function ArbolDoc({ a, sel, onSel, onVer }: { a: ArbolDocOut; sel: Set<string>; onSel: (s: Set<string>) => void; onVer: (id: string) => void }) {
+function ArbolDoc({ a, sel, onSel, onVer, onQuitarMarcas }: {
+  a: ArbolDocOut; sel: Set<string>; onSel: (s: Set<string>) => void; onVer: (id: string) => void; onQuitarMarcas?: (a: ArbolDocOut) => void;
+}) {
   const [cerradas, setCerradas] = useState<Set<string>>(() => cerradasIniciales(a.nodos));
   const [busqueda, setBusqueda] = useState("");
   const [soloMarcados, setSoloMarcados] = useState(false);
@@ -119,6 +121,7 @@ function ArbolDoc({ a, sel, onSel, onVer }: { a: ArbolDocOut; sel: Set<string>; 
   return (
     <div className="arbol-doc">
       <h3>{a.nombre}</h3>
+      {onQuitarMarcas && marcados > 0 && <button className="secundario" onClick={() => onQuitarMarcas(a)}>Quitar marcas de este manual</button>}
       {a.avisos.map((av, i) => <div key={i} className="nota-aviso">ℹ {av}</div>)}
       <div className="arbol-barra" role="toolbar" aria-label={`Herramientas del índice de ${a.nombre}`}>
         <input type="search" placeholder="Buscar en el índice…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} aria-label="Buscar en el índice" />
@@ -134,14 +137,16 @@ function ArbolDoc({ a, sel, onSel, onVer }: { a: ArbolDocOut; sel: Set<string>; 
   );
 }
 
-export function DualTree({ titulo, vacio, arboles, sel, onSel, onVer }: {
-  titulo: string; vacio: string; arboles: ArbolDocOut[]; sel: Set<string>; onSel: (s: Set<string>) => void; onVer: (id: string) => void;
+export function DualTree({ titulo, nota, vacio, arboles, sel, onSel, onVer, onQuitarMarcas }: {
+  titulo: string; nota?: string; vacio: string; arboles: ArbolDocOut[]; sel: Set<string>; onSel: (s: Set<string>) => void; onVer: (id: string) => void;
+  onQuitarMarcas?: (a: ArbolDocOut) => void;     // solo cuando hay marcas en más de un manual
 }) {
   return (
     <section className="panel">
       <h2>{titulo}</h2>
+      {nota && <p className="nota-info">{nota}</p>}
       {arboles.length === 0 && <p className="vacio-texto">{vacio}</p>}
-      {arboles.map((a) => <ArbolDoc key={a.doc_id} a={a} sel={sel} onSel={onSel} onVer={onVer} />)}
+      {arboles.map((a) => <ArbolDoc key={a.doc_id} a={a} sel={sel} onSel={onSel} onVer={onVer} onQuitarMarcas={onQuitarMarcas} />)}
     </section>
   );
 }

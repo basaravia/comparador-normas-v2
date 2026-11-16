@@ -39,7 +39,7 @@ test("al recargar se conservan las marcas del auditor y solo los documentos nuev
 
 test("sesión perdida y reinicio vuelven al estado inicial", () => {
   const e = { ...inicial, paso: "seleccion" as const, seleccion: new Set(["A1"]) };
-  assert.equal(reducir(e, { t: "sesionPerdida" }).sesionPerdida, true);
+  assert.equal(reducir(e, { t: "sesionPerdida" }).perdida?.motivo, "reinicio");
   assert.equal(reducir(e, { t: "sesionPerdida" }).paso, "carga");
   assert.equal(reducir(e, { t: "reiniciar" }).seleccion.size, 0);
 });

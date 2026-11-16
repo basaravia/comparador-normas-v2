@@ -40,3 +40,13 @@ Cualquier otra requiere justificación.
 
 ## Variables de configuración
 Ver [`config/defaults.env`](../config/defaults.env).
+
+### Sesión e identidad (docs/14 #37)
+| Variable | defaults.env | `app.yaml` (mvp) | Nota |
+|---|---|---|---|
+| `SESSION_TTL_HOURS` | 48 | — | retención por inactividad |
+| `SESION_EXPULSABLE_MIN` | 120 `[CALIBRAR]` | — | inactividad mínima para expulsar una sesión cuando `MAX_SESIONES` está lleno |
+| `TRUST_PROXY_IDENTITY` | `false` | `true` | liga la sesión al correo de `x-forwarded-email`; exige `DATABRICKS_APP_NAME` (la inyecta Databricks Apps); ver [16](16-despliegue.md) |
+| `LIMPIAR_TMP_AL_ARRANCAR` | `false` | `true` | borra al iniciar las carpetas `comparador_*` huérfanas de `/tmp` |
+
+`app.yaml` es el mismo para todos los stages (hoy `STAGE=mvp`); en dev y sandbox valen los de `defaults.env`.

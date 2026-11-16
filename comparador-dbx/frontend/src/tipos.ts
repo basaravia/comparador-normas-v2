@@ -141,7 +141,18 @@ export interface ComparacionOut {
   ajustes: Record<string, number>;     // ajustes (RF-19) con los que se hizo la comparación
 }
 
-export interface SesionOut { documentos: DocumentoOut[]; comparacion_id: string | null }
+export interface TrabajoActivo { id: string; tipo: "procesamiento" | "comparacion" }
+/** Los campos nuevos son opcionales: si el servidor no los manda, la app funciona como antes. */
+export interface SesionOut {
+  documentos: DocumentoOut[];
+  comparacion_id: string | null;
+  trabajo_activo?: TrabajoActivo | null;
+  usuario?: string;
+  retencion_horas?: number;
+  max_documentos?: number;
+  iniciada_ts?: number;
+  sesion_nueva?: boolean;
+}
 export interface HealthOut { estado: "ok" | "degradado"; stage: string; llm: boolean; mensaje: string }
 
 export interface AjusteOut {

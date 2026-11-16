@@ -59,6 +59,12 @@ function etapaActual(job: JobOut): number {
 
 const MAX_PAG_CON_MINIATURA = 80;     // más páginas que esto: celdas lisas (cada miniatura se renderiza al pedirla)
 
+/** Miniatura de una página; si el servidor no la puede dar, queda el número. */
+function Miniatura({ docId, n }: { docId: string; n: number }) {
+  const [falla, setFalla] = useState(false);
+  return falla ? <i>{n}</i> : <img src={api.miniatura(docId, n)} alt="" loading="lazy" onError={() => setFalla(true)} />;
+}
+
 function Tira({ docId, p }: { docId: string; p: { paginas_hechas: number; paginas_total: number; lote: number[] } }) {
   const [ini, fin] = p.lote.length === 2 ? p.lote : [0, -1];
   const con = p.paginas_total <= MAX_PAG_CON_MINIATURA;
@@ -68,7 +74,7 @@ function Tira({ docId, p }: { docId: string; p: { paginas_hechas: number; pagina
         const leida = n <= p.paginas_hechas, leyendo = n >= ini && n <= fin;
         return (
           <span key={n} className={`pag ${leida ? "leida" : leyendo ? "leyendo" : "pendiente"}`} title={`Página ${n}`}>
-            {leida && con ? <img src={api.miniatura(docId, n)} alt="" loading="lazy" /> : <i>{n}</i>}
+            {leida && con ? <Miniatura docId={docId} n={n} /> : <i>{n}</i>}
           </span>
         );
       })}

@@ -8,6 +8,7 @@ from backend.main import app
 @pytest.fixture
 def web():
     with TestClient(app) as c:
+        c.get("/api/session")                    # solo GET /api/session abre la sesión (modo cookie); el resto responde 410 sin ella
         yield c
 
 
@@ -18,12 +19,22 @@ def hojas(nodos):
         yield from hojas(n["hijos"])
 
 
-def test_sin_cookie_se_crea_sesion_y_con_cookie_inexistente_es_410(web):
-    assert web.get("/api/session").json() == {"documentos": [], "comparacion_id": None}
-    assert "session_id" in web.cookies
-    web.cookies.set("session_id", "no-existe")
-    r = web.get("/api/session")
-    assert r.status_code == 410 and r.json()["codigo"] == "ERR-SES-001" and "sesión" in r.json()["mensaje"]
+def test_sin_cookie_se_crea_sesion_con_los_campos_del_contrato(web):
+    web.cookies.clear()
+    s = web.get("/api/session").json()
+    assert "session_id" in web.cookies and s["documentos"] == [] and s["comparacion_id"] is None and s["trabajo_activo"] is None
+    assert s["usuario"] == "Sesión local" and s["retencion_horas"] == 48 and s["max_documentos"] == 8 and s["iniciada_ts"] > 0 and s["sesion_nueva"] is False
+
+
+def test_cookie_desconocida_en_get_session_abre_otra_y_el_resto_responde_410(web):
+    web.cookies.clear()
+    ajena = {"Cookie": "session_id=no-existe"}
+    r = web.get("/api/session", headers=ajena)
+    assert r.status_code == 200 and r.json()["sesion_nueva"] is True
+    assert web.cookies.get("session_id") not in (None, "no-existe")                  # el valor recibido nunca se adopta
+    assert web.get("/api/session").json()["sesion_nueva"] is False                   # con la cookie nueva ya no
+    r = web.post("/api/samples/load", headers=ajena)
+    assert r.status_code == 410 and r.json()["codigo"] == "ERR-SES-001" and "cookie" not in r.json()["mensaje"].lower() and "410" not in r.json()["mensaje"]
 
 
 def test_ejemplo_arbol_y_vista_previa(web):
@@ -84,6 +95,7 @@ def test_tope_de_sesiones_vivas_da_503_con_mensaje_de_negocio(web, monkeypatch):
     from backend.config import settings
     from backend.core import sesiones
     monkeypatch.setattr(sesiones, "settings", replace(settings, MAX_SESIONES=0))
+    web.cookies.clear()
     r = web.get("/api/session")
     assert r.status_code == 503 and r.json()["codigo"] == "ERR-SES-002" and "otras personas" in r.json()["mensaje"]
 
@@ -98,7 +110,7 @@ def test_una_sola_comparacion_a_la_vez_por_sesion(web):
     s = sesiones.obtener(sid)
     s.jobs["x"] = JobOut(job_id="x", tipo="comparacion", estado="en_curso")        # una comparación ya en marcha
     r = web.post("/api/comparisons", json={"articulo_ids": n, "seccion_ids": m})
-    assert r.status_code == 422 and r.json()["codigo"] == "ERR-CMP-007"
+    assert r.status_code == 409 and r.json()["codigo"] == "ERR-CMP-007"
 
 
 def test_ajustes_de_sesion_guardar_leer_restablecer_y_rechazo(web):

@@ -116,6 +116,7 @@ def test_cancelar_la_lectura_de_un_pdf_en_cola_no_arranca_docling(tmp_path):
 
 def test_api_job_trae_reloj_del_servidor_y_miniatura_valida_pagina_y_documento():
     with TestClient(app) as web:
+        web.get("/api/session")
         web.post("/api/samples/load")
         sid = web.cookies["session_id"]
         s = sesiones.obtener(sid)
@@ -126,8 +127,8 @@ def test_api_job_trae_reloj_del_servidor_y_miniatura_valida_pagina_y_documento()
         assert web.post("/api/jobs/no-existe/cancel").status_code == 422
         d = next(iter(s.docs))
         r = web.get(f"/api/documents/{d}/pages/1/thumb")                 # el ejemplo no tiene PDF: mensaje de negocio, no traza
-        assert r.status_code == 422 and "Traceback" not in r.text
-        assert web.get("/api/documents/no-existe/pages/1/thumb").status_code == 422
+        assert r.status_code == 404 and r.json()["codigo"] == "ERR-DOC-001" and "ya no está en la aplicación" in r.json()["mensaje"] and "Traceback" not in r.text
+        assert web.get("/api/documents/no-existe/pages/1/thumb").status_code == 404
 
 
 def test_la_indexacion_cancelada_corta_en_el_siguiente_lote_y_sin_cancelar_solo_avanza(obs):
@@ -162,7 +163,7 @@ def test_miniatura_con_cache_acotado_y_misma_imagen():
         a = web.get("/api/documents/M1/pages/2/thumb")
         assert a.status_code == 200 and a.headers["content-type"] == "image/png" and a.content[:4] == b"\x89PNG"
         assert web.get("/api/documents/M1/pages/2/thumb").content == a.content and ("%s" % s.id, "M1", 2) in servicio._MINIATURAS
-        assert web.get("/api/documents/M1/pages/4/thumb").status_code == 422 and web.get("/api/documents/M1/pages/0/thumb").status_code == 422
+        assert web.get("/api/documents/M1/pages/4/thumb").status_code == 404 and web.get("/api/documents/M1/pages/0/thumb").status_code == 404
     for i in range(servicio.MAX_MINIATURAS + 10):
         servicio._MINIATURAS[("x", "y", i)] = b""
         while len(servicio._MINIATURAS) > servicio.MAX_MINIATURAS:

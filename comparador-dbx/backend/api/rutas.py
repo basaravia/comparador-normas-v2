@@ -2,9 +2,9 @@
 import logging
 import os
 import time
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Path, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 
 from backend.api import schemas as S
@@ -22,18 +22,51 @@ _cliente = ModelClient()                                     # un cliente por pr
 _health: dict = {"t": 0.0, "out": None}
 
 
-def sesion_actual(request: Request, response: Response) -> Sesion:
-    """La sesión de la cookie. Sin cookie se crea una; con una cookie que ya no existe (reinicio, expiración) → 410."""
-    sid = request.cookies.get(COOKIE)
-    if sid is None:
+def correo_actual(request: Request) -> Optional[str]:
+    """El correo que entrega el proxy de Databricks, solo con `TRUST_PROXY_IDENTITY`; si no, None (no se lee la cabecera). 401 si falta o no es válido."""
+    if not settings.TRUST_PROXY_IDENTITY:
+        return None
+    return sesiones.leer_correo(request.headers.getlist("x-forwarded-email"))
+
+
+Correo = Annotated[Optional[str], Depends(correo_actual)]
+
+
+def _poner_cookie(request: Request, response: Response, s: Sesion) -> None:
+    seguro = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    response.set_cookie(COOKIE, s.id, httponly=True, samesite="lax", secure=seguro, max_age=settings.SESSION_TTL_HOURS * 3600)
+
+
+def sesion_actual(request: Request, correo: Correo) -> Sesion:
+    """La sesión del usuario (con identidad) o la de la cookie. Sin sesión viva → 410: solo `GET /api/session` abre una nueva en modo cookie."""
+    if correo is not None:
+        return sesiones.crear(sesiones.huella_de(correo))
+    return sesiones.obtener(request.cookies.get(COOKIE))
+
+
+def sesion_o_nueva(request: Request, response: Response, correo: Correo) -> Sesion:
+    """Como `sesion_actual`, pero con cookie ausente o desconocida abre una sesión nueva con id propio (el valor recibido nunca se adopta)."""
+    if correo is not None:
+        return sesiones.crear(sesiones.huella_de(correo))
+    recibida = request.cookies.get(COOKIE)
+    try:
+        return sesiones.obtener(recibida)
+    except SesionPerdida:
         s = sesiones.crear()
-        seguro = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
-        response.set_cookie(COOKIE, s.id, httponly=True, samesite="lax", secure=seguro, max_age=settings.SESSION_TTL_HOURS * 3600)
+        _poner_cookie(request, response, s)
+        request.state.sesion_nueva = recibida is not None
         return s
-    return sesiones.obtener(sid)
 
 
 Ses = Annotated[Sesion, Depends(sesion_actual)]
+
+
+def estado_sesion(s: Sesion, correo: Optional[str], nueva: bool = False) -> S.SesionOut:
+    with s.lock:
+        docs = [d.out for d in s.docs.values()]
+        ultima = next((i for i, c in reversed(s.comparaciones.items()) if c.out.estado == "listo"), None)
+    return S.SesionOut(documentos=docs, comparacion_id=ultima, trabajo_activo=sesiones.trabajo_activo(s), usuario=correo or "Sesión local",
+                       retencion_horas=settings.SESSION_TTL_HOURS, max_documentos=settings.MAX_DOCS_SESION, iniciada_ts=s.iniciada_ts, sesion_nueva=nueva)
 
 
 def _doc(s: Sesion, doc_id: str):
@@ -55,22 +88,24 @@ def _leer(archivo: UploadFile) -> bytes:
 
 
 @router.get("/session", response_model=S.SesionOut)
-def sesion(s: Ses):
-    ultima = next((i for i, c in reversed(s.comparaciones.items()) if c.out.estado == "listo"), None)
-    return S.SesionOut(documentos=[d.out for d in s.docs.values()], comparacion_id=ultima)
+def sesion(request: Request, correo: Correo, s: Annotated[Sesion, Depends(sesion_o_nueva)]):
+    return estado_sesion(s, correo, getattr(request.state, "sesion_nueva", False))
 
 
 @router.delete("/session")
-def reiniciar(request: Request, response: Response):
-    sesiones.reiniciar(request.cookies.get(COOKIE))
-    response.delete_cookie(COOKIE)
+def reiniciar(request: Request, response: Response, correo: Correo):
+    if correo is not None:
+        sesiones.reiniciar_usuario(sesiones.huella_de(correo))
+    else:
+        sesiones.reiniciar(request.cookies.get(COOKIE))
+        response.delete_cookie(COOKIE)
     return {"ok": True}
 
 
 @router.post("/documents", response_model=list[S.DocumentoOut])
 def subir(s: Ses, archivos: Annotated[list[UploadFile], File()]):
-    if len(archivos) > settings.MAX_DOCS_SESION - len(s.docs):
-        raise servicio.ComparacionError("ERR-ING-004", f"Puedes cargar hasta {settings.MAX_DOCS_SESION} documentos por sesión. Reinicia la sesión para empezar de nuevo.")
+    if len(archivos) > settings.MAX_DOCS_SESION - servicio.ocupan_cupo(s):
+        raise servicio.error_tope()
     contenidos = [(a.filename or "documento.pdf", _leer(a)) for a in archivos]
     return servicio.subir_varios(s, contenidos, _cliente)
 
@@ -79,12 +114,18 @@ def subir(s: Ses, archivos: Annotated[list[UploadFile], File()]):
 def editar(s: Ses, doc_id: str, cambios: S.DocumentoPatch):
     d = _doc(s, doc_id)
     if d.out.estado not in ("cargado", "error"):
-        raise servicio.ComparacionError("ERR-DOC-003", "Este documento ya se procesó; para cambiar su tipo, reinicia la sesión y cárgalo de nuevo.")
+        raise servicio.ComparacionError("ERR-DOC-003", "Este documento ya se procesó. Para cambiar su tipo, quítalo y cárgalo de nuevo.")
     if cambios.tipo is not None:
         d.out.tipo, d.out.tipo_sugerido = cambios.tipo, False
     if cambios.metadatos is not None:
         d.out.metadatos = d.out.metadatos.model_copy(update=cambios.metadatos.model_dump(exclude_unset=True))      # solo los campos enviados
     return d.out
+
+
+@router.delete("/documents/{doc_id}", response_model=S.SesionOut)
+def quitar(s: Ses, correo: Correo, doc_id: Annotated[str, Path(pattern=r"^D\d{1,6}$")]):
+    servicio.quitar_documento(s, doc_id)
+    return estado_sesion(s, correo)
 
 
 @router.post("/documents/process", response_model=S.JobOut)

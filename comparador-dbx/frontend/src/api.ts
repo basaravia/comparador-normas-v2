@@ -8,6 +8,8 @@ export class ApiError extends Error {
     super(mensaje);
   }
   get sesionPerdida() { return this.status === 410; }
+  /** 409 porque ya hay un procesamiento o una comparación en marcha. */
+  get procesoEnMarcha() { return this.status === 409 && (this.codigo.startsWith("ERR-JOB-") || this.codigo === "ERR-CMP-007"); }
 }
 
 async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
@@ -42,6 +44,7 @@ export const api = {
     archivos.forEach((a) => f.append("archivos", a));
     return pedir<DocumentoOut[]>("/documents", { method: "POST", body: f });
   },
+  quitar: (id: string) => pedir<SesionOut>(`/documents/${encodeURIComponent(id)}`, { method: "DELETE" }),
   editarDoc: (id: string, p: DocumentoPatch) => pedir<DocumentoOut>(`/documents/${id}`, json("PATCH", p)),
   procesar: (doc_ids: string[]) => pedir<JobOut>("/documents/process", json("POST", { doc_ids })),
   job: (id: string) => pedir<JobOut>(`/jobs/${id}`),

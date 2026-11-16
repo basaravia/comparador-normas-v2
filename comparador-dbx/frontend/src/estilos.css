@@ -142,3 +142,15 @@ select, input:not([type=checkbox]), textarea { font: inherit; padding: 6px 8px; 
 .comentario-modelo { margin: 4px 0 2px 12px; white-space: pre-wrap; color: var(--gris); } .conteos { color: var(--gris); font-size: .85rem; }
 @media (max-width: 720px) { .par-en-curso { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .pag.leyendo { animation: none; } .progreso-barra { transition: none; } }
+
+/* Sesión por usuario, PDF no guardado, carga múltiple */
+.linea-cuenta { margin: 0; padding: 6px 24px; font-size: .85rem; color: var(--gris); background: var(--blanco); border-bottom: 1px solid var(--borde); }
+.dialogo { border: 1px solid var(--borde); border-radius: 12px; padding: 20px 24px; max-width: 560px; width: calc(100% - 32px); color: var(--texto); }
+.dialogo::backdrop { background: rgba(31, 42, 36, .55); }
+.dialogo ul { margin: 8px 0; padding-left: 20px; }
+.casilla { display: flex; align-items: center; gap: 8px; margin-top: 12px; min-height: 24px; } .casilla input { width: auto; }
+.franja-pdf { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; background: var(--verde-claro); border-radius: 6px; padding: 6px 12px; margin-bottom: 12px; font-size: .9rem; }
+.zona-borrado { margin-top: 36px; padding-top: 12px; border-top: 1px solid var(--borde); }
+.ayuda-btn { min-width: 24px; min-height: 24px; } .ayuda-estado { display: block; margin-top: 2px; }
+.estado-perdida h2 { font-size: 1.05rem; margin: 0 0 6px; } .estado-perdida p { margin: 0 0 8px; }
+.docs .acciones { white-space: nowrap; } .docs .acciones .enlace { min-height: 24px; }

@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import re
+import shutil
 import threading
 import time
 import uuid
@@ -21,7 +22,7 @@ from backend.api.schemas import (EsperaLimite, FragmentoOut, IndiceDoc, ParEnCur
                                  NodoOut, ParVia2, SeccionOut)
 from backend.config import RAIZ, Settings, settings
 from backend.core.errors import ComparadorError
-from backend.core.sesiones import Comparacion, Doc, Sesion, error_negocio
+from backend.core.sesiones import Comparacion, Doc, Sesion, error_negocio, trabajo_activo
 from backend.engine import ajustes
 from backend.engine.agregacion import controles_sin_base, marca_articulo, naturaleza_articulo
 from backend.engine.juez import Cancelado, Observador, juzgar_pares
@@ -40,6 +41,7 @@ from backend.retrieval.tabla import titulo_visible
 
 log = logging.getLogger(__name__)
 SAMPLES = RAIZ / "samples"
+EJEMPLO = "Documento de ejemplo."        # advertencia que marca a los documentos precargados
 _PROCESO = ThreadPoolExecutor(max_workers=1)        # procesamiento de documentos: Docling nunca en paralelo (CLAUDE.md regla 7)
 _COMPARACION = ThreadPoolExecutor(max_workers=2)
 _INGESTA = ThreadPoolExecutor(max_workers=4)        # clasificación de varios PDF a la vez (I/O al LLM)
@@ -48,23 +50,37 @@ _INGESTA = ThreadPoolExecutor(max_workers=4)        # clasificación de varios P
 class ComparacionError(ComparadorError):
     """Selección o límites de la comparación: el mensaje ya es de negocio."""
 
-    def __init__(self, codigo: str, mensaje: str):
+    def __init__(self, codigo: str, mensaje: str, estado_http: int = 422):
         super().__init__(mensaje)
-        self.codigo, self.mensaje_negocio = codigo, mensaje
+        self.codigo, self.mensaje_negocio, self.estado_http = codigo, mensaje, estado_http
+
+
+def _ya_hay_proceso() -> ComparacionError:
+    return ComparacionError("ERR-JOB-002", "Ya hay un proceso en marcha con tu cuenta. Espera a que termine.", 409)
 
 
 # ───────────────────────── ingesta ─────────────────────────
 
+def ocupan_cupo(sesion: Sesion) -> int:
+    """Documentos que cuentan para `MAX_DOCS_SESION`: los que fallaron no (se pueden reintentar o quitar)."""
+    with sesion.lock:
+        return sum(d.out.estado != "error" for d in sesion.docs.values())
+
+
+def error_tope() -> ComparacionError:
+    return ComparacionError("ERR-ING-004", f"Llegaste al máximo de {settings.MAX_DOCS_SESION} documentos. Quita alguno de la lista para agregar otro.")
+
+
 def subir(sesion: Sesion, nombre: str, contenido: bytes, cliente: ModelClient) -> DocumentoOut:
     """Valida y clasifica un PDF. El tipo queda sugerido solo si el modelo está seguro; si no, el auditor elige."""
     with sesion.lock:
-        if len(sesion.docs) >= settings.MAX_DOCS_SESION:
-            raise ComparacionError("ERR-ING-004", f"Puedes cargar hasta {settings.MAX_DOCS_SESION} documentos por sesión. Reinicia la sesión para empezar de nuevo.")
+        if ocupan_cupo(sesion) >= settings.MAX_DOCS_SESION:
+            raise error_tope()
         doc_id = sesion.nuevo_id("D")
         seguro = nombre_seguro(nombre)
-        sesion.docs[doc_id] = Doc(out=DocumentoOut(id=doc_id, nombre=seguro))        # cupo reservado dentro del lock: la comprobación de arriba cuenta también las subidas en curso
+        sesion.docs[doc_id] = Doc(out=DocumentoOut(id=doc_id, nombre=seguro), ingesta=True)        # cupo reservado dentro del lock: la comprobación de arriba cuenta también las subidas en curso
+    carpeta = sesion.dir / doc_id
     try:
-        carpeta = sesion.dir / doc_id
         carpeta.mkdir(mode=0o700)
         ruta = carpeta / seguro
         ruta.write_bytes(contenido)
@@ -72,6 +88,7 @@ def subir(sesion: Sesion, nombre: str, contenido: bytes, cliente: ModelClient) -
         if not r["ok"]:
             out = DocumentoOut(id=doc_id, nombre=seguro, estado="error", error=ErrorNegocio(codigo=r["codigo"], mensaje=r["mensaje"]))
             doc = Doc(out=out)
+            shutil.rmtree(carpeta, ignore_errors=True)        # no se puede reintentar: el PDF no se queda en el servidor
         else:
             meta = Metadatos(**{k: str(v) for k, v in r["metadatos"].items() if k in Metadatos.model_fields})
             out = DocumentoOut(id=doc_id, nombre=seguro, paginas=r["paginas"], tipo=r["tipo"], tipo_sugerido=r["tipo"] is not None, metadatos=meta,
@@ -80,6 +97,7 @@ def subir(sesion: Sesion, nombre: str, contenido: bytes, cliente: ModelClient) -
     except BaseException:
         with sesion.lock:
             sesion.docs.pop(doc_id, None)        # libera el cupo reservado
+        shutil.rmtree(carpeta, ignore_errors=True)
         raise
     with sesion.lock:
         sesion.docs[doc_id] = doc
@@ -171,8 +189,11 @@ def _indexando(job: JobOut, n: int, hechos: int, total: int, cancelado: bool = F
 
 
 def procesar(sesion: Sesion, doc_ids: list[str], cliente: ModelClient) -> JobOut:
-    """Encola extracción + seccionado + indexación de los documentos. Devuelve el job (poll con `GET /api/jobs/{id}`)."""
+    """Encola extracción + seccionado + indexación de los documentos. Devuelve el job (poll con `GET /api/jobs/{id}`).
+    Un solo trabajo por sesión. También reintenta documentos en `error` cuyo PDF sigue en disco."""
     with sesion.lock:
+        if trabajo_activo(sesion):
+            raise _ya_hay_proceso()
         docs = []
         for i in doc_ids:
             d = sesion.docs.get(i)
@@ -184,13 +205,14 @@ def procesar(sesion: Sesion, doc_ids: list[str], cliente: ModelClient) -> JobOut
         job = _job(sesion, "procesamiento", documentos={d.out.id: "en_cola" for d in docs},
                    por_documento={d.out.id: ProgresoDoc(etapa="En cola", paginas_total=d.out.paginas) for d in docs})
         for d in docs:
-            d.out.estado = "en_cola"
+            d.out.estado, d.out.error = "en_cola", None
+    rutas = [d.ruta for d in docs]                       # OJO: el PDF se borra al terminar (`d.ruta` pasa a None); las marcas de cancelación se limpian con estas rutas
 
     def correr() -> None:
         job.estado = "en_curso"
         t0, n = time.perf_counter(), len(docs)
-        for d in docs:
-            docling_extractor.olvidar_cancelacion(d.ruta)        # sin marcas viejas de una cancelación anterior
+        for ruta in rutas:
+            docling_extractor.olvidar_cancelacion(ruta)        # sin marcas viejas de una cancelación anterior
         for k, d in enumerate(docs):
             if job.job_id in sesion.cancelados:               # cancelado: lo que no se leyó vuelve a "cargado" para poder reintentarlo
                 d.out.estado = "cargado"
@@ -231,8 +253,11 @@ def procesar(sesion: Sesion, doc_ids: list[str], cliente: ModelClient) -> JobOut
                 if nuevo == "error":
                     d.out.error = job.errores[-1]
         job.progreso, job.cancelable = 1.0, False
+        for ruta in rutas:
+            docling_extractor.olvidar_cancelacion(ruta)        # la cancelación ya se aplicó (o llegó tarde): no se arrastra al reintento
         for d in docs:
-            docling_extractor.olvidar_cancelacion(d.ruta)        # la cancelación ya se aplicó (o llegó tarde): no se arrastra al reintento
+            if d.out.estado == "listo":                          # procesado con éxito: el PDF ya no hace falta (si falló o se canceló se conserva para reintentar)
+                _borrar_pdf(sesion, d)
         if job.job_id in sesion.cancelados:
             job.estado, job.etapa = "cancelado", "Procesamiento cancelado. Los documentos ya leídos se conservan."
         else:
@@ -240,8 +265,31 @@ def procesar(sesion: Sesion, doc_ids: list[str], cliente: ModelClient) -> JobOut
             job.etapa = "Documentos listos" if job.estado == "listo" else "No se pudo procesar ningún documento"
         log.info("Procesamiento: %d documentos en %.0f s", n, time.perf_counter() - t0)
 
-    _PROCESO.submit(correr)
+    def correr_y_cerrar() -> None:
+        try:
+            correr()
+        except Exception as e:                               # un fallo imprevisto no deja el trabajo colgado ni bloquea la sesión
+            err = error_negocio(e)
+            for d in docs:
+                if d.out.estado in ("en_cola", "extrayendo", "seccionando", "indexando"):
+                    d.out.estado, d.out.error = "error", err
+                    job.documentos[d.out.id] = "error"
+            job.errores.append(err)
+            job.estado, job.etapa, job.cancelable = "error", "No se pudo procesar ningún documento", False
+        finally:
+            sesion.ultimo_uso = time.time()                  # el trabajo cuenta como uso de la sesión
+
+    _PROCESO.submit(correr_y_cerrar)
     return job
+
+
+def _borrar_pdf(sesion: Sesion, d: Doc) -> None:
+    """Borra la carpeta del PDF del documento (la que guardó el propio documento, nunca una ruta armada con datos de la solicitud) y sus miniaturas."""
+    with sesion.lock:
+        ruta, d.ruta = d.ruta, None
+    if ruta is not None and ruta.parent.parent == sesion.dir:
+        shutil.rmtree(ruta.parent, ignore_errors=True)
+    _purgar_miniaturas(sesion.id, d.out.id)
 
 
 # ───────────────────────── árbol y selección ─────────────────────────
@@ -362,26 +410,62 @@ _RENDER = threading.Semaphore(2)                                             # a
 _LOCK_MINIATURAS = threading.Lock()
 
 
+def _purgar_miniaturas(sesion_id: str, doc_id: str) -> None:
+    with _LOCK_MINIATURAS:
+        for clave in [k for k in _MINIATURAS if k[0] == sesion_id and k[1] == doc_id]:
+            del _MINIATURAS[clave]
+
+
 def miniatura(sesion: Sesion, doc_id: str, pagina: int) -> bytes:
-    """PNG pequeño de una página del PDF de la sesión (se renderiza al pedirlo, no se guarda). Para la tira de páginas del paso 1."""
+    """PNG pequeño de una página del PDF de la sesión (se renderiza al pedirlo, no se guarda). Solo mientras el PDF existe, o sea durante el procesamiento."""
     with sesion.lock:
         d = sesion.docs.get(doc_id)
-    if d is None or d.ruta is None or not 1 <= pagina <= d.out.paginas:
-        raise ComparacionError("ERR-DOC-001", "No encontramos esa página. Puede que la sesión se haya reiniciado.")
+        ruta = d.ruta if d else None
+    if d is None:
+        raise ComparacionError("ERR-DOC-001", "No encontramos ese documento. Puede que ya lo hayas quitado.", 404)
+    sin_pdf = ComparacionError("ERR-DOC-001", f"El PDF de «{d.out.nombre}» ya no está en la aplicación; solo se conserva su contenido preparado.", 404)
+    if ruta is None or not ruta.exists():
+        raise sin_pdf
+    if not 1 <= pagina <= d.out.paginas:
+        raise ComparacionError("ERR-DOC-001", "No encontramos esa página del documento.", 404)
     clave = (sesion.id, doc_id, pagina)
     with _LOCK_MINIATURAS:
         if clave in _MINIATURAS:
             _MINIATURAS.move_to_end(clave)
             return _MINIATURAS[clave]
-    with _RENDER, pymupdf.open(d.ruta) as pdf:
-        p = pdf[pagina - 1]
-        z = min(1.0, ANCHO_MINIATURA / max(p.rect.width, 1))
-        png = p.get_pixmap(matrix=pymupdf.Matrix(z, z), alpha=False).tobytes("png")
+    try:
+        with _RENDER, pymupdf.open(ruta) as pdf:
+            p = pdf[pagina - 1]
+            z = min(1.0, ANCHO_MINIATURA / max(p.rect.width, 1))
+            png = p.get_pixmap(matrix=pymupdf.Matrix(z, z), alpha=False).tobytes("png")
+    except Exception:
+        if ruta.exists():
+            raise
+        raise sin_pdf                                    # el PDF se borró mientras se renderizaba
     with _LOCK_MINIATURAS:
         _MINIATURAS[clave] = png
         while len(_MINIATURAS) > MAX_MINIATURAS:
             _MINIATURAS.popitem(last=False)
     return png
+
+
+def quitar_documento(sesion: Sesion, doc_id: str) -> None:
+    """Quita un documento de la sesión. Si ya estaba procesado, descarta los índices y la comparación vigente (y su Excel)."""
+    with sesion.lock:
+        d = sesion.docs.get(doc_id)
+        if d is None:
+            raise ComparacionError("ERR-DOC-001", "No encontramos ese documento. Puede que ya lo hayas quitado.", 404)
+        if d.ingesta or trabajo_activo(sesion):
+            raise ComparacionError("ERR-DOC-006", "Espera a que termine el proceso en curso o cancélalo antes de quitar documentos.", 409)
+        del sesion.docs[doc_id]
+        excels = []
+        if d.out.estado == "listo":
+            sesion.indexados, sesion.indice_norma, sesion.indice_manual = set(), None, None      # se reconstruyen con los documentos que quedan
+            excels = [sesion.dir / f"papel_{cid[:8]}.xlsx" for cid in sesion.comparaciones]
+            sesion.comparaciones.clear()                                                         # la comparación vigente ya no vale
+    _borrar_pdf(sesion, d)
+    for f in excels:
+        f.unlink(missing_ok=True)
 
 
 def cancelar(sesion: Sesion, job_id: str) -> JobOut:
@@ -408,7 +492,9 @@ def comparar(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str], cl
     cfg = ajustes.efectivos(sesion)                      # los ajustes de la sesión al momento de lanzar la comparación
     with sesion.lock:
         if any(j.tipo == "comparacion" and j.estado in ("en_cola", "en_curso") for j in sesion.jobs.values()):
-            raise ComparacionError("ERR-CMP-007", "Ya hay una comparación en curso. Espera a que termine para lanzar otra.")
+            raise ComparacionError("ERR-CMP-007", "Ya hay una comparación en curso. Espera a que termine para lanzar otra.", 409)
+        if trabajo_activo(sesion):
+            raise _ya_hay_proceso()
         cid = uuid.uuid4().hex
         comp = Comparacion(out=ComparacionOut(id=cid, estado="en_curso"))
         job = _job(sesion, "comparacion", comparacion_id=cid, etapa="En cola")      # RLock: el job queda registrado antes de soltar el lock
@@ -429,6 +515,7 @@ def comparar(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str], cl
             job.errores.append(err)
             job.mensaje = err.mensaje
         job.cancelable = False
+        sesion.ultimo_uso = time.time()                  # el trabajo cuenta como uso de la sesión
         log.info("Comparación: %d artículos x %d secciones en %.0f s", len(arts), len(secs), time.perf_counter() - t0)
 
     _COMPARACION.submit(correr)
@@ -542,23 +629,30 @@ def excel(sesion: Sesion, comp: Comparacion) -> Path:
 # ───────────────────────── ejemplos precargados (docs/13 D2) ─────────────────────────
 
 def cargar_ejemplo(sesion: Sesion) -> list[DocumentoOut]:
-    """Carga `samples/ejemplo.json` (secciones ya extraídas): sin Docling. Los índices se arman al comparar."""
+    """Carga `samples/ejemplo.json` (secciones ya extraídas): sin Docling. Los índices se arman al comparar.
+    No repite un ejemplo que ya está cargado y respeta `MAX_DOCS_SESION`; si ya estaban todos, devuelve los documentos de la sesión tal cual."""
     archivo = SAMPLES / "ejemplo.json"
     if not archivo.exists():
         raise ComparacionError("ERR-SMP-001", "El ejemplo no está disponible en esta instalación.")
     datos = json.loads(archivo.read_text(encoding="utf-8"))
     salida = []
-    for d in datos["documentos"]:
+    with sesion.lock:
+        faltan = [d for d in datos["documentos"] if not any(x.out.nombre == d["nombre"] and EJEMPLO in x.out.advertencias for x in sesion.docs.values())]
+        if faltan and ocupan_cupo(sesion) + len(faltan) > settings.MAX_DOCS_SESION:
+            raise error_tope()
+    for d in faltan:
         with sesion.lock:
             doc_id = sesion.nuevo_id("D")
-        viejo = d["doc_id"]
-        secs = [Seccion.model_validate({**s, "doc_id": doc_id, "id": doc_id + s["id"][len(viejo):]}) for s in d["secciones"]]
-        out = DocumentoOut(id=doc_id, nombre=d["nombre"], paginas=d["paginas"], tipo=d["tipo"], metadatos=Metadatos(**d.get("metadatos", {})), estado="listo",
-                           advertencias=["Documento de ejemplo."])
-        doc = Doc(out=out, secciones=secs, sha256=d.get("sha256", ""))
-        doc.clasificacion = clasificar_secciones(secs)
-        doc.avisos_arbol = _arbol_avisos(doc)
-        with sesion.lock:
+            viejo = d["doc_id"]
+            secs = [Seccion.model_validate({**s, "doc_id": doc_id, "id": doc_id + s["id"][len(viejo):]}) for s in d["secciones"]]
+            out = DocumentoOut(id=doc_id, nombre=d["nombre"], paginas=d["paginas"], tipo=d["tipo"], metadatos=Metadatos(**d.get("metadatos", {})), estado="listo",
+                               advertencias=[EJEMPLO])
+            doc = Doc(out=out, secciones=secs, sha256=d.get("sha256", ""))
+            doc.clasificacion = clasificar_secciones(secs)
+            doc.avisos_arbol = _arbol_avisos(doc)
             sesion.docs[doc_id] = doc
         salida.append(out)
+    if not salida:
+        with sesion.lock:
+            return [d.out for d in sesion.docs.values()]
     return salida

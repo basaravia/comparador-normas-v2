@@ -189,6 +189,11 @@ export function Results() {
           {msg && <span className="ayuda">{msg}</span>}
           <a className="primario boton" href={api.urlExcel(c.id)} download>Descargar papel de trabajo (.xlsx)</a>
         </div>
+        <p className="ayuda">Al comparar de nuevo, este resultado se reemplaza. Lo único que se conserva es el papel de trabajo que descargues.</p>
+        <div className="barra-acciones">
+          <button className="secundario" onClick={() => d({ t: "paso", paso: "seleccion" })}>Cambiar la selección y comparar de nuevo</button>
+          <button className="secundario" onClick={() => d({ t: "agregarDocs" })}>Agregar documentos</button>
+        </div>
       </section>
     </div>
   );

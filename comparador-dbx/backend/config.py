@@ -108,6 +108,9 @@ class Settings:
     MAX_SESIONES: int = int(_env("MAX_SESIONES"))
     MAX_DOCS_SESION: int = int(_env("MAX_DOCS_SESION"))
     MAX_PARES: int = int(_env("MAX_PARES"))
+    SESION_EXPULSABLE_MIN: int = int(_env("SESION_EXPULSABLE_MIN"))      # [CALIBRAR] minutos sin uso para poder expulsar una sesión cuando MAX_SESIONES está lleno
+    TRUST_PROXY_IDENTITY: bool = _env("TRUST_PROXY_IDENTITY").lower() == "true"            # true: la sesión es del correo de x-forwarded-email (solo detrás del proxy de Databricks)
+    LIMPIAR_TMP_AL_ARRANCAR: bool = _env("LIMPIAR_TMP_AL_ARRANCAR").lower() == "true"      # true: al iniciar borra las carpetas de sesión huérfanas de /tmp
 
     # Papel de trabajo
     COLOR_PRIMARIO: str = _env("COLOR_PRIMARIO")
