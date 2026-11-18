@@ -9,7 +9,7 @@ Wireframe: `wireframes/aviso-pdf-no-guardado-v1.svg`. Nada implementado. Estado 
 
 ## Texto (español de negocio)
 - Título: **Tus documentos están listos. Guarda tus PDF.**
-- Cuerpo: "Esta aplicación no guarda tus PDF. Solo conserva los datos de cada documento y su contenido preparado para buscar, mientras la aplicación siga abierta. Si se reinicia, tendrás que cargarlos de nuevo."
+- Cuerpo: "Esta aplicación no guarda tus PDF. Solo conserva los datos de cada documento y su contenido preparado para buscar, hasta {retencion_horas} horas sin actividad o hasta que la aplicación se reinicie. Después tendrás que cargarlos de nuevo." (Corrección por exactitud del 16 nov 2026, informada al usuario y reversible: el texto aprobado decía "mientras la aplicación siga abierta", que dejó de ser cierto con la sesión por usuario.)
 - "Conserva tu PDF original y anota qué archivo es (nombre, versión y fecha). Lo necesitarás para respaldar tu papel de trabajo."
 - Lista de los documentos recién procesados (nombre · páginas).
 - Casilla: "No volver a mostrar en esta sesión". Botón: **Entendido, continuar**.

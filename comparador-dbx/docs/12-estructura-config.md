@@ -46,7 +46,7 @@ Ver [`config/defaults.env`](../config/defaults.env).
 |---|---|---|---|
 | `SESSION_TTL_HOURS` | 48 | — | retención por inactividad |
 | `SESION_EXPULSABLE_MIN` | 120 `[CALIBRAR]` | — | inactividad mínima para expulsar una sesión cuando `MAX_SESIONES` está lleno |
-| `TRUST_PROXY_IDENTITY` | `false` | `true` | liga la sesión al correo de `x-forwarded-email`; exige `DATABRICKS_APP_NAME` (la inyecta Databricks Apps); ver [16](16-despliegue.md) |
+| `TRUST_PROXY_IDENTITY` | `false` | `false` (pasa a `true` solo tras la comprobación S-21 de [16](16-despliegue.md)) | liga la sesión al correo de `x-forwarded-email`; exige `DATABRICKS_APP_NAME` (la inyecta Databricks Apps); ver [16](16-despliegue.md) |
 | `LIMPIAR_TMP_AL_ARRANCAR` | `false` | `true` | borra al iniciar las carpetas `comparador_*` huérfanas de `/tmp` |
 
 `app.yaml` es el mismo para todos los stages (hoy `STAGE=mvp`); en dev y sandbox valen los de `defaults.env`.

@@ -3,7 +3,7 @@ import type { Dispatch } from "react";
 import { api } from "./api";
 import { leerRecuerdo } from "./recuerdo.ts";
 import type { Accion } from "./reductor.ts";
-import { motivoPerdida } from "./sesion.ts";
+import { huellaUsuario, motivoPerdida } from "./sesion.ts";
 import type { SesionOut } from "./tipos.ts";
 
 interface Opciones { perdidaConocida?: boolean; conProceso?: boolean; sinPerdida?: boolean }
@@ -13,7 +13,7 @@ export async function traerSesion(d: Dispatch<Accion>, o: Opciones = {}): Promis
   const s = await api.sesion();
   const rec = leerRecuerdo();
   const motivo = o.sinPerdida ? null : motivoPerdida({
-    recuerdo: rec, usuario: s.usuario, sesion_nueva: !!s.sesion_nueva, iniciada_ts: s.iniciada_ts, docs: s.documentos.length,
+    recuerdo: rec, usuario: huellaUsuario(s.usuario), sesion_nueva: !!s.sesion_nueva, iniciada_ts: s.iniciada_ts, docs: s.documentos.length,
     perdidaConocida: !!o.perdidaConocida, ahoraMs: Date.now(), retencionHoras: s.retencion_horas,
   });
   d({ t: "sesion", sesion: s, perdida: motivo ? { motivo, conProceso: !!o.conProceso || !!rec?.trabajo } : null });

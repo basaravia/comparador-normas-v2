@@ -451,7 +451,7 @@ Rama de **MVP tal cual está** (docs/14 #32): juez por par con el veredicto de d
 | `backend/engine/verificacion.py` | Verificación de fragmentos con posiciones (misma pieza que en `feat/l4-verificacion-descomposicion`; con las correcciones de appsec: cifras y negaciones, tope de comparación difusa). |
 | `backend/engine/agregacion.py` | `marca_articulo` (A/L/R/X/P, docs/09 §5; sin veredictos válidos → R, nunca A), `naturaleza_articulo`, `controles_sin_base`. |
 | `backend/engine/servicio.py` | Encadena ingesta → Docling (cola de 1 worker) → seccionado → índices FAISS → pares → juez → agregación → conclusión → `EntradaPapel`. `subir`, `procesar`, `arbol`, `seccion`, `comparar`, `guardar_conclusion`, `excel`, `cargar_ejemplo`. Un manual por comparación (el papel tiene un solo manual). Tope `MAX_PARES`. |
-| `backend/core/sesiones.py` | Sesiones en memoria por cookie `session_id` (HttpOnly, SameSite=Lax), expiración `SESSION_TTL_HOURS`, directorio temporal por sesión. |
+| `backend/core/sesiones.py` | Sesiones en memoria por cookie `session_id` (HttpOnly, SameSite=Lax) o, con `TRUST_PROXY_IDENTITY`, por usuario (ver «Sesión por usuario, PDF efímero y multicarga»); expiración `SESSION_TTL_HOURS`, directorio temporal por sesión. |
 | `backend/api/` · `backend/main.py` | Endpoints de docs/11 con el contrato de `backend/api/schemas.py`; errores `{codigo, mensaje}` en lenguaje de negocio; 410 si la sesión se perdió; cabeceras de seguridad; sirve `frontend/dist`. |
 | `frontend/` | React 18 + Vite + TS (Carga · Selección · Resultados), verde y blanco. `npm run build` genera `frontend/dist` (versionado). |
 | `samples/ejemplo.json` · `scripts/precompute_samples.py` | Ejemplo precargado (Arts. 31–48 de la ley LA/FT + MOCK-DEMO-01): secciones ya extraídas, sin Docling; los embeddings se calculan al comparar (dependen del modelo del stage). |
@@ -470,6 +470,72 @@ Rama de **MVP tal cual está** (docs/14 #32): juez por par con el veredicto de d
 - **D1 · Despliegue por SDK (`notebooks/07_desplegar.ipynb`, 19 oct 2026):** el código está en el notebook y los parámetros son widgets (`app`, `secreto_scope`, `secreto_clave`, `ruta`). Identifica al usuario con `current_user.me()`, sube el código a `/Workspace/Users/<correo>/<app>` (`ImportFormat.RAW`; excluye `.env`, y `output`, `documentos`, `notebooks`, `tests`, `.git` solo en la raíz), valida con `apps.get` si la app existe (la crea o actualiza), le da un recurso secreto `foundry-token` con permiso READ y despliega con `deploy_and_wait`. Diferencia con docs/13 §Fase D: el despliegue es por SDK desde un notebook, no por CLI; `databricks-sdk` se instala con `%pip` en el notebook y NO va en `requirements.txt` de la app.
   - **Estado real de D1:** desplegada y en `RUNNING` en Databricks Free (3 apps máx. por workspace); identidad por headers `x-forwarded-*` y escritura de la app en su carpeta comprobadas y documentadas en `docs/16-despliegue.md` (sin uso en la app; regla 8 intacta). **Sin acreditar:** `GET /api/health` con LLM real (Free no tiene Foundry), conversión con Docling dentro del contenedor y APROBADO de `qa-ia`; D1 no pasa a hecho hasta tenerlos.
 - **Selección como índice y progreso en vivo (RF-20/RF-21, docs/14 #35, 19 oct 2026):** `frontend/src/components/DualTree.tsx` (índice abierto hasta el artículo, conteos por rama, página, buscar, expandir/contraer, solo marcados, teclado ARIA tree) y `ProgresoVivo.tsx` (etapas, tira de páginas con miniaturas, tiempos con reloj del servidor, actividad del juez, aviso de espera, cancelar). Backend: campos aditivos de `JobOut` (`schemas.py`), `servicio._ObsJob` (observador que recibe los eventos reales de `juez.Observador`: par que entra, espera por 429, veredicto verificado), `servicio.cancelar` + `docling_extractor.cancelar(ruta)` (mata solo el subproceso de ese PDF), `servicio.miniatura` (PyMuPDF, se renderiza al pedirla) y los endpoints `POST /api/jobs/{id}/cancel` y `GET /api/documents/{id}/pages/{n}/thumb`. También corrige que la pantalla de Selección no se refrescaba al procesar documentos nuevos tras haberla visto (`store.tsx`). Pruebas: `tests/test_progreso_vivo.py` (12, deterministas: observador, anillo de veredictos, cancelación sin llamadas al modelo, marca de cancelación que no se arrastra, miniaturas con caché acotado, API). Además: `Sesion.cancelados` (ids de jobs cancelados) y el estado `cancelado` de `JobOut` y `ComparacionOut`; las miniaturas van en una caché LRU de 64 con a lo más 2 renders a la vez. Frontend: la lógica pura (`src/reductor.ts`, `src/arbol.ts`) se prueba con `npm test` (`frontend/pruebas/`, `node:test`, sin dependencias nuevas; 6 pruebas: refresco de la selección al procesar documentos nuevos, conservación de las marcas y títulos sin artículos). Los componentes no tienen prueba automática (vitest + testing-library quedaría fuera de docs/12: lo decide el usuario). Diferencias con la spec: no hay PDF con cajas en vivo (Docling no entrega geometría); el cancelar de la comparación no interrumpe las llamadas ya enviadas. Corrección (22 oct 2026): un título sin artículos detectados (`es_hoja=False` y sin hijos) ya no se trata como hoja: su casilla queda deshabilitada con el aviso "No se detectaron artículos en este título" y no se envía a comparar (evitaba el 422 ERR-CMP-002).
+
+### Sesión por usuario, PDF efímero y multicarga (rama `feat/sesion-usuario-pdf-efimero`, 16–18 nov 2026; docs/14 #37 y #38)
+
+**Backend**
+- `backend/core/sesiones.py`:
+  - Con `TRUST_PROXY_IDENTITY=true`, la sesión se busca por el SHA-256 del correo de `x-forwarded-email` (`leer_correo`: exactamente un valor, ≤ 254 caracteres, forma `a@b`, sin caracteres de control; si no, 401 `ERR-SES-003`). No se lee ni se emite la cookie. Con la bandera apagada la cabecera no se lee en ningún camino.
+  - `Sesion.id` sigue siendo aleatorio y la carpeta sigue con `mkdtemp(prefix="comparador_sesion_")`.
+  - Ni el correo ni su hash van a logs, errores ni carpetas.
+  - Retención de 48 h. Con `MAX_SESIONES` lleno se expulsa la sesión más inactiva, solo si lleva al menos `SESION_EXPULSABLE_MIN` sin uso y no tiene trabajo activo; si no, 503 `ERR-SES-002`. Ni la expiración ni la expulsión tocan sesiones con trabajo o ingesta en curso.
+  - `limpiar_tmp_huerfanos()`: solo hijos directos de `tempfile.gettempdir()` con el prefijo, directorios reales (no enlaces) del mismo usuario.
+  - `trabajo_activo()`, `hay_trabajo()` y `existente()`.
+- `backend/main.py`:
+  - Arranque (`lifespan`): con la bandera encendida exige `DATABRICKS_APP_NAME` y, si falta, no arranca. Con `LIMPIAR_TMP_AL_ARRANCAR` limpia `/tmp`.
+  - Middleware de origen: POST/PUT/PATCH/DELETE en `/api` con `Sec-Fetch-Site` distinto de `same-origin`/`none` → 403 `ERR-SEG-001`. Si la cabecera falta, pasa.
+  - `ComparadorError.estado_http` (por omisión 422) permite 404/409.
+- `backend/engine/servicio.py`:
+  - El PDF se borra al final de `correr()`, solo en los documentos `listo` (`_borrar_pdf`: la carpeta guardada en el documento y sus miniaturas). En error o cancelación se conserva para reintentar. El PDF rechazado en la ingesta se borra enseguida.
+  - Las marcas de cancelación se limpian con las rutas capturadas al inicio, porque `d.ruta` pasa a None.
+  - `correr_y_cerrar` cierra el trabajo en `error` ante un fallo imprevisto, así el trabajo nunca queda colgado.
+  - Un trabajo por sesión: 409 `ERR-JOB-002`, o `ERR-CMP-007` si es otra comparación.
+  - `procesar` acepta reintentar documentos en `error`.
+  - El tope `MAX_DOCS_SESION` no cuenta los fallidos (`ocupan_cupo`). `cargar_ejemplo` respeta el tope y no duplica.
+  - `quitar_documento`: 409 `ERR-DOC-006` con trabajo o ingesta en curso. Si el documento estaba `listo`, invalida los índices (se reconstruyen en la siguiente comparación con los que quedan) y descarta las comparaciones y sus Excel.
+  - `miniatura`: 404 `ERR-DOC-001` si el PDF ya no existe, nunca 500.
+- `backend/api/rutas.py`:
+  - `GET /api/session` agrega `trabajo_activo {id = job_id, tipo, comparacion_id}`, `usuario` ("Sesión local" sin identidad), `retencion_horas`, `max_documentos`, `iniciada_ts` y `sesion_nueva`. En modo cookie es el único endpoint que abre una sesión nueva ante una cookie desconocida; el resto responde 410 `ERR-SES-001`.
+  - `DELETE /api/documents/{doc_id}` valida `^D\d{1,6}$` y busca solo en la sesión propia.
+  - `DELETE /api/session` marca la sesión `cerrada` y lee el trabajo activo bajo el mismo lock, y lo cancela antes de borrar. Así Docling o el juez no siguen trabajando sin sesión, y un `procesar`, `comparar` o una subida simultáneos reciben 410 (`exigir_abierta`).
+- Configuración (`config/defaults.env`, docs/12):
+  - `SESSION_TTL_HOURS=48`.
+  - `SESION_EXPULSABLE_MIN=120` [CALIBRAR].
+  - `TRUST_PROXY_IDENTITY=false` y `LIMPIAR_TMP_AL_ARRANCAR=false`.
+  - En `app.yaml`: `LIMPIAR_TMP_AL_ARRANCAR=true` y `TRUST_PROXY_IDENTITY=false`, hasta la comprobación S-21 de docs/16.
+
+**Frontend**
+- `src/sesion.ts`: funciones puras (cupo, conflicto de manuales, expirada contra reinicio, reenganche).
+- `src/recuerdo.ts`: localStorage `cn_recuerdo` y `cn_avisados`; sessionStorage `cn_aviso_oculto`. `cn_recuerdo` no guarda el correo, solo una huella corta (`huellaUsuario`, FNV-1a), suficiente para saber si es la misma cuenta (appsec, CWE-922).
+- `src/sincronizar.ts`: refresco al volver a la pestaña.
+- Componentes `AvisoPdf.tsx` (diálogo de docs/ux/aviso-pdf-no-guardado.md), `Confirmar.tsx` (`alertdialog`, foco en Cancelar) y `EstadoPerdida.tsx` (sesión expirada o aplicación reiniciada).
+- Cambios en `App.tsx`, `pages/*` y `components/*`:
+  - Línea de cuenta y retención.
+  - Reenganche al trabajo activo.
+  - "Quitar" y "Reintentar" por fila.
+  - "Borrar todo y empezar de nuevo" con confirmación.
+  - Un solo manual, con "Comparar" deshabilitado si hay marcas en dos manuales.
+  - "Agregar documentos" en Selección y Resultados.
+  - Contador "n de max".
+  - Aviso de archivos no PDF.
+  - Estado "Indexado · PDF no guardado".
+
+**Pruebas**
+- `tests/test_sesion_usuario.py` (37) y `tests/test_sesion_usuario_huecos.py` (13, de `qa-ia`: carreras con el lock, reintento, cancelación, umbral de expulsión, reenganche desde otra pestaña): aislamiento entre usuarios, cabecera ausente, duplicada o mal formada, bandera apagada con cabecera falsificada, arranque sin `DATABRICKS_APP_NAME`, origen cruzado, IDOR y recorrido de rutas en DELETE, expulsión, limpieza de `/tmp`, borrado del PDF, logs sin correo, tope y ejemplo, `trabajo_activo`, "Borrar todo" que cancela el trabajo.
+- Se ajustaron `tests/test_api.py` y `tests/test_progreso_vivo.py`.
+- Frontend: `pruebas/sesion.test.ts`; `npm test` 18/18.
+- Suite no-integración en Ubuntu (18 nov 2026): 789 passed; coverage de backend 91 % (`sesiones.py` 99 %), salvo `test_el_hijo_recibe_un_entorno_minimo_sin_claves_de_los_modelos`, que falla por las variables `LC_*` del laptop. Se corrige en `chore/entorno-ubuntu-uv`; no es de esta rama.
+
+**Diferencias con la spec y límites conocidos**
+- La sesión por usuario está implementada pero **apagada** en `app.yaml` hasta comprobar el proxy desde el navegador (S-21, condición grave de appsec).
+- Las marcas de selección viven en el navegador: se pierden al recargar (P-1 del diseño UX, fuera de esta rama).
+- Las cachés globales por hash de contenido (extracción e índice) sobreviven a "Quitar" y a "Borrar todo" hasta que el proceso se reinicia (docs/16).
+- Sin selector de opción única de manuales (versión simple de I-5).
+- No se recorrió en navegador con PDF reales: la key de Groq local está vencida. Sí se recorrió la API real en local (ejemplo, quitar, borrar todo, cookie vieja, origen cruzado, cabecera falsificada).
+- Observaciones BAJA de appsec (18 nov 2026), para V2:
+  - El tope de documentos de `cargar_ejemplo` se comprueba y se aplica en bloqueos separados: dos cargas simultáneas podrían pasarlo una vez.
+  - "Borrar todo" durante la clasificación de una subida puede dejar ese PDF en `/tmp` hasta el siguiente arranque, cuando lo recoge la limpieza.
+- `pillow` 12.3.0 tiene CVE conocidas (pip-audit). No es de esta rama: se sube en un commit aparte.
 
 ## L5 · Papel de trabajo (APROBADO por `qa-ia`)
 

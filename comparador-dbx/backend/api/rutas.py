@@ -94,8 +94,17 @@ def sesion(request: Request, correo: Correo, s: Annotated[Sesion, Depends(sesion
 
 @router.delete("/session")
 def reiniciar(request: Request, response: Response, correo: Correo):
+    huella = sesiones.huella_de(correo) if correo is not None else ""
+    s = sesiones.existente(request.cookies.get(COOKIE), huella)
+    activo = None
+    if s:
+        with s.lock:                                     # cerrada y trabajo activo se leen juntos: un `procesar` simultáneo o ya quedó registrado (y se cancela) o recibe 410
+            s.cerrada = True
+            activo = sesiones.trabajo_activo(s)
+    if activo:                                           # "Borrar todo" con un proceso en marcha: se cancela antes, para no dejar Docling o el juez trabajando sin sesión
+        servicio.cancelar(s, activo["id"])
     if correo is not None:
-        sesiones.reiniciar_usuario(sesiones.huella_de(correo))
+        sesiones.reiniciar_usuario(huella)
     else:
         sesiones.reiniciar(request.cookies.get(COOKIE))
         response.delete_cookie(COOKIE)

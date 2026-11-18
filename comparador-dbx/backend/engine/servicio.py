@@ -22,7 +22,7 @@ from backend.api.schemas import (EsperaLimite, FragmentoOut, IndiceDoc, ParEnCur
                                  NodoOut, ParVia2, SeccionOut)
 from backend.config import RAIZ, Settings, settings
 from backend.core.errors import ComparadorError
-from backend.core.sesiones import Comparacion, Doc, Sesion, error_negocio, trabajo_activo
+from backend.core.sesiones import Comparacion, Doc, Sesion, error_negocio, exigir_abierta, trabajo_activo
 from backend.engine import ajustes
 from backend.engine.agregacion import controles_sin_base, marca_articulo, naturaleza_articulo
 from backend.engine.juez import Cancelado, Observador, juzgar_pares
@@ -74,6 +74,7 @@ def error_tope() -> ComparacionError:
 def subir(sesion: Sesion, nombre: str, contenido: bytes, cliente: ModelClient) -> DocumentoOut:
     """Valida y clasifica un PDF. El tipo queda sugerido solo si el modelo está seguro; si no, el auditor elige."""
     with sesion.lock:
+        exigir_abierta(sesion)
         if ocupan_cupo(sesion) >= settings.MAX_DOCS_SESION:
             raise error_tope()
         doc_id = sesion.nuevo_id("D")
@@ -192,6 +193,7 @@ def procesar(sesion: Sesion, doc_ids: list[str], cliente: ModelClient) -> JobOut
     """Encola extracción + seccionado + indexación de los documentos. Devuelve el job (poll con `GET /api/jobs/{id}`).
     Un solo trabajo por sesión. También reintenta documentos en `error` cuyo PDF sigue en disco."""
     with sesion.lock:
+        exigir_abierta(sesion)
         if trabajo_activo(sesion):
             raise _ya_hay_proceso()
         docs = []
@@ -491,6 +493,7 @@ def comparar(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str], cl
     arts, secs, _ = _seleccion(sesion, articulo_ids, seccion_ids)
     cfg = ajustes.efectivos(sesion)                      # los ajustes de la sesión al momento de lanzar la comparación
     with sesion.lock:
+        exigir_abierta(sesion)
         if any(j.tipo == "comparacion" and j.estado in ("en_cola", "en_curso") for j in sesion.jobs.values()):
             raise ComparacionError("ERR-CMP-007", "Ya hay una comparación en curso. Espera a que termine para lanzar otra.", 409)
         if trabajo_activo(sesion):

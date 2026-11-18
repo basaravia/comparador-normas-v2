@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { hayConflictoDeManuales, manualesConMarcas, quitarDeArboles, seleccionTrasRecarga } from "../src/arbol.ts";
 import { inicial, reducir } from "../src/reductor.ts";
-import { cupoLibre, evaluarLote, idsParaAviso, motivoPerdida, unirAvisados, type Recuerdo } from "../src/sesion.ts";
+import { cupoLibre, evaluarLote, huellaUsuario, idsParaAviso, motivoPerdida, unirAvisados, type Recuerdo } from "../src/sesion.ts";
 import type { ArbolDocOut, ComparacionOut, DocumentoOut, NodoOut, SesionOut } from "../src/tipos.ts";
 
 const nodo = (id: string): NodoOut => ({ id, identificador: id, titulo: "", preview: "", hoja: true, incierto: false, excluida: false, motivo: "", seleccionada: true, pagina_inicio: 1, hijos: [] });
@@ -72,6 +72,14 @@ test("aviso: solo documentos indexados no avisados, y la lista no se arrastra a 
   assert.deepEqual(idsParaAviso(docs, av, 10), ["D2"]);
   assert.deepEqual(idsParaAviso(docs, av, 11), ["D1", "D2"]);
   assert.deepEqual(unirAvisados(av, 11, ["D2"]).ids, ["D2"]);
+});
+
+test("la huella del usuario no guarda el correo y distingue cuentas", () => {
+  const h = huellaUsuario("auditor@banco.test");
+  assert.match(h, /^[0-9a-f]{8}$/);
+  assert.equal(h, huellaUsuario("auditor@banco.test"));
+  assert.notEqual(h, huellaUsuario("otro@banco.test"));
+  assert.equal(huellaUsuario(undefined), "");
 });
 
 const rec: Recuerdo = { usuario: "u", docs: 2, iniciada_ts: 100, ultima_ms: 0, trabajo: false };

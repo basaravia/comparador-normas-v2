@@ -3,6 +3,7 @@ import { api, ApiError } from "./api";
 import { AvisoPdf } from "./components/AvisoPdf";
 import { avisoParaMostrar, guardarRecuerdo } from "./recuerdo.ts";
 import { traerSesion } from "./sincronizar.ts";
+import { huellaUsuario } from "./sesion.ts";
 import { Processing } from "./pages/Processing";
 import { Ajustes } from "./pages/Ajustes";
 import { Results } from "./pages/Results";
@@ -79,7 +80,7 @@ export default function App() {
   useEffect(() => {
     const i = e.sesionInfo;
     if (i?.iniciada_ts === undefined) return;
-    guardarRecuerdo({ usuario: i.usuario ?? "", docs: e.documentos.length, iniciada_ts: i.iniciada_ts, ultima_ms: Date.now(), trabajo: !!e.trabajoActivo });
+    guardarRecuerdo({ usuario: huellaUsuario(i.usuario), docs: e.documentos.length, iniciada_ts: i.iniciada_ts, ultima_ms: Date.now(), trabajo: !!e.trabajoActivo });
   }, [e.documentos, e.sesionInfo, e.job, e.trabajoActivo]);
 
   const grupo = GRUPO[e.paso];

@@ -68,6 +68,7 @@ class Sesion:
     ultimo_uso: float = field(default_factory=time.time)
     iniciada_ts: float = field(default_factory=time.time)          # cuándo se creó en el servidor: cambia si la sesión se recrea
     huella: str = ""                                               # SHA-256 del correo (solo con TRUST_PROXY_IDENTITY); nunca se registra
+    cerrada: bool = False                                          # "Borrar todo" en marcha: no se aceptan trabajos ni subidas nuevas
     docs: dict[str, Doc] = field(default_factory=dict)
     jobs: dict[str, JobOut] = field(default_factory=dict)
     comparaciones: dict[str, Comparacion] = field(default_factory=dict)
@@ -102,6 +103,12 @@ def trabajo_activo(s: Sesion) -> Optional[dict]:
             if j.estado in ("en_cola", "en_curso"):
                 return {"id": j.job_id, "tipo": j.tipo, "comparacion_id": j.comparacion_id if j.tipo == "comparacion" else None}
     return None
+
+
+def exigir_abierta(s: Sesion) -> None:
+    """Llamar con `s.lock` tomado antes de registrar un trabajo o una subida: una sesión que se está borrando responde 410."""
+    if s.cerrada:
+        raise SesionPerdida()
 
 
 def hay_trabajo(s: Sesion) -> bool:
@@ -195,6 +202,12 @@ def reiniciar_usuario(huella: str) -> None:
     with _LOCK:
         sid = _POR_HUELLA.get(huella)
     reiniciar(sid)
+
+
+def existente(sid: Optional[str] = None, huella: str = "") -> Optional[Sesion]:
+    """La sesión viva de esa cookie o de ese usuario, sin crear ninguna ni renovar su uso. None si no hay."""
+    with _LOCK:
+        return _SESIONES.get(_POR_HUELLA.get(huella, "") if huella else (sid or ""))
 
 
 def leer_correo(valores: list[str]) -> str:

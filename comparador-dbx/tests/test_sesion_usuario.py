@@ -159,6 +159,26 @@ def test_borrar_todo_con_identidad_solo_borra_la_sesion_del_usuario(web_id):
     assert len(web_id.get("/api/session", headers=de(CORREO_B)).json()["documentos"]) == 2
 
 
+def test_borrar_todo_con_un_trabajo_en_curso_lo_cancela_antes(web):
+    s = sesiones.obtener(web.cookies["session_id"])
+    s.jobs["J1"] = JobOut(job_id="J1", tipo="procesamiento", estado="en_curso", cancelable=True)
+    assert web.delete("/api/session").status_code == 200
+    assert "J1" in s.cancelados and not s.jobs["J1"].cancelable          # el hilo del trabajo ve la cancelación y deja de leer y de llamar al modelo
+    assert sesiones.existente(s.id) is None and not s.dir.exists()
+
+
+def test_una_sesion_que_se_esta_borrando_no_acepta_trabajos_nuevos(web):
+    from backend.engine import servicio
+    web.post("/api/samples/load")
+    s = sesiones.obtener(web.cookies["session_id"])
+    s.cerrada = True                                                     # lo que hace "Borrar todo" antes de cancelar y borrar
+    with pytest.raises(sesiones.SesionPerdida):
+        servicio.procesar(s, list(s.docs), None)
+    with pytest.raises(sesiones.SesionPerdida):
+        servicio.subir(s, "x.pdf", b"%PDF", None)
+    assert not s.jobs
+
+
 def test_ni_el_correo_ni_su_hash_aparecen_en_los_logs(web_id, caplog):
     caplog.set_level(logging.DEBUG)
     web_id.post("/api/samples/load", headers=de(CORREO_A))

@@ -43,6 +43,14 @@ export function unirAvisados(previo: Avisados | null, iniciada_ts: number, ids: 
 // ---- Pérdida de sesión (I-2): expirada vs reinicio ----
 
 /** Lo que el navegador recuerda de la última vez que habló con el servidor. */
+/** Huella corta (FNV-1a, 8 hex) para saber si es la misma cuenta sin guardar el correo en el navegador (appsec, CWE-922). */
+export function huellaUsuario(usuario: string | undefined): string {
+  if (!usuario) return "";
+  let h = 0x811c9dc5;
+  for (let i = 0; i < usuario.length; i++) h = Math.imul(h ^ usuario.charCodeAt(i), 0x01000193) >>> 0;
+  return h.toString(16).padStart(8, "0");
+}
+
 export interface Recuerdo { usuario: string; docs: number; iniciada_ts: number; ultima_ms: number; trabajo: boolean }
 export type MotivoPerdida = "expirada" | "reinicio";
 export interface Perdida { motivo: MotivoPerdida; conProceso: boolean }
