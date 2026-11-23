@@ -39,6 +39,13 @@ export interface VeredictoVivo {
   seq: number; par_id: string; articulo: string; seccion: string; cobertura: "total" | "parcial" | "nula" | "sin_veredicto";
   naturaleza: string; confianza: number; cita_norma_ok: boolean; cita_manual_ok: boolean; requiere_revision: boolean; comentario: string;
 }
+/** Par resuelto (docs/11-api.md). Con un backend viejo solo llegan los campos de `VeredictoVivo` (articulo/seccion como texto). */
+export interface ParResuelto {
+  seq: number; par_id: string; articulo: FragmentoOut | string; seccion: FragmentoOut | string;
+  cobertura: VeredictoVivo["cobertura"]; naturaleza: string; confianza: number;
+  cita_norma_ok: boolean; cita_manual_ok: boolean; requiere_revision: boolean; comentario: string;
+  cita_norma?: string; cita_manual?: string; elementos_faltantes?: string[];
+}
 export interface EsperaLimite { activa: boolean; hasta_ts: number; intento: number; max: number }
 
 export interface JobOut {
@@ -68,6 +75,12 @@ export interface JobOut {
   conteo_cobertura: Record<string, number>;
   a_revision: number;
   espera_limite: EsperaLimite;
+  // Campos nuevos de la comparación (docs/11-api.md): opcionales, la app funciona sin ellos.
+  pares_resueltos?: ParResuelto[];
+  seq_ultimo?: number;
+  cancelando?: boolean;
+  estimado_desde_pares?: number;
+  pares_por_pagina?: number;
 }
 
 export interface NodoOut {

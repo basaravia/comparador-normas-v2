@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
-import type { DocumentoOut, JobOut, VeredictoVivo } from "../tipos";
+import { accionCancelar, duracion, ERROR_CANCELAR, estimarRango, textoConfirmacion } from "../progresoComparacion.ts";
+import type { DocumentoOut, JobOut } from "../tipos";
 
 /** Reloj del servidor: `ahora()` devuelve la hora del servidor interpolada con el reloj local entre sondeos (así no importa el desfase del equipo). */
 export function useReloj(job: JobOut | null): () => number {
@@ -11,41 +12,52 @@ export function useReloj(job: JobOut | null): () => number {
   return () => ref.current.s + (performance.now() - ref.current.l) / 1000;
 }
 
-export function duracion(seg: number): string {
-  const s = Math.max(0, Math.round(seg));
-  if (s < 60) return `${s} s`;
-  const m = Math.floor(s / 60);
-  return m < 60 ? `${m} min ${s % 60} s` : `${Math.floor(m / 60)} h ${m % 60} min`;
+export { duracion };
+
+/** Tiempo transcurrido: el único reloj en pantalla. Al terminar se congela. */
+export function transcurridoDe(job: JobOut, ahora: () => number): number {
+  const fin = job.estado === "listo" || job.estado === "error" || job.estado === "cancelado";
+  return (fin && job.ultimo_evento_ts > job.inicio_ts ? job.ultimo_evento_ts : ahora()) - job.inicio_ts;
 }
 
-/** Tiempo restante con rango (±35 %), solo después de la primera medición real. */
-function estimado(hechos: number, total: number, transcurrido: number): string | null {
-  if (hechos <= 0 || total <= hechos || transcurrido < 3) return null;
-  const resto = ((total - hechos) * transcurrido) / hechos;
-  return `entre ${duracion(resto * 0.65)} y ${duracion(resto * 1.35)}`;
-}
-
+/** Un solo tiempo («Tiempo transcurrido»); el estimado de procesamiento sale de las páginas leídas. */
 function Tiempos({ job, hechos, total, ahora }: { job: JobOut; hechos: number; total: number; ahora: () => number }) {
-  const transcurrido = ahora() - job.inicio_ts;
-  const sinNovedad = ahora() - job.ultimo_evento_ts;
-  const est = estimado(hechos, total, transcurrido);
+  const transcurrido = transcurridoDe(job, ahora);
+  const r = estimarRango(hechos, total, transcurrido);
   return (
     <p className="tiempos">
-      Transcurrido: <strong>{duracion(transcurrido)}</strong>
-      {est && <> · Falta aproximadamente: <strong>{est}</strong></>}
-      <> · Última novedad hace {duracion(sinNovedad)}</>
-      {sinNovedad > 40 && job.estado === "en_curso" && <span className="lento"> · Sigue trabajando: una tanda de páginas puede tardar varios minutos.</span>}
+      Tiempo transcurrido: <strong>{duracion(transcurrido)}</strong>
+      {r && <> · Falta aproximadamente: <strong>entre {duracion(r.desde)} y {duracion(r.hasta)}</strong></>}
     </p>
   );
 }
 
-function Cancelar({ job }: { job: JobOut }) {
+/** Cancelar. `pares` > 0 pide confirmación en línea (comparación). «Cancelando…» se conserva al recargar (`job.cancelando`). */
+export function Cancelar({ job, pares = 0, etiqueta = "Cancelar", nota }: { job: JobOut; pares?: number; etiqueta?: string; nota?: string }) {
   const [pedido, setPedido] = useState(false);
-  if (!job.cancelable && !pedido) return null;
+  const [confirmando, setConfirmando] = useState(false);
+  const [fallo, setFallo] = useState(false);
+  const cancelando = pedido || !!job.cancelando;
+  if (!job.cancelable && !cancelando) return null;
+  const enviar = async () => {
+    setConfirmando(false); setFallo(false); setPedido(true);
+    try { await api.cancelar(job.job_id); } catch { setPedido(false); setFallo(true); }
+  };
+  const pulsar = () => (accionCancelar(pares) === "confirmar" ? setConfirmando(true) : enviar());
   return (
-    <button className="secundario" disabled={pedido} onClick={async () => { setPedido(true); try { await api.cancelar(job.job_id); } catch { setPedido(false); } }}>
-      {pedido ? "Cancelando…" : "Cancelar"}
-    </button>
+    <div className="cancelar">
+      {confirmando ? (
+        <div className="confirmar-linea" role="group" aria-label="Confirmar cancelación">
+          <span>{textoConfirmacion(pares)}</span>
+          <button className="secundario" onClick={enviar}>Sí, cancelar</button>
+          <button className="secundario" autoFocus onClick={() => setConfirmando(false)}>Seguir comparando</button>
+        </div>
+      ) : (
+        <button className="secundario" disabled={cancelando} onClick={pulsar}>{cancelando ? "Cancelando…" : etiqueta}</button>
+      )}
+      {cancelando && nota && <small className="cancelando-nota">{nota}</small>}
+      {fallo && <span className="nota-error" role="alert">{ERROR_CANCELAR}</span>}
+    </div>
   );
 }
 
@@ -108,73 +120,8 @@ export function ProgresoProcesamiento({ job, documentos, ahora }: { job: JobOut;
       })}
       {job.indexacion_total > 0 && <p className="doc-etapa">Preparando la búsqueda: {job.indexacion_hechos} de {job.indexacion_total} lotes.</p>}
       <Tiempos job={job} hechos={hechas} total={total} ahora={ahora} />
-      <div className="barra-acciones"><Cancelar job={job} /></div>
+      <div className="barra-acciones"><Cancelar job={job} nota="Se termina la lectura en curso; lo ya leído se conserva." /></div>
       <p className="nota-honesta">Cada recuadro es una página real del PDF; se ilumina cuando el lector termina esa tanda.</p>
-    </>
-  );
-}
-
-const COBERTURA: Record<VeredictoVivo["cobertura"], { icono: string; texto: string }> = {
-  total: { icono: "●", texto: "Cobertura total" }, parcial: { icono: "◐", texto: "Cobertura parcial" },
-  nula: { icono: "○", texto: "Sin cobertura" }, sin_veredicto: { icono: "?", texto: "Sin veredicto (a revisión)" },
-};
-
-function Veredicto({ v }: { v: VeredictoVivo }) {
-  const [abierto, setAbierto] = useState(false);
-  const c = COBERTURA[v.cobertura];
-  const citas = v.cita_norma_ok && v.cita_manual_ok;
-  return (
-    <li className="veredicto">
-      <span className={`cob cob-${v.cobertura}`}><span aria-hidden="true">{c.icono}</span> {c.texto}</span>
-      <span> · {v.articulo} ↔ {v.seccion}</span>
-      <span> · confianza {Math.round(v.confianza * 100)} %</span>
-      <span className={citas ? "ok" : "revisar"}> · {citas ? "✓ citas verificadas" : "⚠ citas por revisar"}</span>
-      {v.comentario && <button className="enlace" onClick={() => setAbierto(!abierto)}>{abierto ? "Ocultar comentario" : "Ver comentario del modelo"}</button>}
-      {abierto && <p className="comentario-modelo">{v.comentario}</p>}
-    </li>
-  );
-}
-
-const FASES: Record<string, string> = { recuperando: "Buscando coincidencias", juzgando: "Evaluando cada par", armando: "Armando el papel de trabajo" };
-
-export function ProgresoComparacion({ job, ahora }: { job: JobOut; ahora: () => number }) {
-  const espera = job.espera_limite;
-  const faltan = espera.activa ? Math.max(0, Math.ceil(espera.hasta_ts - ahora())) : 0;
-  const cc = job.conteo_cobertura;
-  return (
-    <>
-      <p className="doc-etapa"><strong>{FASES[job.fase] ?? job.etapa}</strong>{job.pares_total > 0 && <> · par {job.pares_hechos} de {job.pares_total}</>}</p>
-      {espera.activa && (
-        <div className="banner banner-aviso" role="status">
-          Esperando al servicio de IA (límite de uso del proveedor). Se reanuda en {faltan} s · intento {espera.intento} de {espera.max}.
-        </div>
-      )}
-      <Tiempos job={job} hechos={job.pares_hechos} total={job.pares_total} ahora={ahora} />
-
-      {job.pares_en_curso.length > 0 && (
-        <section className="actividad">
-          <h3>Ahora se analizan</h3>
-          {job.pares_en_curso.map((p) => (
-            <div key={p.par_id} className="par-en-curso">
-              <div className="frag"><small>Norma · {p.articulo.documento} · {p.articulo.identificador} · pág. {p.articulo.pagina}</small><p>{p.articulo.preview}…</p></div>
-              <div className="frag"><small>Manual · {p.seccion.documento} · {p.seccion.identificador} · pág. {p.seccion.pagina}</small><p>{p.seccion.preview}…</p></div>
-              <small className="par-meta">Similitud {p.score.toFixed(2)} · encontrado por {p.origen.map((o) => (o === "v1" ? "la norma" : "el manual")).join(" y ")}</small>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {job.ultimos_veredictos.length > 0 && (
-        <section className="actividad">
-          <h3>Últimos veredictos</h3>
-          <ul className="veredictos">{[...job.ultimos_veredictos].reverse().slice(0, 8).map((v) => <Veredicto key={v.seq} v={v} />)}</ul>
-          <p className="conteos" title="Conteo provisional por par; las marcas A/L/R/X/P se calculan al final">
-            Hasta ahora (por par, provisional): {cc.total ?? 0} totales · {cc.parcial ?? 0} parciales · {cc.nula ?? 0} sin cobertura · {job.a_revision} a revisión
-          </p>
-        </section>
-      )}
-      <div className="barra-acciones"><Cancelar job={job} /></div>
-      <p className="nota-honesta">No mostramos razonamiento: el modelo solo entrega un veredicto con citas, y cada cita se verifica contra el texto del documento.</p>
     </>
   );
 }

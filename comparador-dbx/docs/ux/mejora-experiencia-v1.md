@@ -1,5 +1,7 @@
 # UX · Selección como índice, progreso del paso 1 y del paso 2 (v1)
 
+> **Sustituido (23 nov 2026):** la pantalla 2b («Paso 2 = actividad real del juez», `wireframes/comparacion-v1.svg`) queda sustituida por [`comparacion-en-curso-v1.md`](comparacion-en-curso-v1.md) (docs/14 #39). También se elimina «última novedad hace N s»: queda un solo tiempo, «Tiempo transcurrido».
+
 Wireframes (SVG, baja fidelidad; ábrelos en el navegador): `wireframes/seleccion-indice-v1.svg`, `wireframes/procesamiento-v1.svg`, `wireframes/comparacion-v1.svg`.
 Penpot no estaba disponible. Nada de esto está implementado; "requiere backend" = el job o la API hoy no entrega el dato.
 
