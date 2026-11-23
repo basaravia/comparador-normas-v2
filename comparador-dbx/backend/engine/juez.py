@@ -5,7 +5,9 @@ cuando algo no cuadra. Una cita verificada se reemplaza por el texto real del do
 """
 import asyncio
 import logging
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
 from backend.config import Settings, cargar_prompt, rellenar_prompt, settings
@@ -29,7 +31,7 @@ class Observador:
 
 
 class Cancelado(Exception):
-    """El auditor canceló la comparación: no se lanzan más llamadas (las que ya van en curso terminan)."""
+    """El auditor canceló la comparación: no se lanzan más llamadas y las que van en vuelo se abandonan (terminan solas y se descartan)."""
 
 
 def _dormir(segundos: int, obs: Observador) -> None:
@@ -91,12 +93,43 @@ def juzgar_par(par: Par, articulo: Seccion, seccion: Seccion, nombres: dict[str,
     return par
 
 
+_VIVAS = 0                       # llamadas del juez que siguen corriendo en este proceso, también las huérfanas de una comparación cancelada
+_LOCK_VIVAS = threading.Lock()
+
+
+def llamadas_vivas() -> int:
+    """Cuántas llamadas del juez siguen en vuelo. `servicio.comparar` no lanza otra comparación mientras haya `LLM_CONCURRENCY` o más: así las huérfanas no se apilan."""
+    with _LOCK_VIVAS:
+        return _VIVAS
+
+
+def _juzgar_contado(*args) -> Par:
+    """Corre `juzgar_par` en el hilo del pool contándolo mientras vive (suma al empezar y resta siempre al terminar, aunque falle)."""
+    global _VIVAS
+    with _LOCK_VIVAS:
+        _VIVAS += 1
+    try:
+        return juzgar_par(*args)
+    finally:
+        with _LOCK_VIVAS:
+            _VIVAS -= 1
+
+
+PERIODO_VIGIA_S = 0.5            # cada cuánto se mira si el auditor canceló
+
+
 async def juzgar_pares(pares: list[Par], secciones: dict[str, Seccion], nombres: dict[str, str], cliente: ModelClient,
                        s: Settings = settings, progreso: Callable[[int, int], None] | None = None,
                        obs: Observador | None = None) -> list[Par]:
-    """Juzga todos los pares con concurrencia `LLM_CONCURRENCY`. Si el proveedor cae (LLMUnavailableError) se cancela todo y la excepción sube."""
+    """Juzga todos los pares con concurrencia `LLM_CONCURRENCY`. Si el proveedor cae (LLMUnavailableError) se cancela todo y la excepción sube.
+
+    Cancelación: una tarea vigía mira `obs.cancelado()` cada `PERIODO_VIGIA_S` y lanza `Cancelado` sin esperar a las llamadas al modelo en vuelo
+    (un hilo no se puede interrumpir): corren en un pool propio que se suelta con `shutdown(wait=False)`, así `asyncio.run` no las espera.
+    Esas llamadas terminan solas en segundo plano y su resultado se descarta."""
     obs = obs or Observador()
     sem, hechos, total = asyncio.Semaphore(s.LLM_CONCURRENCY), 0, len(pares)
+    pool = ThreadPoolExecutor(max_workers=s.LLM_CONCURRENCY, thread_name_prefix="juez")
+    loop = asyncio.get_running_loop()
     t0 = time.perf_counter()
     log.info("Juez: %d pares, concurrencia %d", total, s.LLM_CONCURRENCY)
 
@@ -106,18 +139,32 @@ async def juzgar_pares(pares: list[Par], secciones: dict[str, Seccion], nombres:
             if obs.cancelado():
                 raise Cancelado()
             obs.empieza(p)
-            await asyncio.to_thread(juzgar_par, p, secciones[p.articulo_id], secciones[p.seccion_id], nombres, cliente, s, obs)
+            await loop.run_in_executor(pool, _juzgar_contado, p, secciones[p.articulo_id], secciones[p.seccion_id], nombres, cliente, s, obs)
+        if obs.cancelado():                          # llegó tarde: el resultado se descarta
+            raise Cancelado()
         hechos += 1
         obs.termina(p, hechos, total)
         if progreso:
             progreso(hechos, total)
 
+    async def vigia() -> None:
+        while not obs.cancelado():
+            await asyncio.sleep(PERIODO_VIGIA_S)
+        raise Cancelado()
+
     tareas = [asyncio.create_task(uno(p)) for p in pares]
-    try:
+    async def todos() -> None:
         await asyncio.gather(*tareas)
-    except BaseException:
-        for t in tareas:
+
+    trabajo, guardia = asyncio.create_task(todos()), asyncio.create_task(vigia())
+    try:
+        await asyncio.wait({trabajo, guardia}, return_when=asyncio.FIRST_COMPLETED)
+        if guardia.done():
+            guardia.result()                         # lanza Cancelado
+        trabajo.result()                             # lanza la primera excepción de un par, si hubo
+    finally:
+        for t in (trabajo, guardia, *tareas):
             t.cancel()
-        raise
+        pool.shutdown(wait=False, cancel_futures=True)      # sin esperar a los hilos en vuelo
     log.info("Juez: %d pares en %.0f s (%d a revisión)", total, time.perf_counter() - t0, sum(p.requiere_revision for p in pares))
     return pares

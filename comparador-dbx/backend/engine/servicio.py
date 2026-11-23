@@ -18,14 +18,14 @@ from typing import Callable
 
 import pymupdf
 
-from backend.api.schemas import (EsperaLimite, FragmentoOut, IndiceDoc, ParEnCurso, ProgresoDoc, VeredictoVivo, ArbolDocOut, ComparacionOut, DocumentoOut, ErrorNegocio, FilaVia1, FilaVia2, JobOut, Metadatos,
+from backend.api.schemas import (EsperaLimite, FragmentoOut, IndiceDoc, ParEnCurso, ParResuelto, ProgresoDoc, VeredictoVivo, ArbolDocOut, ComparacionOut, DocumentoOut, ErrorNegocio, FilaVia1, FilaVia2, JobOut, Metadatos,
                                  NodoOut, ParVia2, SeccionOut)
 from backend.config import RAIZ, Settings, settings
 from backend.core.errors import ComparadorError
 from backend.core.sesiones import Comparacion, Doc, Sesion, error_negocio, exigir_abierta, trabajo_activo
 from backend.engine import ajustes
 from backend.engine.agregacion import controles_sin_base, marca_articulo, naturaleza_articulo
-from backend.engine.juez import Cancelado, Observador, juzgar_pares
+from backend.engine.juez import Cancelado, Observador, juzgar_pares, llamadas_vivas
 from backend.engine.pares import construir_pares
 from backend.extraction import docling_extractor
 from backend.extraction.sectioner import parsear_bloques
@@ -114,10 +114,20 @@ def subir_varios(sesion: Sesion, archivos: list[tuple[str, bytes]], cliente: Mod
 
 def _job(sesion: Sesion, tipo: str, **campos) -> JobOut:
     ahora = time.time()
-    j = JobOut(job_id=uuid.uuid4().hex, tipo=tipo, estado="en_cola", inicio_ts=ahora, ultimo_evento_ts=ahora, cancelable=True, **campos)
+    j = JobOut(job_id=uuid.uuid4().hex, tipo=tipo, estado="en_cola", inicio_ts=ahora, ultimo_evento_ts=ahora, cancelable=True,
+               estimado_desde_pares=settings.ESTIMADO_DESDE_PARES, pares_por_pagina=settings.PARES_POR_PAGINA, **campos)
     with sesion.lock:
         sesion.jobs[j.job_id] = j
     return j
+
+
+def vista_job(job: JobOut, desde: int = 0) -> JobOut:
+    """Copia del job para responder: reloj del servidor, `cancelando` solo mientras el job no termina y los pares resueltos con `seq > desde`.
+    La lista completa queda en el job (`_resueltos`); cada respuesta lleva solo lo nuevo, así el sondeo de 1,5 s no crece con la comparación."""
+    resueltos = list(job._resueltos)                      # instantánea: el hilo del juez puede añadir mientras se responde
+    return job.model_copy(update={"ahora_ts": time.time(), "cancelando": job.cancelando and job.estado in ("en_cola", "en_curso"),
+                                  "pares_resueltos": [p for p in resueltos if p.seq > desde], "seq_ultimo": resueltos[-1].seq if resueltos else 0,
+                                  "estimado_desde_pares": settings.ESTIMADO_DESDE_PARES, "pares_por_pagina": settings.PARES_POR_PAGINA})
 
 
 def _arbol_avisos(doc: Doc) -> list[str]:
@@ -354,14 +364,34 @@ def _fragmento(s: Seccion, nombres: dict[str, str]) -> FragmentoOut:
     return FragmentoOut(identificador=s.identificador, documento=nombres.get(s.doc_id, ""), pagina=s.pagina_inicio, preview=" ".join(s.texto_literal.split())[:160])
 
 
+MAX_CITA = 600
+MAX_FALTANTES = 10                                         # elementos faltantes que se muestran por par
+MAX_FALTANTE = 300                                         # letras de cada uno
+
+
+def _resuelto(vivo: VeredictoVivo, v, a: Seccion, m: Seccion, nombres: dict[str, str]) -> ParResuelto:
+    """El par resuelto para la pantalla: el veredicto vivo más sus fragmentos y citas. Las citas ya son el texto real del documento
+    (`juzgar_par` las reemplazó con lo que devolvió `verificar_fragmento`; menos de CITATION_SHOW_MIN llega vacío): aquí solo se acotan a 600 letras (y los elementos faltantes a 10 de 300)."""
+    return ParResuelto(**vivo.model_dump(exclude={"articulo", "seccion"}), articulo=_fragmento(a, nombres), seccion=_fragmento(m, nombres),
+                       cita_norma=(v.cita_norma if v else "")[:MAX_CITA], cita_manual=((v.cita_manual or "") if v else "")[:MAX_CITA],
+                       elementos_faltantes=[f[:MAX_FALTANTE] for f in v.elementos_faltantes[:MAX_FALTANTES]] if v else [])
+
+
 class _ObsJob(Observador):
-    """Traslada los eventos reales del juez al job (pares en curso, últimos veredictos, conteos, espera por límite de tasa). Todo en memoria."""
+    """Traslada los eventos reales del juez al job (pares en curso, pares resueltos, conteos, espera por límite de tasa). Todo en memoria."""
 
     def __init__(self, job: JobOut, sesion: Sesion, todas: dict[str, Seccion], nombres: dict[str, str]):
         self.job, self.sesion, self.todas, self.nombres = job, sesion, todas, nombres
         self.lock = threading.Lock()
         self.en_curso: dict[str, ParEnCurso] = {}
         self.seq = 0
+        self.cerrado = False                 # el juicio terminó o se abandonó: un hilo que llega tarde ya no toca el job
+
+    def cerrar(self) -> None:
+        with self.lock:
+            self.cerrado = True
+            self.en_curso.clear()
+            self.job.pares_en_curso, self.job.espera_limite = [], EsperaLimite()
 
     def _toca(self) -> None:
         self.job.ultimo_evento_ts = time.time()
@@ -370,17 +400,25 @@ class _ObsJob(Observador):
         a, m = self.todas[par.articulo_id], self.todas[par.seccion_id]
         score = max((x for x in (par.score_v1, par.score_v2) if x is not None), default=0.0)
         with self.lock:
+            if self.cerrado:
+                return
             self.en_curso[par.id] = ParEnCurso(par_id=par.id, articulo=_fragmento(a, self.nombres), seccion=_fragmento(m, self.nombres),
                                                score=round(float(score), 3), origen=sorted(par.origen), desde_ts=time.time())
             self.job.pares_en_curso = list(self.en_curso.values())
         self._toca()
 
     def espera(self, par: Par, segundos: int, intento: int, maximo: int) -> None:
-        self.job.espera_limite = EsperaLimite(activa=True, hasta_ts=time.time() + segundos, intento=intento, max=maximo)
+        with self.lock:
+            if self.cerrado:
+                return
+            self.job.espera_limite = EsperaLimite(activa=True, hasta_ts=time.time() + segundos, intento=intento, max=maximo)
         self._toca()
 
     def reanuda(self, par: Par) -> None:
-        self.job.espera_limite = EsperaLimite()
+        with self.lock:
+            if self.cerrado:
+                return
+            self.job.espera_limite = EsperaLimite()
         self._toca()
 
     def termina(self, par: Par, hechos: int, total: int) -> None:
@@ -388,13 +426,16 @@ class _ObsJob(Observador):
         a, m = self.todas[par.articulo_id], self.todas[par.seccion_id]
         cobertura = v.cobertura if v else "sin_veredicto"
         with self.lock:
+            if self.cerrado:
+                return
             self.en_curso.pop(par.id, None)
             self.seq += 1
             vivo = VeredictoVivo(seq=self.seq, par_id=par.id, articulo=a.identificador, seccion=m.identificador, cobertura=cobertura,
                                  naturaleza=v.naturaleza_articulo if v else "", confianza=round(v.confianza, 2) if v else 0.0,
                                  cita_norma_ok=par.cita_norma_verificada, cita_manual_ok=par.cita_manual_verificada,
                                  requiere_revision=par.requiere_revision, comentario=(v.comentario[:300] if v else ""))
-            self.job.ultimos_veredictos = [*self.job.ultimos_veredictos, vivo][-20:]
+            self.job.ultimos_veredictos = [*self.job.ultimos_veredictos, vivo][-20:]          # obsoleto: se retira cuando el frontend use `pares_resueltos`
+            self.job._resueltos.append(_resuelto(vivo, v, self.todas[par.articulo_id], self.todas[par.seccion_id], self.nombres))
             self.job.conteo_cobertura = {**self.job.conteo_cobertura, cobertura: self.job.conteo_cobertura.get(cobertura, 0) + 1}
             self.job.a_revision += int(par.requiere_revision)
             self.job.pares_en_curso = list(self.en_curso.values())
@@ -471,8 +512,10 @@ def quitar_documento(sesion: Sesion, doc_id: str) -> None:
 
 
 def cancelar(sesion: Sesion, job_id: str) -> JobOut:
-    """Cancela un job en curso. Procesamiento: mata la lectura del PDF actual (lo ya leído se conserva). Comparación: no se lanzan más pares;
-    las llamadas al modelo que ya van en vuelo terminan (no se pueden interrumpir) y el resultado parcial se descarta."""
+    """Cancela un job en curso (idempotente; un job ya terminado se devuelve sin cambios). Procesamiento: mata la lectura del PDF actual (lo ya
+    leído se conserva). Comparación: no se lanzan más pares y el juez deja de esperar a los que van en vuelo, así que pasa a `cancelado` en
+    ~1 s; esas llamadas al modelo no se pueden interrumpir, terminan solas en segundo plano y su resultado se descarta. La marca se vuelve
+    a mirar entre las fases de `_ejecutar` (juicio, armado del papel, borrador); la llamada del borrador, si ya empezó, se espera."""
     with sesion.lock:
         job = sesion.jobs.get(job_id)
         if job is None:
@@ -480,7 +523,7 @@ def cancelar(sesion: Sesion, job_id: str) -> JobOut:
         if job.estado not in ("en_cola", "en_curso"):
             return job
         sesion.cancelados.add(job_id)
-        job.etapa, job.cancelable = "Cancelando…", False
+        job.etapa, job.cancelable, job.cancelando = "Cancelando…", False, True
         pendientes = [sesion.docs[i] for i, est in job.documentos.items() if est in ("en_cola", "extrayendo") and i in sesion.docs]
     for d in pendientes:
         if d.ruta:
@@ -498,6 +541,8 @@ def comparar(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str], cl
             raise ComparacionError("ERR-CMP-007", "Ya hay una comparación en curso. Espera a que termine para lanzar otra.", 409)
         if trabajo_activo(sesion):
             raise _ya_hay_proceso()
+        if llamadas_vivas() >= cfg.LLM_CONCURRENCY:              # llamadas al modelo huérfanas de una cancelación: no se apilan más
+            raise ComparacionError("ERR-CMP-008", "El servicio de IA está terminando llamadas anteriores o atendiendo otra comparación. Espera unos segundos e inténtalo de nuevo.", 409)
         cid = uuid.uuid4().hex
         comp = Comparacion(out=ComparacionOut(id=cid, estado="en_curso"))
         job = _job(sesion, "comparacion", comparacion_id=cid, etapa="En cola")      # RLock: el job queda registrado antes de soltar el lock
@@ -530,6 +575,11 @@ def _comentario(par) -> tuple[str, list[str]]:
     return (v.comentario, v.elementos_faltantes) if v else ("", [])
 
 
+def _exigir_no_cancelado(sesion: Sesion, job: JobOut) -> None:
+    if job.job_id in sesion.cancelados:
+        raise Cancelado()
+
+
 def _ejecutar(sesion: Sesion, comp: Comparacion, arts: dict[str, Seccion], secs: dict[str, Seccion], job: JobOut, cliente: ModelClient, cfg: Settings) -> None:
     job.etapa, job.progreso, job.fase = "Preparando la búsqueda de coincidencias", 0.02, "recuperando"
     def indexando(h: int, t: int) -> None:
@@ -552,7 +602,11 @@ def _ejecutar(sesion: Sesion, comp: Comparacion, arts: dict[str, Seccion], secs:
     def cb(h: int, t: int) -> None:
         job.progreso, job.mensaje = round(0.3 + 0.55 * h / max(t, 1), 3), f"Par {h} de {t}"
 
-    asyncio.run(juzgar_pares(pares, todas, nombres, cliente, cfg, progreso=cb, obs=obs))
+    try:
+        asyncio.run(juzgar_pares(pares, todas, nombres, cliente, cfg, progreso=cb, obs=obs))
+    finally:
+        obs.cerrar()                                        # si se canceló, las llamadas que sigan en vuelo ya no escriben en el job
+    _exigir_no_cancelado(sesion, job)
     job.mensaje, job.etapa, job.progreso, job.fase = "", "Calculando marcas y armando el papel", 0.86, "armando"
 
     por_art: dict[str, list] = {}
@@ -582,12 +636,14 @@ def _ejecutar(sesion: Sesion, comp: Comparacion, arts: dict[str, Seccion], secs:
     entrada = EntradaPapel(manual=documento(doc_manual), normativas=[documento(d) for d in docs_norma.values()], filas=filas, pares=pares,
                            secciones={i: todas[i] for i in {*arts, *secs}}, controles_sin_base=[todas[i] for i in sin_base], excluidas=excluidas,
                            fecha_ejecucion=date.today())
+    _exigir_no_cancelado(sesion, job)
     job.etapa, job.progreso = "Redactando el borrador de conclusión", 0.92
     try:
         entrada.conclusion = generar_borrador(entrada, cliente)
     except ComparadorError as e:                                  # el borrador es opcional: el auditor lo escribe
         log.warning("Sin borrador de conclusión: %s", e.codigo)
         comp.out.avisos.append("No pudimos redactar el borrador de la conclusión; escríbelo tú antes de descargar el papel.")
+    _exigir_no_cancelado(sesion, job)                             # nada se escribe en la comparación después de cancelar
     comp.entrada = entrada
     comp.out = _resultado(comp.out.id, entrada, secs, pares, comp.out.avisos).model_copy(update={"ajustes": ajustes.valores_usados(cfg)})
 
@@ -639,12 +695,11 @@ def cargar_ejemplo(sesion: Sesion) -> list[DocumentoOut]:
         raise ComparacionError("ERR-SMP-001", "El ejemplo no está disponible en esta instalación.")
     datos = json.loads(archivo.read_text(encoding="utf-8"))
     salida = []
-    with sesion.lock:
+    with sesion.lock:                                    # un solo bloqueo: comprobar qué falta y agregarlo es atómico (dos cargas a la vez no duplican el ejemplo)
         faltan = [d for d in datos["documentos"] if not any(x.out.nombre == d["nombre"] and EJEMPLO in x.out.advertencias for x in sesion.docs.values())]
         if faltan and ocupan_cupo(sesion) + len(faltan) > settings.MAX_DOCS_SESION:
             raise error_tope()
-    for d in faltan:
-        with sesion.lock:
+        for d in faltan:
             doc_id = sesion.nuevo_id("D")
             viejo = d["doc_id"]
             secs = [Seccion.model_validate({**s, "doc_id": doc_id, "id": doc_id + s["id"][len(viejo):]}) for s in d["secciones"]]
@@ -654,7 +709,7 @@ def cargar_ejemplo(sesion: Sesion) -> list[DocumentoOut]:
             doc.clasificacion = clasificar_secciones(secs)
             doc.avisos_arbol = _arbol_avisos(doc)
             sesion.docs[doc_id] = doc
-        salida.append(out)
+            salida.append(out)
     if not salida:
         with sesion.lock:
             return [d.out for d in sesion.docs.values()]

@@ -50,3 +50,11 @@ Ver [`config/defaults.env`](../config/defaults.env).
 | `LIMPIAR_TMP_AL_ARRANCAR` | `false` | `true` | borra al iniciar las carpetas `comparador_*` huérfanas de `/tmp` |
 
 `app.yaml` es el mismo para todos los stages (hoy `STAGE=mvp`); en dev y sandbox valen los de `defaults.env`.
+
+### Comparación en curso (docs/14 #39)
+| Variable | Valor inicial | Nota |
+|---|---|---|
+| `ESTIMADO_DESDE_PARES` | 3 `[CALIBRAR]` | pares resueltos desde los que se muestra el estimado de tiempo restante; el servidor lo entrega en `JobOut.estimado_desde_pares` ([11](11-api.md)) |
+| `PARES_POR_PAGINA` | 50 `[CALIBRAR]` | pares resueltos que se pintan a la vez («Mostrar 50 más»); se entrega en `JobOut.pares_por_pagina` |
+
+Van en `config/defaults.env` y no entran al panel Ajustes (RF-19).

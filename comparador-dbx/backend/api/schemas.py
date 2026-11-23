@@ -1,7 +1,7 @@
 """Contrato JSON de la API (docs/11). Lo que ve el frontend; nunca texto técnico ni trazas."""
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 Tipo = Literal["normativa", "manual_control"]
 Marca = Literal["A", "L", "R", "X", "P"]
@@ -90,6 +90,25 @@ class VeredictoVivo(BaseModel):
     comentario: str = Field(default="", max_length=300)
 
 
+class ParResuelto(BaseModel):
+    """Un par ya juzgado con todo lo que la pantalla «Comparando» necesita (docs/11). Las citas son el texto REAL del documento (regla 5):
+    salen de `verificar_fragmento`, nunca del modelo. Vacía = el modelo no citó o la cita no llegó al umbral CITATION_SHOW_MIN (mira `cita_*_ok`)."""
+    seq: int
+    par_id: str
+    articulo: FragmentoOut
+    seccion: FragmentoOut
+    cobertura: Literal["total", "parcial", "nula", "sin_veredicto"]
+    naturaleza: str = ""
+    confianza: float = 0.0
+    cita_norma_ok: bool = False
+    cita_manual_ok: bool = False
+    requiere_revision: bool = False
+    comentario: str = Field(default="", max_length=300)
+    cita_norma: str = Field(default="", max_length=600)
+    cita_manual: str = Field(default="", max_length=600)
+    elementos_faltantes: list[str] = []
+
+
 class EsperaLimite(BaseModel):
     """El proveedor del modelo pidió esperar (límite de tasa, 429)."""
     activa: bool = False
@@ -126,6 +145,13 @@ class JobOut(BaseModel):
     conteo_cobertura: dict[str, int] = {}                      # provisional: total / parcial / nula / sin_veredicto
     a_revision: int = 0
     espera_limite: EsperaLimite = EsperaLimite()
+    # Comparación en curso (docs/11). La lista completa vive en `_resueltos` (memoria, ≤ MAX_PARES); `GET /api/jobs/{id}?desde=N` entrega solo lo nuevo
+    pares_resueltos: list[ParResuelto] = []                    # solo con seq > desde; en cualquier otra respuesta va vacío
+    seq_ultimo: int = 0                                        # mayor `seq` resuelto hasta ahora: es el `desde` del siguiente sondeo
+    cancelando: bool = False                                   # se pidió cancelar y el job aún no termina (viene del servidor: sobrevive a la recarga)
+    estimado_desde_pares: int = 0                              # ESTIMADO_DESDE_PARES
+    pares_por_pagina: int = 0                                  # PARES_POR_PAGINA
+    _resueltos: list[ParResuelto] = PrivateAttr(default_factory=list)
 
 
 class NodoOut(BaseModel):

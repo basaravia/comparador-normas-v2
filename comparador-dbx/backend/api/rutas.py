@@ -4,7 +4,7 @@ import os
 import time
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, File, Path, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Path, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 
 from backend.api import schemas as S
@@ -143,11 +143,12 @@ def procesar(s: Ses, cuerpo: S.ProcesarIn):
 
 
 @router.get("/jobs/{job_id}", response_model=S.JobOut)
-def job(s: Ses, job_id: str):
+def job(s: Ses, job_id: str, desde: Annotated[int, Query(ge=0)] = 0):
+    """`desde`: último `seq` que el frontend ya tiene; solo se devuelven los pares resueltos posteriores (con 0 o sin él, todos)."""
     j = s.jobs.get(job_id)
     if j is None:
         raise servicio.ComparacionError("ERR-JOB-404", "No encontramos esa tarea. Puede que la sesión se haya reiniciado.")
-    return j.model_copy(update={"ahora_ts": time.time()})
+    return servicio.vista_job(j, desde)
 
 
 @router.get("/documents/{doc_id}/pages/{pagina}/thumb")
@@ -157,7 +158,7 @@ def miniatura(s: Ses, doc_id: str, pagina: int):
 
 @router.post("/jobs/{job_id}/cancel", response_model=S.JobOut)
 def cancelar(s: Ses, job_id: str):
-    return servicio.cancelar(s, job_id)
+    return servicio.vista_job(servicio.cancelar(s, job_id), 2 ** 31)      # sin pares: la respuesta solo confirma el estado
 
 
 @router.get("/sections/tree", response_model=list[S.ArbolDocOut])
