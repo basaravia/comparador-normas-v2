@@ -557,7 +557,7 @@ Diseño: `docs/ux/identidad-visual-v1.md`. Mejora de U0, en verde y blanco, sin 
 **Módulos y cambios**
 - `frontend/src/estilos.css`: bloque `:root` único al inicio con todos los valores visuales (marca, superficie y texto, estados A/L/R/X/P con su letra, avisos tintados, forma, espaciado, sombra, tipografía, cajas de logos). Fuera de él no queda ningún color literal. Se renombraron `--gris` → `--texto-suave`, `--blanco` → `--superficie` / `--sobre-marca` y `--radio` → `--r-m`. Radios y sombra ya salen de tokens en todo el archivo; el **espaciado** (`--e1`…`--e6`) solo se aplicó a la cabecera: el resto se ordena en P2–P5.
 - Dirección visual (24 nov 2026): verde y blanco conservados; de la skill `ui-ux-pro-max` se tomó la forma (radios de 2 a 6 px, sin sombra, pasos rectangulares), el texto secundario reforzado, el anillo de foco oscuro y la separación entre el verde de marca (`--marca*`, antes `--verde*`) y el verde de estado «cumple» (`--ok-*`). Su paleta marino y dorado se previsualizó y se descartó; su script no se ejecutó (código de terceros). Detalle y pendientes en `docs/ux/identidad-visual-v1.md` §8.
-- Iconos y acento (24 nov 2026): `frontend/src/components/Icono.tsx` con 10 iconos propios en SVG que reemplazan a ⚖ ⚙ ⬆ ⚠ ✓ ▸ ▾ ◌ ◐ ✕ (decorativos por defecto; con `titulo` se anuncian). Sin biblioteca ni descargas ni atribución; el único carácter que queda es el título de la pestaña del navegador (`Processing.tsx`), que no admite SVG. Token `--acento` (`#a16207`, 4,9:1 sobre blanco) en el filete de la cabecera y del pie de Selección y en las escalas del producto; primarios siguen verde y blanco. `identidad.test.ts` vigila que no vuelvan los caracteres como iconos.
+- Iconos y acento (24 nov 2026; el uso del acento en filetes se retiró después en la pasada de calma, más abajo): `frontend/src/components/Icono.tsx` con 10 iconos propios en SVG que reemplazan a ⚖ ⚙ ⬆ ⚠ ✓ ▸ ▾ ◌ ◐ ✕ (decorativos por defecto; con `titulo` se anuncian). Sin biblioteca ni descargas ni atribución; el único carácter que queda es el título de la pestaña del navegador (`Processing.tsx`), que no admite SVG. Token `--acento` (`#a16207`, 4,9:1 sobre blanco), hoy solo en las escalas del producto (el filete dorado se quitó en la pasada de calma, ver más abajo); primarios siguen verde y blanco. `identidad.test.ts` vigila que no vuelvan los caracteres como iconos.
 - Cabecera estable entre pantallas (24 nov 2026, la detectó el usuario al recorrer el menú): `scrollbar-gutter: stable` (sin ello la barra de desplazamiento aparecía en Ajustes y Selección y corría la cabecera 15 px), mismo peso en todos los pasos (el activo en negrita ensanchaba su botón 2 px y empujaba a los demás), sitio reservado para «Servicio disponible» (llega tarde y movía Ajustes) y paso actual a opacidad completa aunque esté deshabilitado durante «Procesando» y «Comparando». Medido en el navegador: pasos y Ajustes en las mismas coordenadas en Carga, Selección, Ajustes y Comparando; `identidad.test.ts` fija las reglas. Efecto secundario: sin la respuesta del servicio queda un hueco a la derecha de Ajustes.
 - Correcciones de contraste (WCAG 2.2 AA): texto secundario `#4a5750` (7,1:1 sobre el fondo); letra oscura (`--sobre-L`) sobre el ámbar de la marca L; texto ámbar de `.lento`, `.cob-parcial`, `.incierto` y `.veredicto .revisar` en `--aviso-texto`; `.estado-extrayendo` en `--info-texto`; `.estado-error` en `--error-texto`; límite de input, select, buscador y chips de filtro en `--borde-control` (3,5:1). Sombra `--sombra` en tarjetas y cifras con `tabular-nums`.
 - `frontend/src/components/Marca.tsx` (nuevo): zona de marca de la cabecera (logo de la organización, logo del producto o ⚖, nombre siempre visible) y logo del pie de Ajustes. Un logo que no carga se oculta (sin icono roto). `App.tsx` pide `GET /api/brand` aparte de la sesión; si falla, queda la cabecera de siempre.
@@ -598,6 +598,34 @@ Criterio: `docs/ux/identidad-visual-v1.md` §3 P2. Solo CSS (`frontend/src/estil
 - «Filas de 40 px»: no se fijó un `min-height`; las filas miden de hecho ≥ 52 px en escritorio y a ≤ 720 px pasan a tarjeta, donde la cifra no aplica.
 - Con las celdas en bloque (≤ 720 px), algunos lectores de pantalla dejan de anunciar la estructura de tabla; el contenido y el orden de tabulación no cambian. No se probó con un lector de pantalla (queda en la auditoría de accesibilidad A-52).
 - La tabulación se comprobó por el orden de los elementos enfocables, no pulsando Tab; el orden del DOM no cambió.
+
+## Rediseño de imagen · P3 pantalla Selección (24 nov 2026; docs/14 #40, tablero A-49 y P-37)
+Criterio: `docs/ux/identidad-visual-v1.md` §3 P3. La estructura aprobada (árbol dual, vista previa, barra y pie) no cambia. Cambios en CSS, un icono nuevo y dos reemplazos de carácter; sin cambios de textos, ARIA ni comportamiento.
+
+**Qué cambió**
+- Una sección excluida ya no se atenúa con `opacity: .55` (dejaba el motivo «No se comparará: preámbulo» en ~2,4:1): ahora usa el texto secundario sólido. Medido en navegador: identificador y vista previa 7,6:1, motivo 5,3:1, opacidad efectiva 1.
+- Icono SVG `info` en `Icono.tsx` en lugar del carácter ℹ en los avisos de Selección (`DualTree.tsx`) y Resultados (`Results.tsx`); la prueba que impide caracteres como icono ahora incluye ℹ.
+- `scroll-padding-bottom: 6rem` en `html`: el pie fijo (71 px) no tapa el elemento que recibe el foco (guía 100 de la skill, WCAG 2.4.11; tablero P-37 parte Selección).
+- Heredado de P1 y sin tocar: bordes de control a `--borde-control`, chevrón de 24 px, anillo de foco oscuro.
+
+**Mediciones (Chromium, app local con el ejemplo cargado)**: `scroll-padding-bottom` calculado 96 px frente a un pie de 71 px; el último elemento enfocable de la página queda por encima del pie (pero esa página cabe casi entera en el visor: la prueba es débil); sin ℹ como carácter en ningún aviso. `npm test` 44 (2 nuevas).
+
+**Diferencias con la spec y límites conocidos**
+- §3 P3 pide «pie fijo con sombra superior en lugar de filete de 2 px»: el pie lleva una línea fina neutra de 1 px (no sombra ni filete grueso), porque la dirección visual v1.1 (§8) quita las sombras y la pasada de calma (§9) los filetes gruesos. **Pendiente del usuario/PO**: corregir el criterio o pedir la sombra.
+- «Casillas, buscador y «solo marcados» con límite ≥ 3:1»: buscador y chips usan `--borde-control` (medido); las casillas son las nativas del navegador y no se midieron.
+- «El pie no tapa la última fila»: se reservó el espacio de desplazamiento, pero no se probó con un documento largo que desborde el visor y tabulando con teclado.
+- La parte de P-37 para Comparando (resumen fijo superior que puede tapar el foco) sigue pendiente de P4.
+
+## Rediseño de imagen · pasada de calma (24 nov 2026; docs/14 #40, `docs/ux/identidad-visual-v1.md` §9)
+Origen: el usuario vio P1–P3 y las encontró «bastante cargadas»; pidió revisar tendencias 2026 y aplicarlas. Solo CSS (`estilos.css`) y una prueba; sin cambios de textos, estructura, ARIA ni comportamiento.
+
+**Qué cambió**: un solo verde sólido por pantalla (el paso activo de la cabecera pasa a tono suave con línea inferior); bordes de tarjeta más tenues y separadores de fila suaves (`--borde`, `--borde-suave`); sin filete dorado grueso (línea fina neutra en cabecera y pie de Selección); nota de cuenta sin franja propia; el motivo de exclusión del árbol deja de ir en rojo (color reservado a lo anómalo); más espacio en filas, paneles y contenedor; subrayado fino y tenue en los enlaces.
+
+**Fuentes y su calidad**: tres blogs de diseño (saasui.design, uxmagic.ai, uxpin.com); heurísticas sin cifras verificables, sin estudios de usabilidad. Detalle y las propuestas no aplicadas, pendientes de decisión del usuario (texto repetido «Los PDF no se guardan», plegar filtros, paleta de comandos, vistas por rol) en `docs/ux/identidad-visual-v1.md` §9.
+
+**Mediciones (Chromium, ejemplo cargado, 1366 px)**: capturas antes/después de Selección, Carga y Comparando revisadas a ojo; sin scroll horizontal en Carga; paso activo `rgb(231, 243, 236)` (`--marca-claro`). `npm test` 45 (1 nueva). **No medido**: la reducción de «carga» es una impresión visual, no una medición; sin prueba con usuarios.
+
+**Límites**: Resultados no se vio con datos (P5); a 320 px solo se revisó Carga en P2, no con estos cambios.
 
 ## L5 · Papel de trabajo (APROBADO por `qa-ia`)
 

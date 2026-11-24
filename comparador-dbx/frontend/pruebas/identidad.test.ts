@@ -98,7 +98,7 @@ test("ningún carácter hace de icono en los componentes: se usa <Icono> (la ún
     "components/DocTable.tsx", "components/DropZone.tsx", "components/DualTree.tsx", "components/Marca.tsx", "progresoComparacion.ts"];
   for (const a of archivos) {
     const codigo = readFileSync(new URL(a, dir), "utf-8").replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "").replace(/document\.title = `[^`]*`/g, "");
-    assert.deepEqual(codigo.match(/[⚖⚙⬆⚠✓✔▸▾◌◐✕]/g) ?? [], [], `${a} usa un carácter como icono`);
+    assert.deepEqual(codigo.match(/[⚖⚙⬆⚠ℹ✓✔▸▾◌◐✕]/g) ?? [], [], `${a} usa un carácter como icono`);
   }
 });
 
@@ -115,4 +115,16 @@ test("Carga (P2): el nombre largo se parte sin desbordar, el estado va en una l�
   assert.doesNotMatch(css, /\.tabla \.nombre\s*\{[^}]*overflow:\s*hidden/);                 // recortaba el nombre sin puntos suspensivos
   assert.match(css, /\.estado\s*\{[^}]*white-space:\s*nowrap/);
   assert.match(css, /@media \(max-width: 720px\)\s*\{[^@]*\.docs,\s*\.docs tbody,\s*\.docs tr,\s*\.docs td\s*\{\s*display:\s*block/);
+});
+
+test("Selección (P3): una sección excluida no se atenúa con opacidad (el motivo debe leerse) y la página reserva sitio al pie fijo", () => {
+  assert.doesNotMatch(css, /\.nodo\.excluida\s*>\s*\.nodo-fila\s*\{[^}]*opacity/);
+  assert.match(css, /html\s*\{[^}]*scroll-padding-bottom/);
+});
+
+test("calma: el paso activo no es verde sólido (la acción principal es el único) y el motivo de exclusión no va en rojo", () => {
+  assert.match(css, /\.paso\.activo\s*\{[^}]*background:\s*var\(--marca-claro\)/);
+  assert.doesNotMatch(css, /\.paso\.activo\s*\{[^}]*background:\s*var\(--marca\)\s*;/);
+  assert.match(css, /\.nodo-motivo\s*\{[^}]*color:\s*var\(--texto-suave\)/);
+  assert.doesNotMatch(css, /border-bottom:\s*3px/);                                  // sin filete grueso decorativo en la cabecera
 });

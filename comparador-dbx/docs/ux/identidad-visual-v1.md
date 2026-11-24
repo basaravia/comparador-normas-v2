@@ -75,7 +75,7 @@ Reglas de forma para no depender del color: cada marca conserva su letra; en lis
 ## 3. Pantallas, en orden de entrega
 Cada paso es independiente y reversible. Criterios medibles (se verifican con captura + herramienta de contraste + teclado).
 
-**P1 · Tokens + cabecera + Ajustes (esfuerzo M).** Cabecera blanca de 56 px con borde inferior de 1 px `--borde` y filete verde de 3 px (como hoy), zona de marca a la izquierda (§4), pasos en el centro, Ajustes y «Servicio disponible» a la derecha. Ajustes: tarjetas `.ajuste` con la nueva sombra y espaciado 12/24.
+**P1 · Tokens + cabecera + Ajustes (esfuerzo M).** Cabecera blanca de 56 px con borde inferior de 1 px `--borde` y filete verde de 3 px (como hoy; desde v1.1/§9 es una línea fina neutra de 1 px), zona de marca a la izquierda (§4), pasos en el centro, Ajustes y «Servicio disponible» a la derecha. Ajustes: tarjetas `.ajuste` con la nueva sombra y espaciado 12/24.
 - Todos los pares de §2 cumplen 4,5:1 (texto) o 3:1 (componente) medidos con la fórmula WCAG.
 - La cabecera no cambia de altura entre pasos y no hace más de 2 líneas a 320 px de ancho.
 - Foco visible en Carga, Selección, Resultados, Ajustes y Servicio: anillo ≥ 2 px, visible sobre el paso activo verde.
@@ -88,7 +88,7 @@ Cada paso es independiente y reversible. Criterios medibles (se verifican con ca
 - Un nombre de archivo de 120 caracteres no produce scroll horizontal.
 - Todos los controles de fila miden ≥ 24 px; tabulación llega a «Quitar» sin trampas.
 
-**P3 · Selección (estructura aprobada intacta).** Solo: bordes de controles a `--borde-control`, paneles con sombra, pie fijo con sombra superior en lugar de filete de 2 px.
+**P3 · Selección (estructura aprobada intacta).** Solo: bordes de controles a `--borde-control`, paneles con sombra, pie fijo con sombra superior en lugar de filete de 2 px. **Ver §8 y §9**: la dirección v1.1 quita las sombras y la pasada de calma los filetes gruesos; el pie lleva una línea fina de 1 px. Pendiente del usuario: confirmar si quiere la sombra del pie.
 - La posición de árbol, vista, barra y pie no cambia respecto de `seleccion-indice-v1.svg`.
 - Casillas, buscador y «solo marcados» tienen límite visible ≥ 3:1.
 - El pie fijo no tapa la última fila al desplazarse (margen inferior ≥ altura del pie).
@@ -192,11 +192,12 @@ Tras ver P1 implementada, el usuario pidió usar la skill `ui-ux-pro-max` y **co
 | `--verde*` | `#1e7b4f` / `#165c3b` / `#e7f3ec` | se llaman `--marca*`, mismos valores |
 | `--ok-fondo`, `--ok-texto` (nuevos) | – | `#e7f3ec` / `#165c3b`: verde de estado «cumple» (chip «Cubre por completo», «listo», banner ok, citas verificadas), independiente de la marca: al cambiar la marca el significado no cambia |
 | `--texto-suave` | `#5b6760` (5,9:1) | `#4a5750` (7,6:1 sobre blanco, 7,1:1 sobre el fondo; objetivo reforzado) |
-| `--borde` | `#d6ded9` | `#c5d0ca` (el borde de tarjeta se ve sin sombra) |
+| `--borde` | `#d6ded9` | `#dde4e0` (subió a `#c5d0ca` en v1.1 y la pasada de calma lo aclaró otra vez; borde de tarjeta y de cabecera, decorativo) |
+| `--borde-suave` (nuevo) | – | `#e8eeea`: separador entre filas de tabla |
 | `--foco` | `#2f6fb0` | `#1f2a24` (14,8:1) |
 | `--r-s`, `--r-m`, `--r-l` | 6 / 8 / 12 px | 3 / 4 / 6 px; nuevo `--r-xs` 2 px; los pasos de la cabecera son rectangulares |
 | `--sombra` | `0 1px 2px …` | `none` |
-| `--acento` (nuevo) | – | `#a16207` (dorado, 4,9:1 sobre blanco): acento libre, el usuario dejó elegirlo mientras los primarios sigan verde y blanco. Se usa en el filete de la cabecera, el filete del pie de Selección y las escalas del producto; cambiarlo es editar este valor |
+| `--acento` (nuevo) | – | `#a16207` (dorado, 4,9:1 sobre blanco): acento libre, el usuario dejó elegirlo mientras los primarios sigan verde y blanco. Hoy solo se usa en las escalas del producto: el filete dorado de la cabecera y del pie se quitó en la pasada de calma (§9); cambiarlo es editar este valor |
 
 Pendiente de la skill para P3–P5:
 1. «Focus Not Obscured» (guía 100): `scroll-padding` para que el pie fijo de Selección y el resumen fijo de Comparando no tapen el elemento enfocado.
@@ -205,3 +206,26 @@ Pendiente de la skill para P3–P5:
 4. Objetivo táctil: la guía 22 aclara que los 44 px son de móvil; en web rige WCAG 2.5.8 (24 px), que ya se cumple.
 
 El wireframe `wireframes/identidad-cabecera-v1.svg` es de v1 (esquinas de 8 px) y no se actualizó.
+
+## 9. Pasada de calma (24 nov 2026): «se ve cargado»
+El usuario vio P1–P3 y las encontró visualmente cargadas; pidió revisar tendencias de 2026 en aplicaciones similares y aplicarlas.
+
+**Fuentes consultadas** (leídas el 24 nov 2026): saasui.design «7 SaaS UI Design Trends for 2026», uxmagic.ai «B2B SaaS UI Design Trends in 2026» y uxpin.com «Dashboard Design Principles (2026)». Son blogs de agencias y proveedores de diseño: dan **heurísticas, no cifras verificables** (ninguna fija límites de colores, densidad o niveles de énfasis) y las afirmaciones de impacto en métricas no tienen fuente. La búsqueda no halló rediseños 2026 documentados de AuditBoard, Workiva ni Vanta; Drata anunció uno (mayo 2026) sin detalle visual útil. Lo que las tres repiten:
+1. Mostrar por defecto solo lo que necesita la tarea; lo avanzado, plegado o en el contexto.
+2. Una acción principal por pantalla.
+3. Jerarquía con tipografía y espacio antes que con color, líneas o iconos; el espacio agrupa mejor que las cajas.
+4. Color reservado para lo urgente o anómalo.
+
+**Aplicado (solo CSS, sin cambiar textos, estructura ni comportamiento)**
+- El único verde sólido de la pantalla es la acción principal: el paso activo de la cabecera pasa a un tono suave con línea inferior (`--marca-claro`, `--marca-osc`: 7,0:1).
+- Menos líneas: bordes de tarjeta más tenues (`--borde`), separadores de fila suaves (`--borde-suave`), filete dorado de 3 px y de 2 px sustituido por una línea fina neutra en la cabecera y el pie de Selección; la franja blanca de cuenta pasa a una nota discreta sobre el fondo.
+- Color solo para lo anómalo: el motivo de exclusión que se repetía en rojo en cada fila del árbol pasa a texto secundario (el rojo queda para errores y brechas).
+- Más aire: relleno de filas de tabla (12 px), de paneles (18 px), de filas de pares (10×14 px) y del contenedor.
+- Enlaces con subrayado fino y tenue que se refuerza al pasar el puntero.
+
+**Propuestas no aplicadas (pendientes de decisión del usuario)**
+- **Texto repetido**: «Los PDF no se guardan…» aparece en la nota de cuenta y otra vez en la banda de Selección. Quitar una es un cambio de textos (docs/05); se propone como decisión.
+- **Plegar filtros y acciones** (Expandir/Contraer todo, filtros-chips) en un menú: cambia comportamiento y DOM; se propone para P4/P5 con prueba de usuario.
+- **Paleta de comandos (Ctrl/Cmd+K)** y **vistas por rol**: son de producto, no de imagen; la fuente los justifica con «más de 10 funciones» y ejemplos de CRM.
+- **Datos de ejemplo en estados vacíos**: una fuente los recomienda; en una herramienta de auditoría podrían confundirse con datos reales.
+- El logo de prueba «BANCO DEMO» es un bloque verde sólido: es un archivo de prueba; el logo real lo define el banco.

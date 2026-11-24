@@ -155,7 +155,7 @@ export function Results() {
           <div><strong>{c.via2.filter((f) => f.sin_base).length}</strong> controles sin base normativa</div>
         </div>
       </section>
-      {c.avisos.map((a, i) => <div key={i} className="nota-aviso">ℹ {a}</div>)}
+      {c.avisos.map((a, i) => <div key={i} className="nota-aviso"><Icono nombre="info" /> {a}</div>)}
       <AjustesUsados usados={c.ajustes ?? {}} />
 
       <div className="conmutador" role="tablist">

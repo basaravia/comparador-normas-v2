@@ -123,7 +123,7 @@ function ArbolDoc({ a, sel, onSel, onVer, onQuitarMarcas }: {
     <div className="arbol-doc">
       <h3>{a.nombre}</h3>
       {onQuitarMarcas && marcados > 0 && <button className="secundario" onClick={() => onQuitarMarcas(a)}>Quitar marcas de este manual</button>}
-      {a.avisos.map((av, i) => <div key={i} className="nota-aviso">ℹ {av}</div>)}
+      {a.avisos.map((av, i) => <div key={i} className="nota-aviso"><Icono nombre="info" /> {av}</div>)}
       <div className="arbol-barra" role="toolbar" aria-label={`Herramientas del índice de ${a.nombre}`}>
         <input type="search" placeholder="Buscar en el índice…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} aria-label="Buscar en el índice" />
         <button className="enlace" onClick={() => setCerradas(new Set())}>Expandir todo</button>
