@@ -129,3 +129,22 @@ Requisito: ningún RF/RNF de `docs/04` la nombra; el criterio es `docs/ux/identi
 Mutación manual (copia en el scratchpad, no en el repo): backend 19 mutantes, 6 sobrevivían a `test_marca.py` (tope 64 vs 65, `.png`, tamaño exacto `>=`, `LOGO_DIR` vacío, mayúsculas, `strip`); con `test_marca_huecos.py` mueren todos salvo 2 equivalentes (`suffix.lower()`, que el regex ya hace innecesario, y un mutante sin efecto). CSS 20 mutantes: 6 sobrevivían (par malo oculto por el parche `--sobre-L`, nombres de color, `hsl()`, segundo `:root`, `var()` sin definir, radio/fuente literal); la propuesta en el scratchpad de la sesión los mata todos, pero esa ruta (`frontend/pruebas/`) queda fuera de lo que QA puede escribir.
 
 Defectos de esta pasada (ambos BAJA): (1) `.punto::before { border-radius: 50% }` en vez de `var(--r-circulo)` (§6a): **corregido** el 24 nov; (2) `HEAD` sobre `/api/brand` y `/marca/*` da 405, como el resto de la API: aceptado, los `<img>` no lo usan. La prueba de identidad se reforzó tras la mutación (un solo `:root`, tokens definidos, sin `hsl()` ni colores con nombre, radios y fuentes sin literales, iconos sin caracteres, cabecera estable): hoy mide 41 pares (33 de texto y 8 de componente).
+
+## Pasada: lote técnico del backlog — tope de páginas por sesión, endurecimiento HTTP, P-38 (rama `feat/sesion-usuario-pdf-efimero`, sin commit, 24 nov 2026)
+
+Requisitos: RF-01 (carga múltiple con tope) y RF-04 (límites de ingesta) ampliados con `ERR-ING-005` (docs/05 y docs/11); S-16, S-18 y S-22 de appsec (sin ID en docs/04). `pytest -m "not integracion" --cov=backend`: **952 pasan, 1 skip, 3 xfail** (2 previas + QA-S22-01); cobertura total 95 % (`servicio.py` 84 %, `rutas.py` 90 %, `main.py` 97 %, `sesiones.py` 99 %).
+
+| Criterio | Pruebas | Estado |
+|---|---|---|
+| `MAX_PAGES_SESION`: aritmética (justo en el tope cabe, +1 no), fallidos no suman, quitar libera, atomicidad con dos subidas a la vez | `tests/test_tope_paginas_sesion.py` (10) | verificado |
+| Con el ejemplo cargado el tope cuenta sus páginas; lote por API (acepta lo que cabe, rechaza el resto en orden); rechazos repetidos no agotan `MAX_DOCS_SESION`; un PDF inválido conserva su error aunque la sesión ya pase el tope | `tests/test_tope_paginas_huecos.py` (4) | verificado |
+| Cuerpo de la subida: `Content-Length` justo en el tope pasa y +1 da 413; 413 con cabeceras de seguridad; sin `Content-Length` (por tramos) y valor no numérico no se cortan; solo `POST /api/documents`; el límite por archivo sigue (422 `ERR-ING-002`) | `test_endurecimiento.py` (5) + `test_tope_paginas_huecos.py` (6) | verificado |
+| 500 con cabeceras; CSP sin `unsafe-inline` en `style-src` | `test_endurecimiento.py` | verificado |
+| «Borrar todo» durante la subida: no se registra ni queda PDF (unitaria, por API → 410, dos subidas en vuelo) | `test_tope_paginas_sesion.py`, `test_tope_paginas_huecos.py` | verificado salvo QA-S22-01 |
+| P-38: pruebas de tiempo con `process_time` siguen detectando lo cuadrático | mutación manual (ver abajo) | verificado |
+
+Mutación manual (copia en el scratchpad, no en el repo): 18 mutantes de `servicio.py` y `main.py`; mueren 16, sobreviven 2 **equivalentes** (`excepto` en `paginas_en_sesion`: el documento reservado vale 0 páginas). Uno vivo al principio (aplicar el tope también a los fallidos) mató con la prueba nueva del error propio. P-38: chunker con coste cuadrático → 6,9 s de CPU (umbral 0,5), `COLA_DOCUMENTO` cuadrática → 56 s (0,5), `CORTE_ARTICULOS` con `[ \t]*` (ReDoS) → 75 s (0,1): las tres pruebas fallan.
+
+Defectos: **QA-S22-01 (BAJA)**: `subir` hace `carpeta.mkdir` fuera del bloqueo; si «Borrar todo» ya borró la carpeta de la sesión sale `FileNotFoundError` (500 genérico) en vez de 410 (`servicio.py:95`). Prueba xfail estricta `tests/test_tope_paginas_huecos.py::test_borrar_todo_justo_antes_de_guardar_el_pdf_responde_410_no_500`.
+Observaciones: `cargar_ejemplo` no aplica `MAX_PAGES_SESION` (no usa Docling; sus 65 págs sí cuentan para las subidas siguientes). El 413 por cuerpo y el 422 por archivo grande llevan el mismo código `ERR-ING-002` con estado distinto.
+Integración: `test_procesar_un_pdf_real_con_docling_borra_el_pdf` pasa (19,5 s, Docling real); las pruebas con el LLM fallan por entorno (`GROQ_API_KEY` ausente, `ERR-CFG-001`); embeddings Ollama responden. No se corrieron L3/extracción/E2E: `llama-server` huérfano al 210 % de CPU.

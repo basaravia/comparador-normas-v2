@@ -4,7 +4,7 @@ Prefijo `/api`. FastAPI sirve además `frontend/dist` en `/`.
 
 | Método y ruta | Descripción |
 |---|---|
-| `POST /api/documents` | multipart con N archivos. Valida, lee metadatos nativos, llama al clasificador. Devuelve filas con sugerencias |
+| `POST /api/documents` | multipart con N archivos. Valida, lee metadatos nativos, llama al clasificador. Devuelve filas con sugerencias. Un documento que pasa `MAX_PAGES_SESION` entre todos los de la sesión vuelve como fila `error` con `ERR-ING-005` (sin PDF en el servidor, no cuenta para el tope de documentos). Un cuerpo mayor que `(MAX_DOCS_SESION × MAX_MB + 1) MiB` responde 413 `ERR-ING-002` sin leerse |
 | `GET /api/session` | Estado de la sesión: `documentos[]`, `comparacion_id`, `trabajo_activo` (`null` o `{id, tipo: procesamiento\|comparacion, comparacion_id}`; `id` es siempre el `job_id` de `GET /api/jobs/{id}` y `comparacion_id` solo viene en comparaciones), `usuario` (correo con la bandera de identidad; si no, «Sesión local»), `retencion_horas`, `max_documentos`, `iniciada_ts` (cambia si la sesión se recrea) y `sesion_nueva` (`true` solo si llegó una cookie desconocida y se abrió una sesión nueva). `Cache-Control: no-store`. Es el único endpoint que abre una sesión nueva en modo cookie |
 | `PATCH /api/documents/{id}` | Actualiza tipo y metadatos editados por el auditor. Un documento ya procesado no cambia de tipo (`ERR-DOC-003`) |
 | `DELETE /api/documents/{id}` | Quita un documento de la sesión propia (`id` con forma `D<número>`; si no existe o es de otra sesión, `404 ERR-DOC-001`). Con cualquier trabajo activo o el documento en ingesta → `409 ERR-DOC-006`. Borra su carpeta y miniaturas, invalida los índices y descarta la comparación vigente (y su Excel). Devuelve la sesión actualizada |

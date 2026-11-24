@@ -22,7 +22,7 @@ from backend.api.schemas import (EsperaLimite, FragmentoOut, IndiceDoc, ParEnCur
                                  NodoOut, ParVia2, SeccionOut)
 from backend.config import RAIZ, Settings, settings
 from backend.core.errors import ComparadorError
-from backend.core.sesiones import Comparacion, Doc, Sesion, error_negocio, exigir_abierta, trabajo_activo
+from backend.core.sesiones import Comparacion, Doc, Sesion, SesionPerdida, error_negocio, exigir_abierta, trabajo_activo
 from backend.engine import ajustes
 from backend.engine.agregacion import controles_sin_base, marca_articulo, naturaleza_articulo
 from backend.engine.juez import Cancelado, Observador, juzgar_pares, llamadas_vivas
@@ -67,6 +67,16 @@ def ocupan_cupo(sesion: Sesion) -> int:
         return sum(d.out.estado != "error" for d in sesion.docs.values())
 
 
+def paginas_en_sesion(sesion: Sesion, excepto: str = "") -> int:
+    """Páginas sumadas de los documentos que ocupan cupo (los fallidos no cuentan). Llamar con el bloqueo de la sesión tomado."""
+    return sum(d.out.paginas for i, d in sesion.docs.items() if i != excepto and d.out.estado != "error")
+
+
+def error_tope_paginas(total: int) -> ComparacionError:
+    return ComparacionError("ERR-ING-005", f"Esta carga llevaría la sesión a {total} páginas y el máximo es {settings.MAX_PAGES_SESION}. "
+                            "Quita algún documento de la lista y vuelve a cargar este.")
+
+
 def error_tope() -> ComparacionError:
     return ComparacionError("ERR-ING-004", f"Llegaste al máximo de {settings.MAX_DOCS_SESION} documentos. Quita alguno de la lista para agregar otro.")
 
@@ -95,12 +105,30 @@ def subir(sesion: Sesion, nombre: str, contenido: bytes, cliente: ModelClient) -
             out = DocumentoOut(id=doc_id, nombre=seguro, paginas=r["paginas"], tipo=r["tipo"], tipo_sugerido=r["tipo"] is not None, metadatos=meta,
                                advertencias=[r["advertencia"]] if r.get("advertencia") else [])
             doc = Doc(out=out, ruta=ruta, sha256=r["sha256"])
-    except BaseException:
+    except BaseException as e:
         with sesion.lock:
             sesion.docs.pop(doc_id, None)        # libera el cupo reservado
+            cerrada = sesion.cerrada
         shutil.rmtree(carpeta, ignore_errors=True)
+        if cerrada and isinstance(e, FileNotFoundError):     # «Borrar todo» ya había borrado la carpeta de la sesión justo antes de guardar el PDF: 410, no un 500 (QA-S22-01)
+            raise SesionPerdida() from None
         raise
     with sesion.lock:
+        if sesion.cerrada:                           # «Borrar todo» llegó mientras se clasificaba: no se registra nada y el PDF no queda en /tmp (S-22)
+            sesion.docs.pop(doc_id, None)            # libera también el cupo reservado al empezar
+            shutil.rmtree(carpeta, ignore_errors=True)
+            try:
+                sesion.dir.rmdir()                   # la carpeta de la sesión queda vacía si el borrado ya había pasado
+            except OSError:
+                pass
+            raise SesionPerdida()
+        if doc.out.estado != "error":
+            total = paginas_en_sesion(sesion, excepto=doc_id) + doc.out.paginas
+            if total > settings.MAX_PAGES_SESION:        # no cabe: queda como documento fallido (no cuenta para el cupo) y el PDF no se queda en el servidor
+                e = error_tope_paginas(total)
+                out = DocumentoOut(id=doc_id, nombre=seguro, estado="error", error=ErrorNegocio(codigo=e.codigo, mensaje=e.para_usuario()["mensaje"]))
+                doc = Doc(out=out)
+                shutil.rmtree(carpeta, ignore_errors=True)
         sesion.docs[doc_id] = doc
     return out
 

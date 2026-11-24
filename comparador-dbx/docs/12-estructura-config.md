@@ -45,6 +45,7 @@ Ver [`config/defaults.env`](../config/defaults.env).
 | Variable | defaults.env | `app.yaml` (mvp) | Nota |
 |---|---|---|---|
 | `SESSION_TTL_HOURS` | 48 | — | retención por inactividad |
+| `MAX_PAGES_SESION` | 500 `[CALIBRAR]` | — | páginas sumadas de los documentos de una sesión (los fallidos no cuentan); sin tope, una sesión con PDF de 250 páginas podía ocupar la cola de Docling (1 worker) hasta ~6,7 h (appsec S-18). El documento que no cabe queda como fallido con `ERR-ING-005` |
 | `SESION_EXPULSABLE_MIN` | 120 `[CALIBRAR]` | — | inactividad mínima para expulsar una sesión cuando `MAX_SESIONES` está lleno |
 | `TRUST_PROXY_IDENTITY` | `false` | `false` (pasa a `true` solo tras la comprobación S-21 de [16](16-despliegue.md)) | liga la sesión al correo de `x-forwarded-email`; exige `DATABRICKS_APP_NAME` (la inyecta Databricks Apps); ver [16](16-despliegue.md) |
 | `LIMPIAR_TMP_AL_ARRANCAR` | `false` | `true` | borra al iniciar las carpetas `comparador_*` huérfanas de `/tmp` |

@@ -125,6 +125,7 @@ class Settings:
     SESSION_TTL_HOURS: int = int(_env("SESSION_TTL_HOURS"))
     MAX_SESIONES: int = int(_env("MAX_SESIONES"))
     MAX_DOCS_SESION: int = int(_env("MAX_DOCS_SESION"))
+    MAX_PAGES_SESION: int = int(_env("MAX_PAGES_SESION"))              # [CALIBRAR] páginas sumadas de los documentos de una sesión (appsec S-18: la cola de Docling es de un solo worker)
     MAX_PARES: int = int(_env("MAX_PARES"))
     ESTIMADO_DESDE_PARES: int = int(_env("ESTIMADO_DESDE_PARES"))        # [CALIBRAR] pares resueltos desde los que «Comparando» muestra el tiempo restante (se entrega en JobOut)
     PARES_POR_PAGINA: int = int(_env("PARES_POR_PAGINA"))                # [CALIBRAR] pares resueltos que «Comparando» pinta a la vez (se entrega en JobOut)
