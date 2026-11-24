@@ -109,3 +109,10 @@ test("la cabecera no se mueve entre pantallas: barra reservada, mismo peso en lo
   assert.match(css, /\.paso\.activo:disabled\s*\{[^}]*opacity:\s*1/);
   assert.match(css, /\.estado-servicio\s*\{[^}]*min-width/);
 });
+
+test("Carga (P2): el nombre largo se parte sin desbordar, el estado va en una línea y a 720 px la tabla pasa a tarjetas", () => {
+  assert.match(css, /\.tabla \.nombre\s*\{[^}]*overflow-wrap:\s*anywhere/);
+  assert.doesNotMatch(css, /\.tabla \.nombre\s*\{[^}]*overflow:\s*hidden/);                 // recortaba el nombre sin puntos suspensivos
+  assert.match(css, /\.estado\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(css, /@media \(max-width: 720px\)\s*\{[^@]*\.docs,\s*\.docs tbody,\s*\.docs tr,\s*\.docs td\s*\{\s*display:\s*block/);
+});

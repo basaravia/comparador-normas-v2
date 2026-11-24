@@ -580,6 +580,25 @@ Diseño: `docs/ux/identidad-visual-v1.md`. Mejora de U0, en verde y blanco, sin 
 - No se verificó todavía el foco por teclado sobre el paso activo ni se hizo la auditoría de accesibilidad completa (tarea de cierre del rediseño).
 - Los logos de la captura eran de prueba, creados en un directorio temporal; ninguno entra al repo.
 
+## Rediseño de imagen · P2 pantalla Carga (24 nov 2026; docs/14 #40)
+Criterio: `docs/ux/identidad-visual-v1.md` §3 P2. Solo CSS (`frontend/src/estilos.css`) y una prueba en `identidad.test.ts`: sin cambios de textos, ARIA, comportamiento ni API.
+
+**Qué cambió**
+- Zona de carga con más aire vertical (borde punteado de marca y `--r-l`, como antes).
+- El nombre de archivo se muestra completo y se parte donde haga falta (`overflow-wrap: anywhere`). Antes la celda lo recortaba sin puntos suspensivos y, a 320 px, un nombre largo sin guiones desbordaba la página (962 px sobre 305).
+- El estado «Indexado · PDF no guardado» va en una sola línea con su «?» al lado (antes se partía en dos dentro de una píldora).
+- Archivo, tipo, estado y acciones alineados al centro de la fila; «Datos del documento» y «Quitar» separados 12 px.
+- A 720 px o menos cada documento pasa a una tarjeta (bloques en vez de tabla de cuatro columnas) y el selector ocupa el ancho; el encabezado de la tabla queda oculto a la vista pero disponible para lectores de pantalla.
+
+**Mediciones (Chromium, app local con el ejemplo cargado)**: sin scroll horizontal a 1366 y a 320 px con un nombre de 120 caracteres sin guiones (inyectado en la fila; la prueba automática solo comprueba las reglas CSS, esta evidencia es de navegador); el estado mide una línea; los controles de fila (`?`, «Datos del documento», «Quitar») miden como mínimo 24×31 px y los selectores 35 px; las filas principales miden 133 y 52 px; no hay ningún `tabindex` positivo y el orden de tabulación (lista de elementos enfocables en orden del DOM) pasa por zona de carga, tipo, `?`, datos, «Quitar» de cada documento, «Continuar a la selección» y «Borrar todo». `npm test` 43 (1 nueva); bundle `index-BVNMxRtD.css` e `index-DhdXE1Hl.js` (el JS es idéntico al anterior).
+
+**Diferencias con la spec y límites conocidos**
+- «El botón primario es el único elemento verde sólido»: se cumple dentro del contenido de la pantalla; el paso activo de la cabecera también es verde sólido (y, con el logo de prueba, el logo). Se entiende como único **botón** de acción.
+- «Estados `.estado` con texto `--texto`»: los estados usan `--ok-texto`, `--info-texto` y `--error-texto` (verdes, azules y rojos de estado, medidos ≥ 4,5:1), no `--texto`; el texto del criterio queda desfasado respecto del diseño §8. **Pendiente del usuario/PO**: corregir el doc o aceptar la excepción.
+- «Filas de 40 px»: no se fijó un `min-height`; las filas miden de hecho ≥ 52 px en escritorio y a ≤ 720 px pasan a tarjeta, donde la cifra no aplica.
+- Con las celdas en bloque (≤ 720 px), algunos lectores de pantalla dejan de anunciar la estructura de tabla; el contenido y el orden de tabulación no cambian. No se probó con un lector de pantalla (queda en la auditoría de accesibilidad A-52).
+- La tabulación se comprobó por el orden de los elementos enfocables, no pulsando Tab; el orden del DOM no cambió.
+
 ## L5 · Papel de trabajo (APROBADO por `qa-ia`)
 
 **Criterio (docs/13):** el Excel abre sin advertencias; los conteos de la Hoja 1 cuadran con la Hoja 2; cero llamadas al modelo al generarlo. **Cumplido en sandbox** (`05_papel.ipynb`, Groq real para el borrador), con la entrada de prueba de abajo. Falta que L4 entregue la marca real.

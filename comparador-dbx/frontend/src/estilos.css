@@ -66,7 +66,7 @@ main { padding: 20px 24px 40px; }
 .nota-error { background: var(--error-fondo); border-radius: var(--r-s); padding: 6px 10px; margin: 6px 0; font-size: .9rem; }
 .ocupado, .ayuda, .vacio-texto { color: var(--texto-suave); } .ayuda { margin: 8px 0; font-size: .9rem; }
 
-.dropzone { border: 2px dashed var(--marca); background: var(--superficie); border-radius: var(--r-l); padding: 36px 16px; text-align: center; cursor: pointer; transition: background .15s; }
+.dropzone { border: 2px dashed var(--marca); background: var(--superficie); border-radius: var(--r-l); padding: var(--e6) var(--e4) 40px; text-align: center; cursor: pointer; transition: background .15s; }
 .dropzone.encima, .dropzone:hover { background: var(--marca-claro); } .dropzone.off { opacity: .6; pointer-events: none; }
 .dz-icono { color: var(--marca); line-height: 0; margin-bottom: var(--e2); } .dz-titulo { font-size: 1.15rem; font-weight: 600; margin: 4px 0; } .dz-sub { margin: 0; color: var(--texto-suave); }
 
@@ -80,13 +80,13 @@ a.boton { margin-left: auto; }
 .tabla { width: 100%; border-collapse: collapse; background: var(--superficie); border-radius: var(--r-m); overflow: hidden; margin-top: 16px; }
 .tabla th { text-align: left; background: var(--marca-claro); padding: 8px 12px; font-size: .85rem; }
 .tabla td { padding: 8px 12px; border-top: 1px solid var(--borde); vertical-align: top; }
-.tabla .nombre { max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
+.tabla .nombre { max-width: 420px; overflow-wrap: anywhere; }
 .fila-alerta td { background: var(--aviso-fondo); } .fila-error td { background: var(--error-fondo); }
 .fila-nota td, .fila-meta td { background: var(--suave-1); }
 select, input:not([type=checkbox]), textarea { font: inherit; padding: 6px 8px; border: 1px solid var(--borde-control); border-radius: var(--r-s); background: var(--superficie); width: 100%; }
 .docs select { width: auto; min-width: 190px; } .sugerido { font-style: italic; }
 .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; } .meta-grid label { font-size: .8rem; color: var(--texto-suave); }
-.estado { display: inline-block; padding: 2px 10px; border-radius: var(--r-pill); font-size: .8rem; background: var(--neutro-fondo); }
+.estado { display: inline-block; white-space: nowrap; padding: 2px 10px; border-radius: var(--r-pill); font-size: .8rem; background: var(--neutro-fondo); }
 .estado-listo { background: var(--ok-fondo); color: var(--ok-texto); } .estado-error, .estado-sinbase { background: var(--error-fondo); color: var(--error-texto); }
 .estado-extrayendo, .estado-seccionando, .estado-indexando { background: var(--info-fondo); color: var(--info-texto); }
 
@@ -189,9 +189,10 @@ select, input:not([type=checkbox]), textarea { font: inherit; padding: 6px 8px; 
 .casilla { display: flex; align-items: center; gap: 8px; margin-top: 12px; min-height: 24px; } .casilla input { width: auto; }
 .franja-pdf { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; background: var(--marca-claro); border-radius: var(--r-s); padding: 6px 12px; margin-bottom: 12px; font-size: .9rem; }
 .zona-borrado { margin-top: 36px; padding-top: 12px; border-top: 1px solid var(--borde); }
-.ayuda-btn { min-width: 24px; min-height: 24px; } .ayuda-estado { display: block; margin-top: 2px; }
+.ayuda-btn { min-width: 24px; min-height: 24px; margin-left: var(--e1); } .ayuda-estado { display: block; margin-top: 2px; white-space: normal; max-width: 24em; }
 .estado-perdida h2 { font-size: 1.05rem; margin: 0 0 6px; } .estado-perdida p { margin: 0 0 8px; }
-.docs .acciones { white-space: nowrap; } .docs .acciones .enlace { min-height: 24px; }
+.docs .acciones { white-space: nowrap; } .docs .acciones .enlace { min-height: 24px; } .docs .acciones .enlace + .enlace { margin-left: var(--e3); }
+.docs td { vertical-align: middle; } .docs td:nth-child(3) { white-space: nowrap; }   /* archivo, tipo y estado alineados al centro de la fila */
 
 /* Comparando: resumen fijo, lista única de pares (docs/ux/comparacion-en-curso-v1.md) */
 .resumen-fijo { position: sticky; top: 0; z-index: 5; background: var(--fondo); padding: 8px 0 6px; border-bottom: 1px solid var(--borde); }
@@ -243,3 +244,12 @@ select, input:not([type=checkbox]), textarea { font: inherit; padding: 6px 8px; 
 .icono-cargando { animation: giro 1.2s linear infinite; }
 @keyframes giro { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .icono-cargando { animation: none; } }
+
+/* Carga a 720 px o menos: cada documento en una tarjeta, sin scroll horizontal */
+@media (max-width: 720px) {
+  .docs thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }   /* los encabezados siguen disponibles para lectores de pantalla */
+  .docs, .docs tbody, .docs tr, .docs td { display: block; }
+  .docs td { border-top: 0; padding: var(--e1) var(--e3); } .docs tbody tr:not(.fila-nota):not(.fila-meta) { border-top: 1px solid var(--borde); padding: var(--e2) 0; }
+  .docs td:nth-child(3) { white-space: normal; } .docs .acciones { white-space: normal; }
+  .docs select { width: 100%; }
+}
