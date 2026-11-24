@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  accionCancelar, anuncioInicial, chipDe, citasVerificadas, contarNuevos, contarPorFiltro, corteVisible, debeRetener, estadoCita, etiquetaPar,
+  accionCancelar, anuncioInicial, chipDe, citasVerificadas, contarNuevos, contarPorFiltro, corteVisible, debeRetener, estadoCita, etiquetaPar, partesPar,
   filtrar, ordenarFilas, paginar, paresPorPagina, estimadoDesdePares, resueltosDe, siguienteAnuncio, textoCancelada, textoConfirmacion,
   textoContador, textoEstimado, textoFase, trabajoTerminado, unirResueltos, type DatosAnuncio,
 } from "../src/progresoComparacion.ts";
@@ -119,6 +119,8 @@ test("filas: etiqueta, citas y chips", () => {
   const frag = (identificador: string, documento: string) => ({ identificador, documento, pagina: 1, preview: "" });
   assert.equal(etiquetaPar(frag("12", "Norma X"), frag("5.2", "Manual Y")), "Art. 12 · Norma X ↔ Sección 5.2 · Manual Y");
   assert.equal(etiquetaPar("Art. 12", "5.2"), "Art. 12 ↔ Sección 5.2");
+  assert.deepEqual(partesPar(frag("Artículo 31", "Norma X"), frag("5.1", "Manual Y")), { ids: "Artículo 31 ↔ Sección 5.1", docs: "Norma X ↔ Manual Y" });
+  assert.deepEqual(partesPar("Art. 12", "5.2"), { ids: "Art. 12 ↔ Sección 5.2", docs: "" });
   assert.equal(citasVerificadas(par(1)), true);
   assert.equal(citasVerificadas(par(1, "total", { cita_manual_ok: false })), false);
   assert.equal(citasVerificadas(par(1, "nula", { cita_manual_ok: false, cita_manual: "" })), true);

@@ -169,6 +169,14 @@ export function etiquetaPar(art: FragmentoOut | string, sec: FragmentoOut | stri
   return `${docDe(art) ? `${a} · ${docDe(art)}` : a} ↔ ${docDe(sec) ? `${s} · ${docDe(sec)}` : s}`;
 }
 
+/** La fila se lee en dos líneas: lo que distingue al par («Art. 12 ↔ Sección 5.2», no se corta) y debajo los documentos (se acortan). */
+export function partesPar(art: FragmentoOut | string, sec: FragmentoOut | string): { ids: string; docs: string } {
+  return {
+    ids: `${conPrefijo("Art.", idDe(art))} ↔ ${conPrefijo("Sección", idDe(sec))}`,
+    docs: docDe(art) && docDe(sec) ? `${docDe(art)} ↔ ${docDe(sec)}` : "",
+  };
+}
+
 /** Citas verificadas: ambas ok; si el modelo no halló fragmento del manual (no lo cubre), solo cuenta la de la norma. */
 export function citasVerificadas(p: ParResuelto): boolean {
   const manualOk = p.cita_manual_ok || (p.cobertura === "nula" && !p.cita_manual);

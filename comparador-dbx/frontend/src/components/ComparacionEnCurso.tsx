@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   anuncioInicial, chipDe, citasVerificadas, contarNuevos, contarPorFiltro, corteVisible, debeRetener, duracion, estadoCita, estimadoDesdePares,
-  etiquetaPar, FILTROS, filtrar, maxSeq, ordenarFilas, paginar, paresPorPagina, porRevisar, siguienteAnuncio, textoCancelada, textoContador, textoEstimado, textoFase,
+  etiquetaPar, partesPar, FILTROS, filtrar, maxSeq, ordenarFilas, paginar, paresPorPagina, porRevisar, siguienteAnuncio, textoCancelada, textoContador, textoEstimado, textoFase,
   visiblesHasta, type EstadoAnuncio, type Filtro, type FilaPar,
 } from "../progresoComparacion.ts";
 import type { FragmentoOut, JobOut, ParResuelto } from "../tipos";
@@ -50,11 +50,15 @@ function Fila({ f, abierta, alternar, cancelando }: { f: FilaPar; abierta: boole
   const chip = chipDe(f, cancelando);
   const idDetalle = `detalle-${f.clave}`;
   const etiqueta = etiquetaPar(f.par.articulo, f.par.seccion);
+  const partes = partesPar(f.par.articulo, f.par.seccion);
   return (
     <li className={`fila-par${f.tipo === "curso" ? " en-curso" : ""}`}>
       <button className="fila-cab" aria-expanded={abierta} aria-controls={idDetalle} onClick={alternar}>
         <span className={`chip chip-${chip.clase}`}><span aria-hidden="true">{chip.icono}</span> {chip.texto}</span>
-        <span className="fila-etiqueta" title={etiqueta}>{etiqueta}</span>
+        <span className="fila-etiqueta" title={etiqueta}>
+          <span className="fila-ids">{partes.ids}</span>
+          {partes.docs && <span className="fila-docs">{partes.docs}</span>}
+        </span>
         {f.tipo === "resuelto" && (
           <span className={citasVerificadas(f.par) ? "citas-ok" : "citas-revisar"}>{citasVerificadas(f.par) ? "✓ Citas verificadas" : "⚠ Citas por revisar"}</span>
         )}
