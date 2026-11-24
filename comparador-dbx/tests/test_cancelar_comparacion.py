@@ -109,11 +109,14 @@ def test_cancelar_la_comparacion_con_pares_en_vuelo_la_deja_cancelada_en_segundo
     job = servicio.comparar(s, [art], [sec], cliente=None)
     comp = s.comparaciones[job.comparacion_id]
     esperar(lambda: len(arrancaron) == 2)
+    time.sleep(0.05)                               # que ningún avance de los pares caiga después de esta marca de tiempo
+    antes_de_cancelar = time.time()
     servicio.cancelar(s, job.job_id)
     t0 = time.perf_counter()
     tardo = esperar(lambda: job.estado == "cancelado")
     print(f"\nsegundos desde Cancelar hasta estado cancelado: {time.perf_counter() - t0:.2f}")
     assert job.estado == "cancelado" and tardo < 2 and comp.out.estado == "cancelado" and comp.entrada is None
+    assert job.ultimo_evento_ts >= antes_de_cancelar     # el reloj de la pantalla se congela al cancelar, no en el último avance
     assert job.pares_en_curso == [] and not job.espera_limite.activa
     suelta.set()                                   # los hilos huérfanos terminan tarde, con resultado y un aviso de espera
     esperar(lambda: not any(t.name.startswith("juez") for t in threading.enumerate()))

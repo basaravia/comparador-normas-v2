@@ -289,7 +289,7 @@ def procesar(sesion: Sesion, doc_ids: list[str], cliente: ModelClient) -> JobOut
             job.errores.append(err)
             job.estado, job.etapa, job.cancelable = "error", "No se pudo procesar ningún documento", False
         finally:
-            sesion.ultimo_uso = time.time()                  # el trabajo cuenta como uso de la sesión
+            sesion.ultimo_uso = job.ultimo_evento_ts = time.time()   # el trabajo cuenta como uso; y el reloj de la pantalla se congela al cerrar, no en el último avance
 
     _PROCESO.submit(correr_y_cerrar)
     return job
@@ -563,7 +563,7 @@ def comparar(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str], cl
             job.errores.append(err)
             job.mensaje = err.mensaje
         job.cancelable = False
-        sesion.ultimo_uso = time.time()                  # el trabajo cuenta como uso de la sesión
+        sesion.ultimo_uso = job.ultimo_evento_ts = time.time()   # uso de la sesión; y el reloj de la pantalla se congela al cerrar (cancelar incluido), no en el último par resuelto
         log.info("Comparación: %d artículos x %d secciones en %.0f s", len(arts), len(secs), time.perf_counter() - t0)
 
     _COMPARACION.submit(correr)
