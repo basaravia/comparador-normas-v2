@@ -494,16 +494,16 @@ def test_regex_hostiles_de_100_kb_en_menos_de_0_1_s(nombre):
     texto = HOSTILES[nombre]
     assert len(texto) >= N - 100
     for regex in [CORTE_ARTICULOS, *(p.regex for p in PATRONES)]:
-        t0 = time.perf_counter()
+        t0 = time.process_time()
         regex.findall(texto) if regex is CORTE_ARTICULOS else regex.match(texto)
-        assert time.perf_counter() - t0 < 0.1, regex.pattern[:60]
+        assert time.process_time() - t0 < 0.1, regex.pattern[:60]
 
 
 @pytest.mark.parametrize("nombre", HOSTILES)
 def test_parsear_bloques_con_un_bloque_hostil_de_100_kb_en_menos_de_0_1_s(nombre):
-    t0 = time.perf_counter()
+    t0 = time.process_time()
     parsear_bloques([{"texto": HOSTILES[nombre], "pagina": 1, "tipo": "parrafo"}], "N1", "normativa")
-    assert time.perf_counter() - t0 < 0.1
+    assert time.process_time() - t0 < 0.1
 
 
 # --- Numeración de las listas (marcador) ---------------------------------------------------------------------------
@@ -651,5 +651,5 @@ def test_cola_del_documento_no_es_cuadratica_con_espacios_y_tabuladores_hostiles
     import time
     from backend.extraction.patterns import COLA_DOCUMENTO
     for hostil in ("CERTIFICACIÓN" + " \t" * 50_000, "CERTIFICACIÓN" + "\t" * 100_000, "Firmado" + " " * 100_000, "FIRMAS DE" + " " * 100_000):
-        t0 = time.perf_counter(); COLA_DOCUMENTO.match(hostil); assert time.perf_counter() - t0 < 0.5
+        t0 = time.process_time(); COLA_DOCUMENTO.match(hostil); assert time.process_time() - t0 < 0.5
     assert COLA_DOCUMENTO.match("CERTIFICACIÓN:") and COLA_DOCUMENTO.match("CERTIFICACIÓN : ") and not COLA_DOCUMENTO.match("La certificación de cumplimiento")

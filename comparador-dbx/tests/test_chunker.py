@@ -150,6 +150,7 @@ def test_entrada_hostil_de_400kb_se_parte_sin_alterar_el_literal(patron):
 
 @pytest.mark.parametrize("patron", PATRONES_HOSTILES)
 def test_entrada_hostil_de_400kb_en_menos_de_medio_segundo(patron):
+    # Se mide el tiempo de CPU del proceso (process_time), no el de reloj: con la CPU ocupada por otros procesos el reloj se infla y la prueba fallaba sin que el código cambiara (P-38).
     # Se mide en un intérprete limpio: con `--cov` el trazado de coverage multiplica el tiempo por ~2
     # y mediría a coverage, no al chunker (criterio de docs/13 / entrada hostil de L3).
     codigo = (
@@ -158,7 +159,7 @@ def test_entrada_hostil_de_400kb_en_menos_de_medio_segundo(patron):
         "from l3_ayudas import seccion\n"
         "from backend.retrieval.chunker import subchunkear\n"
         "sec = seccion(texto=%r * (400 * 1024 // %d))\n"
-        "t0 = time.perf_counter(); subchunkear(sec, 'Ley'); print(time.perf_counter() - t0)\n"
+        "t0 = time.process_time(); subchunkear(sec, 'Ley'); print(time.process_time() - t0)\n"
     ) % (str(RAIZ), str(RAIZ / "tests"), patron, len(patron))
     salida = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True, check=True, cwd=RAIZ)
     assert float(salida.stdout) < 0.5, f"{patron!r}: {salida.stdout.strip()} s"

@@ -225,7 +225,9 @@ def test_el_hijo_recibe_un_entorno_minimo_sin_claves_de_los_modelos(hacer_pdf, c
     assert "secreto-que-no-debe-salir" not in json.dumps(entorno_hijo)
     assert entorno_hijo["OMP_NUM_THREADS"] == "1" and entorno_hijo["HF_HUB_DISABLE_TELEMETRY"] == "1" and entorno_hijo["DO_NOT_TRACK"] == "1"
     assert entorno_hijo["HF_HOME"] == "/modelos" and entorno_hijo["LC_ALL"] == "C.UTF-8" and "PATH" in entorno_hijo
-    assert set(entorno_hijo) <= de.ENTORNO_HIJO | {"OMP_NUM_THREADS", "HF_HUB_DISABLE_TELEMETRY", "DO_NOT_TRACK", "HF_HOME", "LC_ALL", "DOCLING_DEVICE"}
+    permitidas = de.ENTORNO_HIJO | {"OMP_NUM_THREADS", "HF_HUB_DISABLE_TELEMETRY", "DO_NOT_TRACK", "DOCLING_DEVICE"}
+    ajenas = {k for k in entorno_hijo if k not in permitidas and not k.startswith(("HF_", "LC_"))}      # HF_* y LC_* pasan por diseño (modelos y locale): cualquier otra variable no
+    assert not ajenas, ajenas
     assert entorno_hijo["DOCLING_DEVICE"] in de.DISPOSITIVOS   # lo fija DOCLING_DEVICE (auto | cpu | cuda | mps)
     assert Path(cwd).resolve() == Path(RAIZ).resolve()
 
