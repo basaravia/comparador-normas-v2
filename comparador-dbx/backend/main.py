@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend.api.rutas import router
-from backend.config import RAIZ, settings
+from backend.config import RAIZ, logo_permitido, settings
 from backend.core.errors import ComparadorError, LLMUnavailableError
 from backend.core.progreso import configurar_logs
 from backend.core import sesiones
@@ -99,6 +99,19 @@ async def _http(_: Request, e: StarletteHTTPException):
 async def _inesperado(_: Request, e: Exception):
     log.exception("Error no controlado")
     return _json(500, ComparadorError.codigo, ComparadorError.mensaje_negocio)
+
+
+TIPOS_LOGO = {".svg": "image/svg+xml", ".png": "image/png"}
+
+
+@app.get("/marca/{nombre}", include_in_schema=False)
+def logo(nombre: str):
+    """Sirve solo los logos que la configuración nombra (docs/ux/identidad-visual-v1.md §4). La CSP propia hace inofensivo un SVG abierto a pantalla completa."""
+    archivo = logo_permitido(nombre)
+    if archivo is None:
+        return _json(404, "ERR-HTTP-404", "No encontramos lo que buscabas.")
+    return FileResponse(archivo, media_type=TIPOS_LOGO[archivo.suffix.lower()],
+                        headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox", "Cache-Control": "private, max-age=3600"})
 
 
 if DIST.exists():

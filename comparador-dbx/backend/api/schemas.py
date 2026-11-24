@@ -265,6 +265,15 @@ class HealthOut(BaseModel):
     mensaje: str = ""
 
 
+class MarcaOut(BaseModel):
+    """Identidad visible de la cabecera (lista blanca: nada más sale de la configuración). Logo vacío = se muestra el texto."""
+    nombre_producto: str = ""
+    texto_alternativo: str = ""
+    logo_org: str = ""
+    logo_producto: str = ""
+    logo_pie: str = ""
+
+
 class AjusteOut(BaseModel):
     clave: str
     etiqueta: str

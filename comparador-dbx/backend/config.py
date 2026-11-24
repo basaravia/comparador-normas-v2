@@ -10,6 +10,7 @@ El código no tiene valores por defecto: los `[CALIBRAR]` viven solo en `default
 En Databricks el token de Foundry llega como variable de entorno: en Apps con `valueFrom`
 en app.yaml y en notebooks con `dbutils.secrets.get` (línea comentada en cada notebook).
 """
+import logging
 import os
 import re
 from dataclasses import dataclass, field
@@ -34,6 +35,23 @@ load_dotenv(RAIZ / "config" / "defaults.env", override=False)  # solo rellena lo
 def _env(nombre: str) -> str:
     valor = os.environ.get(nombre, "").strip()
     return "" if valor.startswith("#") else valor   # un comentario de .env leído como valor (según la versión de python-dotenv)
+
+
+_URL_MARCA = re.compile(r"/marca/[A-Za-z0-9._-]{1,64}\.(svg|png)")
+
+
+def _url_marca(variable: str) -> str:
+    """Ruta de un logo: solo `/marca/<archivo>.svg|png` de esta misma app. Cualquier otra cosa (https, data:, `..`, `//host`) se descarta
+    con un aviso que nombra la variable (nunca el valor) y la cabecera queda con el texto: el logo es opcional y no debe tumbar el arranque."""
+    valor = _env(variable)
+    if valor and not (_URL_MARCA.fullmatch(valor) and ".." not in valor):
+        logging.getLogger(__name__).warning("%s no es una ruta /marca/<archivo>.svg|png: se ignora y se muestra el texto", variable)
+        return ""
+    return valor
+
+
+def _texto_marca(variable: str, maximo: int) -> str:
+    return re.sub(r"[\x00-\x1f\x7f]", "", _env(variable))[:maximo]
 
 
 @dataclass(frozen=True)
@@ -118,6 +136,14 @@ class Settings:
     COLOR_PRIMARIO: str = _env("COLOR_PRIMARIO")
     COLOR_FONDO: str = _env("COLOR_FONDO")
 
+    # Marca (docs/ux/identidad-visual-v1.md §6): todo opcional; los archivos de logo los aporta el servicio de destino, nunca el repo
+    NOMBRE_PRODUCTO: str = _texto_marca("NOMBRE_PRODUCTO", 80)
+    TEXTO_ALTERNATIVO: str = _texto_marca("TEXTO_ALTERNATIVO", 120)     # nombre de la organización para el alt del logo
+    LOGO_DIR: str = _env("LOGO_DIR")                                      # carpeta de los logos; relativa a comparador-dbx/
+    LOGO_ORG_URL: str = _url_marca("LOGO_ORG_URL")
+    LOGO_PRODUCTO_URL: str = _url_marca("LOGO_PRODUCTO_URL")
+    LOGO_PIE_URL: str = _url_marca("LOGO_PIE_URL")
+
     def publico(self) -> dict:
         """La configuración con los secretos ocultos, para mostrar o registrar."""
         return {k: ("***" if es_secreto(k) and v else v) for k, v in self.__dict__.items()}
@@ -139,6 +165,40 @@ def carpeta_normas() -> Path:
 def carpeta_manuales() -> Path:
     """Carpeta donde se leen los manuales de control (`MANUALES_DIR`; los MOCK ficticios están versionados)."""
     return _carpeta(settings.MANUALES_DIR)
+
+
+LOGO_MAX_BYTES = 512 * 1024      # tope de seguridad de un logo (no es [CALIBRAR])
+
+
+def carpeta_marca() -> Path:
+    """Carpeta de los logos (`LOGO_DIR`; si es relativa, desde `comparador-dbx/`). No se versiona."""
+    return _carpeta(settings.LOGO_DIR)
+
+
+def logo_permitido(nombre: str) -> Path | None:
+    """Archivo de logo que se puede servir, o None. Solo se sirve lo que las variables LOGO_*_URL nombran (un archivo extra en la carpeta no se expone),
+    dentro de la carpeta de marca, con el tamaño permitido."""
+    if not settings.LOGO_DIR or f"/marca/{nombre}" not in {settings.LOGO_ORG_URL, settings.LOGO_PRODUCTO_URL, settings.LOGO_PIE_URL} - {""}:
+        return None
+    try:
+        base = carpeta_marca().resolve()
+        archivo = (base / nombre).resolve()               # un enlace simbólico en bucle lanza RuntimeError; el logo es opcional: sin logo, no 500
+        if base not in archivo.parents or not archivo.is_file():
+            return None
+        if archivo.stat().st_size > LOGO_MAX_BYTES:
+            logging.getLogger(__name__).warning("Un logo pesa más de %d KB: no se sirve", LOGO_MAX_BYTES // 1024)
+            return None
+    except (OSError, RuntimeError, ValueError):
+        return None
+    return archivo
+
+
+def marca_publica() -> dict:
+    """Lo único de la marca que ve la interfaz (lista blanca explícita: nunca se reutiliza `publico()`). Un logo cuyo archivo no existe llega vacío."""
+    def logo(url: str) -> str:
+        return url if url and logo_permitido(url.rsplit("/", 1)[1]) else ""
+    return {"nombre_producto": settings.NOMBRE_PRODUCTO, "texto_alternativo": settings.TEXTO_ALTERNATIVO,
+            "logo_org": logo(settings.LOGO_ORG_URL), "logo_producto": logo(settings.LOGO_PRODUCTO_URL), "logo_pie": logo(settings.LOGO_PIE_URL)}
 
 
 def manuales_locales() -> list[Path]:

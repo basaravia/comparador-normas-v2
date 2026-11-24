@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, Path, Query, Request, Response, Up
 from fastapi.responses import FileResponse
 
 from backend.api import schemas as S
+from backend import config
 from backend.config import settings
 from backend.core import sesiones
 from backend.core.errors import ComparadorError
@@ -225,6 +226,12 @@ def guardar_ajustes(s: Ses, cuerpo: S.AjustesIn):
 @router.delete("/settings", response_model=S.AjustesOut)
 def restablecer_ajustes(s: Ses):
     return ajustes.restablecer(s)
+
+
+@router.get("/brand", response_model=S.MarcaOut)
+def marca():
+    """Nombre del producto y logos configurados (docs/ux/identidad-visual-v1.md §6). Solo lectura, sin sesión, sin datos sensibles."""
+    return config.marca_publica()
 
 
 @router.get("/health", response_model=S.HealthOut)

@@ -37,3 +37,10 @@ Manual_Tecnico_Comparador_Normativo_MVP.pdf
 # En manuales/ solo van en git los MOCK ficticios; cualquier otro manual (p. ej. MANUAL-ARLAFT-V14) se queda en local
 /comparador-dbx/documentos/manuales/*
 !/comparador-dbx/documentos/manuales/MOCK-DEMO-*.pdf
+
+# Logos de la marca: los aporta el servicio de destino, nunca el repo publico
+/comparador-dbx/marca/*
+!/comparador-dbx/marca/LEEME.md
+
+# Archivo de coverage local
+.coverage

@@ -58,3 +58,15 @@ Ver [`config/defaults.env`](../config/defaults.env).
 | `PARES_POR_PAGINA` | 50 `[CALIBRAR]` | pares resueltos que se pintan a la vez («Mostrar 50 más»); se entrega en `JobOut.pares_por_pagina` |
 
 Van en `config/defaults.env` y no entran al panel Ajustes (RF-19).
+
+### Marca e identidad visual (docs/14 #40)
+Todas opcionales; vacías = cabecera «⚖ Comparador Normativo» sin logos. Los logos los copia el servicio de destino; **no se versionan** (`marca/LEEME.md` explica las medidas).
+
+| Variable | Valor inicial | Nota |
+|---|---|---|
+| `NOMBRE_PRODUCTO` | `Comparador Normativo` | texto de la cabecera (≤ 80 caracteres, sin caracteres de control) |
+| `TEXTO_ALTERNATIVO` | vacío | nombre de la organización para el alt del logo («Logo de …»; ≤ 120 caracteres); vacío = «Logo» |
+| `LOGO_DIR` | `marca` | carpeta de los logos; relativa a `comparador-dbx/` (`carpeta_marca()` en `config.py`) |
+| `LOGO_ORG_URL`, `LOGO_PRODUCTO_URL`, `LOGO_PIE_URL` | vacío | ruta `/marca/<archivo>.svg` o `.png` (solo letras, números, `.`, `_`, `-`; ≤ 64). Cualquier otro valor (https, `data:`, `..`) se descarta con un aviso en el log que nombra la variable y no el valor |
+
+Los colores, radios, espaciado y tipografía **no** son variables de entorno: viven en el bloque `:root` de `frontend/src/estilos.css` (`docs/ux/identidad-visual-v1.md` §6).
