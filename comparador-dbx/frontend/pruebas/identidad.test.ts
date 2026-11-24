@@ -128,3 +128,11 @@ test("calma: el paso activo no es verde sólido (la acción principal es el úni
   assert.match(css, /\.nodo-motivo\s*\{[^}]*color:\s*var\(--texto-suave\)/);
   assert.doesNotMatch(css, /border-bottom:\s*3px/);                                  // sin filete grueso decorativo en la cabecera
 });
+
+test("Comparando (P4): la página reserva el alto del resumen fijo para que no tape el foco", () => {
+  assert.match(css, /html\s*\{[^}]*scroll-padding-top:\s*var\(--alto-resumen\)/);
+  assert.match(raiz, /--alto-resumen:/);
+  const tsx = readFileSync(new URL("../src/components/ComparacionEnCurso.tsx", import.meta.url), "utf-8");
+  assert.match(tsx, /setProperty\("--alto-resumen"/);
+  assert.match(tsx, /removeProperty\("--alto-resumen"\)/);                          // al salir de la pantalla se libera
+});

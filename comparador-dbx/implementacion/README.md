@@ -627,6 +627,18 @@ Origen: el usuario vio P1–P3 y las encontró «bastante cargadas»; pidió rev
 
 **Límites**: Resultados no se vio con datos (P5); a 320 px solo se revisó Carga en P2, no con estos cambios.
 
+## Rediseño de imagen · P4 pantalla Comparando (24 nov 2026; docs/14 #40, tablero A-50 y P-37 parte Comparando)
+Criterio: `docs/ux/identidad-visual-v1.md` §3 P4 (estructura de `comparacion-en-curso-v1.md` intacta). La parte visual de P4 (filas con filete izquierdo en curso, chips, resumen fijo) ya quedó cubierta por P1, P3 y la pasada de calma; lo nuevo es la accesibilidad del foco.
+
+**Qué cambió**: el resumen fijo superior (261 px a 1366×768) podía tapar el elemento enfocado al tabular por la lista (WCAG 2.4.11, guía 100 de la skill). `ComparacionEnCurso.tsx` publica su alto en la variable `--alto-resumen` (con un `ResizeObserver`, +8 px) y `html { scroll-padding-top: var(--alto-resumen) }` lo reserva; al salir de la pantalla la variable se libera. Es el único cambio de TSX de P4: no toca DOM, textos, ARIA ni la lógica de la lista.
+
+**Mediciones (Chromium, comparación real en curso con el modelo local, luego cancelada)**: alto del resumen 261 px, variable 269 px, `scroll-padding-top` calculado 269 px; al enfocar la última fila de la lista, la página se desplazó (229 px) y la fila quedó por debajo del resumen; tras salir, la variable se libera y el padding vuelve a 0. `npm test` 46 (1 nueva).
+
+**Diferencias con la spec y límites conocidos**
+- Con una lista de 6 filas la página casi no desplaza, así que la comprobación del foco es débil; no se probó con cientos de pares resueltos ni pulsando Tab.
+- §3 P4: «Cancelar comparación sigue visible sin desplazarse en 1366×768»: se cumple al abrir la pantalla; el resumen ocupa 261 px de 768 (34 % del alto) y es lo que más pesa visualmente. Compactarlo (sacar filtros y texto de ayuda de la parte fija) cambia el DOM y queda como **propuesta pendiente del usuario**.
+- «Filas sin saltos de lista al pasar de En análisis a resuelta» y «filtros ≥ 40 px, estado activo distinguible sin color»: no se vuelven a medir aquí (filtros de 40 px heredados de la pantalla anterior; no se vio una fila pasar a resuelta porque el modelo local tarda minutos por par).
+
 ## L5 · Papel de trabajo (APROBADO por `qa-ia`)
 
 **Criterio (docs/13):** el Excel abre sin advertencias; los conteos de la Hoja 1 cuadran con la Hoja 2; cero llamadas al modelo al generarlo. **Cumplido en sandbox** (`05_papel.ipynb`, Groq real para el borrador), con la entrada de prueba de abajo. Falta que L4 entregue la marca real.

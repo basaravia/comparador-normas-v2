@@ -100,6 +100,17 @@ export function ComparacionEnCurso({ job, resueltos, ahora, alVolver }: { job: J
   const corteEf = corteVisible(corte, ultimo, retener);
   useEffect(() => { if (!retener) setCorte(ultimo); }, [retener, ultimo]);
 
+  // El resumen fijo no debe tapar el elemento que recibe el foco: se publica su alto y la página lo reserva en scroll-padding-top.
+  useEffect(() => {
+    const r = resumenRef.current;
+    if (!r) return;
+    const publicar = () => document.documentElement.style.setProperty("--alto-resumen", `${r.offsetHeight + 8}px`);
+    publicar();
+    const o = new ResizeObserver(publicar);
+    o.observe(r);
+    return () => { o.disconnect(); document.documentElement.style.removeProperty("--alto-resumen"); };
+  }, []);
+
   // Cuántas filas dejó atrás la persona al bajar (la parte alta de la lista queda sobre el resumen fijo).
   useEffect(() => {
     const medir = () => {

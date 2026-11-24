@@ -30,13 +30,14 @@
   --e1: 4px; --e2: 8px; --e3: 12px; --e4: 16px; --e5: 24px; --e6: 32px;
   --sombra: none;
   --alto-cabecera: 56px;
+  --alto-resumen: 0px;         /* lo fija la pantalla «Comparando» con el alto de su resumen fijo (para el scroll-padding) */
   /* Tipografía: fuentes del sistema (sin descargas); el banco puede nombrar una ya instalada */
   --fuente: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --tam-base: 1rem; --peso-titulo: 600;
   /* Cajas de los logos (docs/ux/identidad-visual-v1.md §4) */
   --logo-org-max-w: 200px; --logo-org-max-h: 40px; --logo-prod-max: 32px; --logo-pie-max-w: 160px; --logo-pie-max-h: 32px;
 }
 * { box-sizing: border-box; }
-html { scrollbar-gutter: stable; scroll-padding-bottom: 6rem; }   /* barra reservada: no aparece y desaparece entre pantallas (la cabecera no se corre 15 px); y el pie fijo de Selección no tapa el elemento enfocado (WCAG 2.4.11) */
+html { scrollbar-gutter: stable; scroll-padding-bottom: 6rem; scroll-padding-top: var(--alto-resumen); }   /* barra reservada: no aparece y desaparece entre pantallas (la cabecera no se corre 15 px); y el pie fijo de Selección no tapa el elemento enfocado (WCAG 2.4.11) */
 body { margin: 0; font-family: var(--fuente); font-size: var(--tam-base); color: var(--texto); background: var(--fondo); line-height: 1.45; }
 h2 { margin: 0 0 var(--e4); font-size: 1.2rem; font-weight: var(--peso-titulo); } h3 { margin: 8px 0; font-size: 1rem; font-weight: var(--peso-titulo); } h4 { margin: 14px 0 4px; font-size: .85rem; text-transform: uppercase; letter-spacing: .03em; color: var(--texto-suave); }
 small { color: var(--texto-suave); }
