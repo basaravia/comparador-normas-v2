@@ -38,16 +38,29 @@ app = FastAPI(title="Comparador Normativo de Doble Vía", docs_url=None, redoc_u
 app.include_router(router)
 
 CABECERAS = {"X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY",
-             "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'"}
+             "Content-Security-Policy": "default-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'"}
 
 
 @app.middleware("http")
 async def cabeceras(request: Request, call_next):
     origen = request.headers.get("sec-fetch-site", "same-origin").lower()          # sin la cabecera (clientes que no son navegador) se permite
+    largo = request.headers.get("content-length", "")
     if request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith("/api") and origen not in ("same-origin", "none"):
         respuesta = _json(403, "ERR-SEG-001", "No pudimos validar el origen de la solicitud. Recarga la página e inténtalo de nuevo.")
+    elif request.method == "POST" and request.url.path == "/api/documents" and largo.isdigit() and int(largo) > tope_subida():
+        # El cuerpo entero supera lo que cabría en una sesión: se corta antes de recibirlo (el límite por archivo sigue en `_leer`).
+        respuesta = _json(413, "ERR-ING-002", f"El archivo supera el máximo de {settings.MAX_PAGES} páginas o {settings.MAX_MB} MB. Divídelo o consulta con el equipo de soporte.")
     else:
         respuesta = await call_next(request)
+    return con_cabeceras(request, respuesta)
+
+
+def tope_subida() -> int:
+    """Bytes máximos de una subida: todos los documentos que caben en una sesión, cada uno con su máximo de MB, más un MB de sobres de formulario."""
+    return (settings.MAX_DOCS_SESION * settings.MAX_MB + 1) * 1024 ** 2
+
+
+def con_cabeceras(request: Request, respuesta):
     for k, v in CABECERAS.items():
         respuesta.headers.setdefault(k, v)
     if request.url.path.startswith("/api"):
@@ -96,9 +109,9 @@ async def _http(_: Request, e: StarletteHTTPException):
 
 
 @app.exception_handler(Exception)
-async def _inesperado(_: Request, e: Exception):
+async def _inesperado(request: Request, e: Exception):
     log.exception("Error no controlado")
-    return _json(500, ComparadorError.codigo, ComparadorError.mensaje_negocio)
+    return con_cabeceras(request, _json(500, ComparadorError.codigo, ComparadorError.mensaje_negocio))
 
 
 TIPOS_LOGO = {".svg": "image/svg+xml", ".png": "image/png"}
