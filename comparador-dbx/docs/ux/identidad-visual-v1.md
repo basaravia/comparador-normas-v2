@@ -17,14 +17,15 @@ Patrones tomados de herramientas GRC/auditoría (AuditBoard, TeamMate+, Workiva,
 | Consistencia | Una escala de espaciado (4/8/12/16/24/32), un radio por tamaño de componente, una sombra. Ninguna pantalla define valores propios. |
 
 ## 2. Tokens (valores ACTUALES y contraste medido)
+> v1.1 (24 nov 2026, ver §8): los tokens `--verde*` se llaman ahora `--marca*` y `--gris` es `--texto-suave`. Los valores de las tablas de §2 son los de **v1**; §8 lista lo que cambió.
 Contraste = razón WCAG 2.2. Umbral: texto ≥ 4,5:1; componentes e iconos ≥ 3:1 (1.4.11). «Falla» = incumple hoy. «Propuesta» = valor sugerido para corregirlo; el resto se queda igual.
 
 ### 2.1 Color base, superficie, borde y texto
 | Token | Actual | Par medido | Razón | Resultado | Propuesta |
 |---|---|---|---|---|---|
-| `--verde` | #1e7b4f | blanco sobre verde (botón primario, paso activo) | 5,25 | Cumple | igual |
-| `--verde-osc` | #165c3b | blanco sobre él (hover) / sobre blanco | 7,99 | Cumple | igual |
-| `--verde-claro` | #e7f3ec | verde sobre él (secundario hover) | 4,61 | Cumple | igual |
+| `--marca` | #1e7b4f | blanco sobre verde (botón primario, paso activo) | 5,25 | Cumple | igual |
+| `--marca-osc` | #165c3b | blanco sobre él (hover) / sobre blanco | 7,99 | Cumple | igual |
+| `--marca-claro` | #e7f3ec | verde sobre él (secundario hover) | 4,61 | Cumple | igual |
 | `--blanco` | #ffffff | superficie de tarjetas | – | – | token `--superficie` = blanco (alias) |
 | `--fondo` | #f6f8f7 | fondo de página | – | – | igual |
 | `--texto` | #1f2a24 | sobre blanco / sobre fondo | 14,84 / 13,91 | Cumple | igual |
@@ -80,8 +81,9 @@ Cada paso es independiente y reversible. Criterios medibles (se verifican con ca
 - Foco visible en Carga, Selección, Resultados, Ajustes y Servicio: anillo ≥ 2 px, visible sobre el paso activo verde.
 - Con `prefers-reduced-motion` no hay animaciones.
 - Sin logos configurados la cabecera se ve igual que hoy (§4).
+- **Diferencia declarada en la implementación (24 nov 2026, pendiente de decisión del usuario):** a 320 px la cabecera ocupa 3 filas (117 px sin logos, 119 con ellos), no ≤ 2: los tres pasos caben en una fila, pero marca, Ajustes y «Servicio disponible» no caben juntos. Forzar 2 filas obliga a ocultar el estado del servicio; el `product-owner` recomienda aceptar la diferencia.
 
-**P2 · Carga.** Dropzone con borde punteado verde, `--r-l`, más aire vertical; la tabla de documentos con encabezado `--verde-claro` y filas de 40 px; estados `.estado` con texto `--texto`.
+**P2 · Carga.** Dropzone con borde punteado verde, `--r-l`, más aire vertical; la tabla de documentos con encabezado `--marca-claro` y filas de 40 px; estados `.estado` con texto `--texto`.
 - El botón primario es el único elemento verde sólido en la pantalla.
 - Un nombre de archivo de 120 caracteres no produce scroll horizontal.
 - Todos los controles de fila miden ≥ 24 px; tabulación llega a «Quitar» sin trampas.
@@ -126,7 +128,7 @@ Cómo se configura (sin dependencias ni logos en el repo):
 - **Opción A (descartada, backend: no):** el servicio de destino coloca los archivos en `frontend/dist/marca/` (o `frontend/public/marca/` antes del build): `logo-org.svg`, `logo-producto.svg`, `logo-pie.svg`, más `marca.json` con `{"organizacion": "Banco X"}` para el alt. La carpeta `marca/` va en `.gitignore`; el repo solo trae `marca/LEEME.md` con estas medidas. Sin archivos → fallback. La interfaz los pide con `<img>` y `onError`; para el nombre lee `marca.json` con un `fetch` simple.
 - **Opción B (backend: sí, esfuerzo S):** variables `LOGO_ORG_ARCHIVO`, `LOGO_PRODUCTO_ARCHIVO`, `LOGO_ORG_ALT` en `config/defaults.env` (junto a `COLOR_PRIMARIO`), carpeta fuera del repo (por ejemplo `/tmp` o la que defina el servicio) y una ruta de solo lectura que sirva el archivo. Más coherente con el resto de la configuración, pero toca API.
 - Alternativa descartada: incrustar logos como base64 en el CSS o en el código (sube el repo y expone la marca en el repositorio público).
-- Los colores del brand kit se cambian en `:root` (`--verde`, `--verde-osc`, `--verde-claro`); `COLOR_PRIMARIO` ya existe en `config/defaults.env`. Quien cambie el verde debe volver a medir los pares de §2 (blanco sobre `--verde` ≥ 4,5).
+- Los colores del brand kit se cambian en `:root` (`--marca`, `--marca-osc`, `--marca-claro`); `COLOR_PRIMARIO` ya existe en `config/defaults.env`. Quien cambie el verde debe volver a medir los pares de §2 (blanco sobre `--marca` ≥ 4,5).
 
 ## 5. Qué NO cambia
 - Estructura y orden de Comparando (bloques A–G) y de Selección (árbol, vista previa, pie).
@@ -143,7 +145,7 @@ Esta sección **sustituye** la opción A de §4: los logos se configuran por var
 
 | Grupo | Tokens (`[CALIBRAR]`) |
 |---|---|
-| Marca | `--verde`, `--verde-osc`, `--verde-claro`, `--sobre-marca` (texto sobre `--verde`, hoy blanco) |
+| Marca | `--marca`, `--marca-osc`, `--marca-claro`, `--sobre-marca` (texto sobre `--marca`, hoy blanco) |
 | Superficie y texto | `--fondo`, `--superficie`, `--texto`, `--texto-suave` (hoy `--gris`), `--borde`, `--borde-control`, `--foco` |
 | Estados | `--A`, `--L`, `--R`, `--X`, `--P` y sus letras `--sobre-A`…`--sobre-P` |
 | Avisos tintados | `--aviso-fondo`/`--aviso-texto`, `--error-fondo`/`--error-texto`, `--info-fondo`/`--info-texto`, `--neutro-fondo` (reemplazan los literales listados arriba) |
@@ -151,7 +153,7 @@ Esta sección **sustituye** la opción A de §4: los logos se configuran por var
 | Tipografía | `--fuente` (pila del sistema por defecto; el banco puede nombrar la suya **si ya está instalada**, sin descargas), `--tam-base`, `--peso-titulo` |
 | Logos | `--logo-org-max-w:200px`, `--logo-org-max-h:40px`, `--logo-prod-max:32px`, `--logo-pie-max-w:160px` |
 
-El valor por defecto de `--verde` sigue viniendo de `COLOR_PRIMARIO` (`config/defaults.env`); si el backend lo entrega en la configuración pública, la interfaz lo asigna a `--verde` al arrancar (misma ruta que los logos). Los demás tokens se editan en el bloque.
+El valor por defecto de `--marca` sigue viniendo de `COLOR_PRIMARIO` (`config/defaults.env`); si el backend lo entrega en la configuración pública, la interfaz lo asigna a `--marca` al arrancar (misma ruta que los logos). Los demás tokens se editan en el bloque.
 
 **(b) Logos y nombre por configuración pública (no sensible).** Variables nuevas en `config/defaults.env`, todas opcionales (vacías = fallback):
 
@@ -172,8 +174,8 @@ El valor por defecto de `--verde` sigue viniendo de `COLOR_PRIMARIO` (`config/de
 2. Copia los logos al servicio de destino y completa `LOGO_ORG_URL`, `LOGO_PRODUCTO_URL`, `LOGO_PIE_URL`, `NOMBRE_PRODUCTO` y `TEXTO_ALTERNATIVO` en `config/defaults.env`; reinicia.
 3. Revisa a simple vista las 5 pantallas (Carga, Selección, Comparando, Resultados, Ajustes) con y sin logo; nada se corta a 320 px.
 4. Mide el contraste de los pares siguientes (herramienta WCAG o la fórmula usada aquí) y corrige el token si falla:
-   - Texto 4,5:1: `--texto` / `--superficie` y `--fondo`; `--texto-suave` / `--superficie`, `--fondo`, `--verde-claro` y fondo de etapas; `--sobre-marca` / `--verde` y `--verde-osc`; `--verde` y `--verde-osc` / `--verde-claro`; `--sobre-A…P` / cada estado; `--aviso-texto` / `--aviso-fondo`; `--error-texto` / `--error-fondo`; `--info-texto` / `--info-fondo`.
-   - Componente 3:1: `--borde-control` / `--superficie` y `--fondo`; `--foco` / `--superficie`, `--fondo` (el anillo queda fuera del botón verde); `--verde` / `--fondo` (borde de la zona de carga); `--verde` / fondo de barra de progreso.
+   - Texto 4,5:1: `--texto` / `--superficie` y `--fondo`; `--texto-suave` / `--superficie`, `--fondo`, `--marca-claro` y fondo de etapas; `--sobre-marca` / `--marca` y `--marca-osc`; `--marca` y `--marca-osc` / `--marca-claro`; `--sobre-A…P` / cada estado; `--aviso-texto` / `--aviso-fondo`; `--error-texto` / `--error-fondo`; `--info-texto` / `--info-fondo`.
+   - Componente 3:1: `--borde-control` / `--superficie` y `--fondo`; `--foco` / `--superficie`, `--fondo` (el anillo queda fuera del botón verde); `--marca` / `--fondo` (borde de la zona de carga); `--marca` / fondo de barra de progreso.
 5. Comprueba por teclado que el foco se ve en cada control y que A, L, R, X y P se distinguen en escala de grises (letra y palabra).
 Aceptación: ningún par de la lista baja del umbral; cambiar toda la identidad no exige tocar ninguna regla de componente (verificable con `grep -nE '#[0-9a-fA-F]{3,8}|rgba?\(' estilos.css` fuera de `:root`: 0 coincidencias).
 
@@ -181,3 +183,25 @@ Aceptación: ningún par de la lista baja del umbral; cambiar toda la identidad 
 1. (Resuelto por el usuario: logos por variables; ver §6.) Ajustar §4 «Opción A» como descartada.
 2. Aprobar el ajuste de color de L (letra oscura) y del gris secundario (#5b6760): cambian ligeramente el aspecto, pero corrigen 7 pares que hoy fallan 4,5:1.
 3. Si el banco exige que el logo aparezca también en el pie de Resultados (hoy se propone solo en cabecera y «Acerca de»).
+
+## 8. Actualización v1.1 (24 nov 2026): dirección de la skill `ui-ux-pro-max`
+Tras ver P1 implementada, el usuario pidió usar la skill `ui-ux-pro-max` y **conservar verde y blanco**. Se consultaron sus datos locales (productos «Legal Services» y «Banking/Traditional Finance», estilos «Accessible & Ethical» y «Minimalism & Swiss Style», guías UX 22, 28, 31, 36 y 100, iconos Phosphor) leyendo los CSV directamente: su script `search.py` no se ejecutó (código de terceros). Se tomó la **forma** y el refuerzo de accesibilidad; su paleta marino y dorado se previsualizó y se descartó.
+
+| Token | v1 | v1.1 |
+|---|---|---|
+| `--verde*` | `#1e7b4f` / `#165c3b` / `#e7f3ec` | se llaman `--marca*`, mismos valores |
+| `--ok-fondo`, `--ok-texto` (nuevos) | – | `#e7f3ec` / `#165c3b`: verde de estado «cumple» (chip «Cubre por completo», «listo», banner ok, citas verificadas), independiente de la marca: al cambiar la marca el significado no cambia |
+| `--texto-suave` | `#5b6760` (5,9:1) | `#4a5750` (7,6:1 sobre blanco, 7,1:1 sobre el fondo; objetivo reforzado) |
+| `--borde` | `#d6ded9` | `#c5d0ca` (el borde de tarjeta se ve sin sombra) |
+| `--foco` | `#2f6fb0` | `#1f2a24` (14,8:1) |
+| `--r-s`, `--r-m`, `--r-l` | 6 / 8 / 12 px | 3 / 4 / 6 px; nuevo `--r-xs` 2 px; los pasos de la cabecera son rectangulares |
+| `--sombra` | `0 1px 2px …` | `none` |
+| `--acento` (nuevo) | – | `#a16207` (dorado, 4,9:1 sobre blanco): acento libre, el usuario dejó elegirlo mientras los primarios sigan verde y blanco. Se usa en el filete de la cabecera, el filete del pie de Selección y las escalas del producto; cambiarlo es editar este valor |
+
+Pendiente de la skill para P3–P5:
+1. «Focus Not Obscured» (guía 100): `scroll-padding` para que el pie fijo de Selección y el resumen fijo de Comparando no tapen el elemento enfocado.
+2. ~~Iconos SVG en lugar de ⚙ ⚖ ⚠ ✓ ▸ ▾~~ **Hecho (24 nov)**: `frontend/src/components/Icono.tsx`, 10 iconos propios en SVG (24×24, trazo redondeado, `currentColor`; escalas, ajustes, subir, check, equis, aviso, abajo, derecha, cargando, mitad). Se dibujaron en casa: Phosphor (MIT) está en los datos de la skill solo como nombres, sin trazados, y descargar Flaticon u otra biblioteca no era posible ni conveniente (atribución por icono). Una prueba impide que vuelvan los caracteres como iconos; la única excepción es el título de la pestaña.
+3. Tipografía «Financial Trust» (IBM Plex Sans) o «Corporate Trust» (Lexend y Source Sans 3): exige alojar los `.woff2` en el repo por la CSP; no aplicado, sigue la pila del sistema.
+4. Objetivo táctil: la guía 22 aclara que los 44 px son de móvil; en web rige WCAG 2.5.8 (24 px), que ya se cumple.
+
+El wireframe `wireframes/identidad-cabecera-v1.svg` es de v1 (esquinas de 8 px) y no se actualizó.

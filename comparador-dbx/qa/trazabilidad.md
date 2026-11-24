@@ -112,3 +112,20 @@ Criterios de `docs/ux/mejora-experiencia-v1.md` §e: 7 (conteo = suma de veredic
 ## Pasada: pantalla «Comparando», tope de llamadas vivas y carrera en `cargar_ejemplo` (rama `feat/sesion-usuario-pdf-efimero`, sin commit, 23 nov 2026)
 
 `pytest -m "not integracion" --cov=backend`: 824 pasan, 1 falla ajena (`test_el_hijo_recibe_un_entorno_minimo_*`, variables `LC_*` del entorno), cobertura total 94 % (juez 86 %, servicio 82 %, schemas 100 %, rutas 87 %); `npm test`: 30 de 30. Las pruebas de hilos (`test_cancelar_*`, `test_comparando_api`, `test_sesion_usuario_huecos`) se repitieron 15 veces: 15 de 15 sin intermitencias. Huecos cerrados en `tests/test_comparando_huecos.py` (24 pruebas, 15 repeticiones sin fallo). Sin cubrir: componentes React y flujo real con modelo (clave de Groq vencida; `-m integracion` no se corrió).
+
+## Pasada: pantalla 1 del rediseño, tokens CSS + cabecera con marca y logos paramétricos + Ajustes (rama `feat/sesion-usuario-pdf-efimero`, 24 nov 2026)
+
+Requisito: ningún RF/RNF de `docs/04` la nombra; el criterio es `docs/ux/identidad-visual-v1.md` §4 y §6 (todo valor visual en `:root`, contraste WCAG 2.2 AA, logos solo por variables). Sin ID propio: se traza a §6.
+
+| Criterio (identidad-visual-v1 §) | Pruebas | Estado |
+|---|---|---|
+| §6a un solo bloque de tokens; sin colores literales fuera de `:root` | `frontend/pruebas/identidad.test.ts`: `ninguna regla fuera de :root lleva colores literales` | verificado para `#hex` y `rgb()`; **huecos** (ver abajo): `hsl()`, colores con nombre, segundo `:root`, `var()` sin definir, radios/fuentes literales |
+| §6c contraste: texto 4,5:1 y componentes 3:1 | `identidad.test.ts`: `texto: cada par cumple 4,5:1` (33 pares), `componentes: cada par cumple 3:1` (8 pares) | verificado para los pares listados; un par nuevo en el CSS no se mide solo (la lista es manual) |
+| §6b/§4 variables de logo y nombre; solo rutas propias; sin `data:`/`https`/`..` | `tests/test_marca.py` (29) y `tests/test_marca_huecos.py` (41 nuevas; 70 en total) | verificado |
+| §6b el logo solo se sirve si una variable lo nombra, dentro de `LOGO_DIR`, ≤ 512 KB, con CSP propia | `test_solo_se_sirve_lo_que_la_configuracion_nombra`, `test_un_logo_enlace_simbolico_fuera_*`, `test_el_tope_de_tamano_es_inclusivo_en_512_kb`, `test_sin_carpeta_configurada_*`, `test_el_logo_se_sirve_con_tipo_fijo_y_csp_propia` | verificado |
+| §6b variables vacías o ausentes = cabecera con texto | `test_sin_configurar_la_marca_*`, `test_los_defaults_versionados_*`, `test_con_las_variables_de_marca_ausentes_*` (proceso aparte) | verificado |
+| Componentes `Marca.tsx`/`LogoPie` (⚖ de respaldo, alt «Logo de …», `onError` oculta el logo) | — | **sin prueba** (P-35, sin framework de componentes) |
+
+Mutación manual (copia en el scratchpad, no en el repo): backend 19 mutantes, 6 sobrevivían a `test_marca.py` (tope 64 vs 65, `.png`, tamaño exacto `>=`, `LOGO_DIR` vacío, mayúsculas, `strip`); con `test_marca_huecos.py` mueren todos salvo 2 equivalentes (`suffix.lower()`, que el regex ya hace innecesario, y un mutante sin efecto). CSS 20 mutantes: 6 sobrevivían (par malo oculto por el parche `--sobre-L`, nombres de color, `hsl()`, segundo `:root`, `var()` sin definir, radio/fuente literal); la propuesta en el scratchpad de la sesión los mata todos, pero esa ruta (`frontend/pruebas/`) queda fuera de lo que QA puede escribir.
+
+Defectos de esta pasada (ambos BAJA): (1) `.punto::before { border-radius: 50% }` en vez de `var(--r-circulo)` (§6a): **corregido** el 24 nov; (2) `HEAD` sobre `/api/brand` y `/marca/*` da 405, como el resto de la API: aceptado, los `<img>` no lo usan. La prueba de identidad se reforzó tras la mutación (un solo `:root`, tokens definidos, sin `hsl()` ni colores con nombre, radios y fuentes sin literales, iconos sin caracteres, cabecera estable): hoy mide 41 pares (33 de texto y 8 de componente).

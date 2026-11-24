@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import { hayConflictoDeManuales, hojas, manualesConMarcas, quitarMarcasDeDoc, seleccionTrasRecarga } from "../arbol.ts";
 import { DualTree } from "../components/DualTree";
+import { Icono } from "../components/Icono";
 import { verAvance } from "../sincronizar.ts";
 import { useStore } from "../store";
 import type { ArbolDocOut, SeccionOut } from "../tipos";
@@ -112,7 +113,7 @@ export function Selector() {
             <small> · pág. {vista.pagina_inicio}{vista.pagina_fin !== vista.pagina_inicio ? `–${vista.pagina_fin}` : ""}</small>
             <button className="enlace" onClick={() => setVista(null)}>Cerrar</button>
           </div>
-          {vista.incierto && <div className="nota-aviso">⚠ Esta sección se detectó por longitud; revísala.</div>}
+          {vista.incierto && <div className="nota-aviso"><Icono nombre="aviso" /> Esta sección se detectó por longitud; revísala.</div>}
           {vista.ruta.length > 0 && <div className="vista-ruta">{vista.ruta.join(" › ")}</div>}
           <pre className="vista-texto">{vista.texto}</pre>
         </aside>

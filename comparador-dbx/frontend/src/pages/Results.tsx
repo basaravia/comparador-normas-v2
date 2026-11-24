@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import { MarkBadge, SIGNIFICADO } from "../components/MarkBadge";
+import { Icono } from "../components/Icono";
 import { useStore } from "../store";
 import type { AjusteOut, FilaVia1, FilaVia2, Marca } from "../tipos";
 
@@ -10,7 +11,7 @@ const COBERTURA = { total: "Cubre del todo", parcial: "Cubre en parte", nula: "N
 function DetalleVia1({ f }: { f: FilaVia1 }) {
   return (
     <div className="detalle">
-      {f.requiere_revision && <div className="nota-aviso">⚠ Este resultado quedó marcado para revisión: valídalo antes de usarlo.</div>}
+      {f.requiere_revision && <div className="nota-aviso"><Icono nombre="aviso" /> Este resultado quedó marcado para revisión: valídalo antes de usarlo.</div>}
       <h4>Texto de la norma</h4>
       <blockquote>{f.texto_articulo}</blockquote>
       {f.cita_norma && <><h4>Fragmento clave de la norma</h4><blockquote className="cita">{f.cita_norma}</blockquote></>}
@@ -37,7 +38,7 @@ function Via1({ filas, filtro }: { filas: FilaVia1[]; filtro: Marca | "todas" })
           <FilaExpandible key={f.articulo_id} abierta={abierta === f.articulo_id} onAlternar={() => setAbierta(abierta === f.articulo_id ? null : f.articulo_id)}
             celdas={[
               <><strong>{f.identificador}</strong><br /><small>{f.documento}</small></>,
-              <><MarkBadge marca={f.marca} />{f.requiere_revision && <span className="revision" title="Requiere revisión"> ⚠</span>}</>,
+              <><MarkBadge marca={f.marca} />{f.requiere_revision && <span className="revision"> <Icono nombre="aviso" titulo="Requiere revisión" /></span>}</>,
               f.seccion_respaldo || <span className="vacio-texto">—</span>,
               <span className="comentario">{f.comentario || "—"}</span>,
             ]} detalle={<DetalleVia1 f={f} />} />

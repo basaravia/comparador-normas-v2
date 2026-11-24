@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { api, ApiError } from "../api";
 import { useStore } from "../store";
-import type { AjusteOut } from "../tipos";
+import { LogoPie } from "../components/Marca";
+import { Icono } from "../components/Icono";
+import type { AjusteOut, MarcaOut } from "../tipos";
 
 const num = (s: string): number | null => (s.trim() === "" || !Number.isFinite(Number(s)) ? null : Number(s));
 const coma = (n: number) => String(n).replace(".", ",");
@@ -31,13 +33,13 @@ function Campo({ a, texto, onCambio }: { a: AjusteOut; texto: string; onCambio: 
           Por defecto: <strong>{coma(a.defecto)}</strong> · rango {coma(a.minimo)} a {coma(a.maximo)}
           {distinto && <span className="distinto"> · ● Distinto del valor por defecto</span>}
         </span>
-        {r.aviso && <span className="ajuste-aviso" role="alert">⚠ {r.aviso}</span>}
+        {r.aviso && <span className="ajuste-aviso" role="alert"><Icono nombre="aviso" /> {r.aviso}</span>}
       </div>
     </div>
   );
 }
 
-export function Ajustes({ onSesionPerdida }: { onSesionPerdida: () => void }) {
+export function Ajustes({ onSesionPerdida, marca }: { onSesionPerdida: () => void; marca?: MarcaOut }) {
   const { d } = useStore();
   const [params, setParams] = useState<AjusteOut[] | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -106,7 +108,7 @@ export function Ajustes({ onSesionPerdida }: { onSesionPerdida: () => void }) {
         <div className="nota-aviso">Estos ajustes afectan la calidad de la verificación o el costo y el tiempo del análisis. Cámbialos solo si sabes lo que haces.</div>
         <section className="ajustes-grupo">{avanzados.map(campo)}</section>
       </details>
-      {cruce && <div className="nota-aviso" role="alert">⚠ La exigencia para mostrar una cita no puede ser mayor que la exigida para validarla como literal.</div>}
+      {cruce && <div className="nota-aviso" role="alert"><Icono nombre="aviso" /> La exigencia para mostrar una cita no puede ser mayor que la exigida para validarla como literal.</div>}
       <div className="barra-acciones">
         <button className="primario" onClick={guardar} disabled={ocupado || hayBloqueo || !sinGuardar}>Guardar</button>
         <button className="secundario" onClick={restablecer} disabled={ocupado || (!hayDistintos && !sinGuardar)}>Restablecer valores por defecto</button>
@@ -116,6 +118,7 @@ export function Ajustes({ onSesionPerdida }: { onSesionPerdida: () => void }) {
         <input ref={archivo} type="file" accept="application/json,.json" hidden aria-label="Importar ajustes desde un archivo JSON"
           onChange={(ev) => { const f = ev.target.files?.[0]; ev.target.value = ""; if (f) importar(f); }} />
       </div>
+      {marca && <LogoPie marca={marca} />}
     </div>
   );
 }

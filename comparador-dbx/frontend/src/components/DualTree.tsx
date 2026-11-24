@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { hojas } from "../arbol.ts";
 import type { ArbolDocOut, NodoOut } from "../tipos";
+import { Icono } from "./Icono";
 
 const MAX_NODOS_ABIERTO = 150;   // hasta este tamaño el índice nace abierto hasta el artículo; si no, hasta el nivel 2
 
@@ -63,14 +64,14 @@ function Nodo({ n, c, nivel }: { n: NodoOut; c: Ctx; nivel: number }) {
         aria-checked={estado === "algunas" ? "mixed" : estado === "todas"}>
       <div className="nodo-fila" style={{ paddingLeft: nivel * 18 }} tabIndex={-1} data-fila data-id={n.id} data-rama={rama ? "1" : "0"} data-abierto={abierto ? "1" : "0"}>
         {rama
-          ? <button className="plegar" tabIndex={-1} onClick={() => c.alternarRama(n.id)} aria-label={abierto ? "Contraer" : "Expandir"}>{abierto ? "▾" : "▸"}</button>
+          ? <button className="plegar" tabIndex={-1} onClick={() => c.alternarRama(n.id)} aria-label={abierto ? "Contraer" : "Expandir"}><Icono nombre={abierto ? "abajo" : "derecha"} tam="1.2rem" /></button>
           : <span className="plegar vacio" />}
         <input type="checkbox" tabIndex={-1} checked={estado === "todas"} disabled={meta.length === 0} aria-label={`Marcar ${n.identificador}`}
           ref={(el) => { if (el) el.indeterminate = estado === "algunas"; }} onChange={alternar} />
         <div className="nodo-texto" onClick={abrir}>
           <span className="nodo-id">{n.identificador}</span>
           {n.titulo && <span className="nodo-titulo"> {n.titulo}</span>}
-          {n.incierto && <span className="incierto" title="Esta sección se detectó por longitud; revísala"> ⚠</span>}
+          {n.incierto && <span className="incierto" > <Icono nombre="aviso" titulo="Esta sección se detectó por longitud; revísala" /></span>}
           {!rama && n.preview && <div className="nodo-preview">{n.preview}</div>}
           {meta.length === 0 && <div className="nodo-motivo">No se detectaron artículos en este título</div>}
           {n.excluida && n.motivo && <div className="nodo-motivo">No se comparará: {n.motivo}</div>}

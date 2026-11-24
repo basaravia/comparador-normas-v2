@@ -10,7 +10,9 @@ import { Results } from "./pages/Results";
 import { Selector } from "./pages/Selector";
 import { Upload } from "./pages/Upload";
 import { useStore, type Paso } from "./store";
-import type { HealthOut } from "./tipos";
+import { Marca, MARCA_POR_DEFECTO } from "./components/Marca";
+import { Icono } from "./components/Icono";
+import type { HealthOut, MarcaOut } from "./tipos";
 
 const PASOS: { id: "carga" | "seleccion" | "resultados"; texto: string }[] = [
   { id: "carga", texto: "1 · Carga" }, { id: "seleccion", texto: "2 · Selección" }, { id: "resultados", texto: "3 · Resultados" },
@@ -22,12 +24,16 @@ const GRUPO: Record<Paso, "carga" | "seleccion" | "resultados"> = {
 export default function App() {
   const { e, d } = useStore();
   const [salud, setSalud] = useState<HealthOut | null>(null);
+  const [marca, setMarca] = useState<MarcaOut>(MARCA_POR_DEFECTO);
   const [listo, setListo] = useState(false);
   const [verAjustes, setVerAjustes] = useState(false);     // el panel no cambia `paso`: el flujo sigue montado (y sondeando) detrás
 
   const [errorSesion, setErrorSesion] = useState("");
   const ultimo = useRef(e);
   ultimo.current = e;
+
+  // La marca no depende de la sesión; si no responde queda la cabecera de siempre.
+  useEffect(() => { api.marca().then(setMarca).catch(() => undefined); }, []);
 
   // Al abrir (o recargar la página) se recupera lo que haya en la sesión.
   useEffect(() => {
@@ -92,14 +98,14 @@ export default function App() {
   return (
     <>
       <header className="cabecera">
-        <div className="marca-app"><span className="logo" aria-hidden>⚖</span> Comparador Normativo</div>
+        <Marca marca={marca} />
         <nav className="pasos" aria-label="Pasos">
           {PASOS.map((p) => (
             <button key={p.id} className={!verAjustes && grupo === p.id ? "paso activo" : "paso"} disabled={!puedeIr(p.id)}
               aria-current={!verAjustes && grupo === p.id ? "step" : undefined} onClick={() => { setVerAjustes(false); d({ t: "paso", paso: p.id }); }}>{p.texto}</button>
           ))}
         </nav>
-        <button className={verAjustes ? "paso activo" : "paso"} aria-pressed={verAjustes} onClick={() => setVerAjustes(!verAjustes)}>⚙ Ajustes</button>
+        <button className={verAjustes ? "paso activo" : "paso"} aria-pressed={verAjustes} onClick={() => setVerAjustes(!verAjustes)}><Icono nombre="ajustes" /> Ajustes</button>
         <div className="estado-servicio">
           {salud && <span className={salud.estado === "ok" ? "punto ok" : "punto mal"} title={salud.mensaje || (salud.estado === "ok" ? "Servicio disponible" : "Servicio con problemas")}>
             {salud.estado === "ok" ? "Servicio disponible" : "Servicio con problemas"}</span>}
@@ -115,7 +121,7 @@ export default function App() {
         <div className="banner banner-aviso">No pudimos conectarnos al servicio de análisis. Intenta de nuevo en un momento.</div>
       )}
       <main>
-        {verAjustes && <Ajustes onSesionPerdida={() => setVerAjustes(false)} />}
+        {verAjustes && <Ajustes onSesionPerdida={() => setVerAjustes(false)} marca={marca} />}
         <div hidden={verAjustes}>
         {!listo ? <div className="pagina"><p className="ocupado">Cargando…</p></div> :
           e.paso === "carga" ? <Upload /> :

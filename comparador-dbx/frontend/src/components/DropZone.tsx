@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Icono } from "./Icono";
 
 /** Zona de carga. En el tope de documentos queda desactivada y dice por qué (`textoTope`). */
 export function DropZone({ onArchivos, deshabilitado, textoTope }: { onArchivos: (a: File[]) => void; deshabilitado?: boolean; textoTope?: string }) {
@@ -25,7 +26,7 @@ export function DropZone({ onArchivos, deshabilitado, textoTope }: { onArchivos:
       aria-disabled={off}
       onKeyDown={(ev) => { if (!off && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); entrada.current?.click(); } }}
     >
-      <div className="dz-icono" aria-hidden>⬆</div>
+      <div className="dz-icono" aria-hidden><Icono nombre="subir" tam="2.6rem" /></div>
       {textoTope ? <p className="dz-titulo">{textoTope}</p> : (
         <>
           <p className="dz-titulo">Arrastra aquí tus normativas y manuales (PDF)</p>

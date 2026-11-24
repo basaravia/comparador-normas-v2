@@ -6,6 +6,7 @@ import {
 } from "../progresoComparacion.ts";
 import type { FragmentoOut, JobOut, ParResuelto } from "../tipos";
 import { Cancelar, transcurridoDe } from "./ProgresoVivo";
+import { Icono, type NombreIcono } from "./Icono";
 
 const ALTO_FILA = 48;   // px; para saber cuántas filas bajó la persona
 
@@ -54,15 +55,15 @@ function Fila({ f, abierta, alternar, cancelando }: { f: FilaPar; abierta: boole
   return (
     <li className={`fila-par${f.tipo === "curso" ? " en-curso" : ""}`}>
       <button className="fila-cab" aria-expanded={abierta} aria-controls={idDetalle} onClick={alternar}>
-        <span className={`chip chip-${chip.clase}`}><span aria-hidden="true">{chip.icono}</span> {chip.texto}</span>
+        <span className={`chip chip-${chip.clase}`}><Icono nombre={chip.icono as NombreIcono} /> {chip.texto}</span>
         <span className="fila-etiqueta" title={etiqueta}>
           <span className="fila-ids">{partes.ids}</span>
           {partes.docs && <span className="fila-docs">{partes.docs}</span>}
         </span>
         {f.tipo === "resuelto" && (
-          <span className={citasVerificadas(f.par) ? "citas-ok" : "citas-revisar"}>{citasVerificadas(f.par) ? "✓ Citas verificadas" : "⚠ Citas por revisar"}</span>
+          <span className={citasVerificadas(f.par) ? "citas-ok" : "citas-revisar"}>{citasVerificadas(f.par) ? <><Icono nombre="check" /> Citas verificadas</> : <><Icono nombre="aviso" /> Citas por revisar</>}</span>
         )}
-        <span className="chevron" aria-hidden="true">{abierta ? "▾" : "▸"}</span>
+        <span className="chevron" aria-hidden="true"><Icono nombre={abierta ? "abajo" : "derecha"} /></span>
       </button>
       <div id={idDetalle} className="fila-detalle" hidden={!abierta}>
         {abierta && (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, ApiError } from "../api";
+import { Icono } from "./Icono";
 import type { DocumentoOut, Metadatos, Tipo } from "../tipos";
 
 export const ESTADOS: Record<string, string> = {
@@ -75,7 +76,7 @@ function Fila({ doc, editable, onCambio, onError, acc }: {
         <tr className="fila-nota"><td colSpan={4}>
           {doc.error && <div className="nota-error">{doc.error.mensaje} <small>({doc.error.codigo})</small></div>}
           {doc.estado === "error" && <div className="nota-aviso">Este documento no cuenta para el máximo{acc.max !== undefined ? ` de ${acc.max}` : ""}.</div>}
-          {doc.advertencias.map((a, i) => <div key={i} className="nota-aviso">⚠ {a}</div>)}
+          {doc.advertencias.map((a, i) => <div key={i} className="nota-aviso"><Icono nombre="aviso" /> {a}</div>)}
         </td></tr>
       )}
       {abierto && (

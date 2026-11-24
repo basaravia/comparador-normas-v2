@@ -192,11 +192,11 @@ export function estadoCita(lado: "norma" | "manual", p: ParResuelto): string {
 
 export interface ChipEstado { icono: string; texto: string; clase: string }
 export function chipDe(f: FilaPar, cancelando: boolean): ChipEstado {
-  if (f.tipo === "curso") return cancelando ? { icono: "◌", texto: "Terminando", clase: "curso" } : { icono: "◌", texto: "En análisis", clase: "curso" };
+  if (f.tipo === "curso") return cancelando ? { icono: "cargando", texto: "Terminando", clase: "curso" } : { icono: "cargando", texto: "En análisis", clase: "curso" };
   switch (f.par.cobertura) {
-    case "total": return { icono: "✓", texto: "Cubre por completo", clase: "total" };
-    case "parcial": return { icono: "◐", texto: "Cubre en parte", clase: "parcial" };
-    case "nula": return { icono: "✕", texto: "No lo cubre", clase: "nula" };
-    default: return { icono: "⚠", texto: "Sin veredicto · revisar", clase: "revisar" };
+    case "total": return { icono: "check", texto: "Cubre por completo", clase: "total" };
+    case "parcial": return { icono: "mitad", texto: "Cubre en parte", clase: "parcial" };
+    case "nula": return { icono: "equis", texto: "No lo cubre", clase: "nula" };
+    default: return { icono: "aviso", texto: "Sin veredicto · revisar", clase: "revisar" };
   }
 }

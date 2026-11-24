@@ -167,6 +167,8 @@ export interface SesionOut {
   sesion_nueva?: boolean;
 }
 export interface HealthOut { estado: "ok" | "degradado"; stage: string; llm: boolean; mensaje: string }
+/** Identidad de la cabecera (GET /brand). Logo vacío = se muestra solo el texto. */
+export interface MarcaOut { nombre_producto: string; texto_alternativo: string; logo_org: string; logo_producto: string; logo_pie: string }
 
 export interface AjusteOut {
   clave: string;

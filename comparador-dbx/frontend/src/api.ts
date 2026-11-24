@@ -1,6 +1,6 @@
 import type {
   AjustesIn, AjustesOut, ArbolDocOut, ComparacionIn, ComparacionOut, DocumentoOut, DocumentoPatch, ErrorNegocio, HealthOut,
-  JobOut, SeccionOut, SesionOut, Tipo,
+  JobOut, MarcaOut, SeccionOut, SesionOut, Tipo,
 } from "./tipos";
 
 export class ApiError extends Error {
@@ -39,6 +39,7 @@ export const api = {
   sesion: () => pedir<SesionOut>("/session"),
   reiniciar: () => pedir<void>("/session", { method: "DELETE" }),
   salud: () => pedir<HealthOut>("/health"),
+  marca: () => pedir<MarcaOut>("/brand"),
   subir: (archivos: File[]) => {
     const f = new FormData();
     archivos.forEach((a) => f.append("archivos", a));
