@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 330" width="1100" height="330" font-family="system-ui, sans-serif" font-size="13">
+  <title>Cabecera con espacios para logos (baja fidelidad)</title>
+  <rect width="1100" height="330" fill="#f6f8f7"/>
+  <!-- Estado 1: con logos -->
+  <text x="20" y="22" font-weight="700">1. Con logos configurados (alto de cabecera 56 px)</text>
+  <rect x="20" y="32" width="1060" height="56" fill="#fff" stroke="#d6ded9"/>
+  <rect x="20" y="86" width="1060" height="3" fill="#1e7b4f"/>
+  <rect x="36" y="40" width="200" height="40" fill="#eee" stroke="#555" stroke-dasharray="4 3"/>
+  <text x="136" y="64" text-anchor="middle" fill="#444">Logo organización</text>
+  <text x="136" y="104" text-anchor="middle" font-size="11" fill="#444">① máx 200×40 · zona de respeto 8 px</text>
+  <rect x="252" y="48" width="32" height="32" fill="#eee" stroke="#555" stroke-dasharray="4 3"/>
+  <text x="268" y="104" text-anchor="middle" font-size="11" fill="#444">② producto 32×32 (opcional)</text>
+  <text x="296" y="64" font-weight="700" fill="#1e7b4f">Comparador Normativo</text>
+  <text x="296" y="104" font-size="11" fill="#444" dx="90">③ nombre siempre visible</text>
+  <text x="520" y="64" fill="#555">1 · Carga   2 · Selección   3 · Resultados</text>
+  <text x="900" y="64" fill="#555">⚙ Ajustes   ● Servicio disponible</text>
+  <!-- Estado 2: sin logos -->
+  <text x="20" y="150" font-weight="700">2. Sin logos (fallback: igual que hoy)</text>
+  <rect x="20" y="160" width="1060" height="56" fill="#fff" stroke="#d6ded9"/>
+  <rect x="20" y="214" width="1060" height="3" fill="#1e7b4f"/>
+  <text x="36" y="192" font-weight="700" fill="#1e7b4f">⚖ Comparador Normativo</text>
+  <text x="520" y="192" fill="#555">1 · Carga   2 · Selección   3 · Resultados</text>
+  <text x="900" y="192" fill="#555">⚙ Ajustes   ● Servicio disponible</text>
+  <text x="36" y="236" font-size="11" fill="#444">④ imagen ausente o con error: se oculta, sin icono roto; el texto no cambia de tamaño ni lugar</text>
+  <!-- Acerca de -->
+  <text x="20" y="270" font-weight="700">3. Ajustes · «Acerca de» (opcional)</text>
+  <rect x="20" y="280" width="1060" height="40" fill="#fff" stroke="#d6ded9"/>
+  <rect x="36" y="284" width="160" height="32" fill="#eee" stroke="#555" stroke-dasharray="4 3"/>
+  <text x="116" y="304" text-anchor="middle" fill="#444">Logo pie 160×32</text>
+  <text x="212" y="304" fill="#444">⑤ alt «Logo de {organización}»; sin archivo, la sección no se muestra</text>
+</svg>
