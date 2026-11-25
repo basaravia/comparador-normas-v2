@@ -79,7 +79,8 @@ export function Selector() {
   const usados = manualesConMarcas(e.manuales, e.seleccion);
   const conflicto = hayConflictoDeManuales(e.manuales, e.seleccion);
   const quitarMarcas = (a: ArbolDocOut) => d({ t: "seleccion", seleccion: quitarMarcasDeDoc(a, e.seleccion) });
-  const verAviso = () => d({ t: "abrirAviso", ids: e.documentos.filter((x) => x.estado === "listo").map((x) => x.id), entrar: false });
+  const conPdf = e.documentos.filter((x) => x.estado === "listo" && !x.es_ejemplo);         // el ejemplo no tiene PDF original: no hay nada que conservar
+  const verAviso = () => d({ t: "abrirAviso", ids: conPdf.map((x) => x.id), entrar: false });
   const agregar = () => d({ t: "agregarDocs" });
   const plural = (n: number, s: string, p: string) => `${n} ${n === 1 ? s : p}`;
 
@@ -87,8 +88,7 @@ export function Selector() {
     <div className="pagina ancha">
       <h2 id="encabezado-seleccion" tabIndex={-1}>Elige qué comparar</h2>
       <div className="franja-pdf" role="note">
-        <span>Conserva los PDF originales.</span>
-        <button className="enlace" onClick={verAviso}>Ver aviso</button>
+        {conPdf.length > 0 && <><span>Conserva los PDF originales.</span><button className="enlace" onClick={verAviso}>Ver aviso</button></>}
         <button className="enlace" onClick={agregar}>Agregar documentos</button>
       </div>
       {info && <div className="banner banner-ok" role="status">{info}</div>}

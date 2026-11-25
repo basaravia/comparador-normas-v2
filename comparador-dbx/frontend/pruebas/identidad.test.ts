@@ -1,7 +1,7 @@
 // Identidad visual paramétrica (docs/ux/identidad-visual-v1.md §6): el bloque :root es el único lugar con valores visuales y cada par
 // de colores cumple WCAG 2.2 AA. Quien sustituya la paleta por la del banco corre `npm test` y ve qué par falla.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const css = readFileSync(new URL("../src/estilos.css", import.meta.url), "utf-8");
@@ -87,7 +87,7 @@ test("todo var(--token) usado en una regla está definido en :root", () => {
 });
 
 test("fuera de :root los radios y las fuentes salen de tokens (sin px ni nombres de fuente literales)", () => {
-  const sinComentarios = resto.replace(/\/\*[\s\S]*?\*\//g, "");
+  const sinComentarios = resto.replace(/\/\*[\s\S]*?\*\//g, "").replace(/@font-face\s*\{[^}]*\}/g, "");        // el @font-face es la definición de la fuente, no un uso
   assert.deepEqual(sinComentarios.match(/border(?:-[a-z]+)*-radius\s*:[^;}]*\d(?:px|rem|em|%)/g) ?? [], []);
   assert.deepEqual(sinComentarios.match(/font-family\s*:(?!\s*(?:var\(|inherit))[^;}]*/g) ?? [], []);
 });
@@ -162,4 +162,18 @@ test("cambios aprobados el 25 nov: texto de la norma plegado si hay fragmento, u
   const fijo = comparando.slice(inicio, comparando.indexOf("\n      </div>\n", inicio));                 // hasta el cierre del bloque fijo (seis espacios de sangría)
   assert.ok(!fijo.includes('className="filtros"') && !fijo.includes('className="ayuda-linea"'));  // la parte fija solo lleva el avance y «Cancelar»
   assert.ok(comparando.includes('className="filtros"') && comparando.includes('className="ayuda-linea"'));
+});
+
+test("las fuentes del @font-face son archivos locales de src/fuentes con licencia, y la pila del sistema sigue como respaldo", () => {
+  const css = readFileSync(new URL("../src/estilos.css", import.meta.url), "utf8");
+  const caras = css.match(/@font-face\s*\{[^}]*\}/g) ?? [];
+  assert.equal(caras.length, 3);
+  for (const c of caras) {
+    const url = c.match(/url\(\s*"([^"]+)"\s*\)/)?.[1] ?? "";
+    assert.match(url, /^\.\/fuentes\/[A-Za-z0-9-]+\.woff2$/);                       // ni http, ni data:, ni otra carpeta
+    assert.ok(existsSync(new URL(`../src/${url.slice(2)}`, import.meta.url)), `falta el archivo ${url}`);
+    assert.match(c, /font-display:\s*swap/);
+  }
+  assert.ok(existsSync(new URL("../src/fuentes/OFL.txt", import.meta.url)));
+  assert.match(css, /--fuente:\s*"IBM Plex Sans",\s*system-ui/);
 });

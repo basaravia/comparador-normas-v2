@@ -1,3 +1,7 @@
+/* Fuente alojada en el repositorio (D-64; licencia en src/fuentes/OFL.txt): la política de seguridad no admite fuentes de otro sitio. */
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url("./fuentes/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 600; font-display: swap; src: url("./fuentes/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 700; font-display: swap; src: url("./fuentes/IBMPlexSans-Bold.woff2") format("woff2"); }
 /* ============================================================================================
    TOKENS DE IDENTIDAD — único lugar con valores visuales (docs/ux/identidad-visual-v1.md §6).
    Para cambiar la imagen (brand kit del banco) se editan SOLO estos valores; ninguna regla de más abajo
@@ -32,7 +36,7 @@
   --alto-cabecera: 56px;
   --alto-resumen: 0px;         /* lo fija la pantalla «Comparando» con el alto de su resumen fijo (para el scroll-padding) */
   /* Tipografía: fuentes del sistema (sin descargas); el banco puede nombrar una ya instalada */
-  --fuente: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --tam-base: 1rem; --peso-titulo: 600;
+  --fuente: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --tam-base: 1rem; --peso-titulo: 600;
   /* Cajas de los logos (docs/ux/identidad-visual-v1.md §4) */
   --logo-org-max-w: 200px; --logo-org-max-h: 40px; --logo-prod-max: 32px; --logo-pie-max-w: 160px; --logo-pie-max-h: 32px;
 }

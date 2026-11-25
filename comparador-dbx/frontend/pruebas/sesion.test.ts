@@ -74,6 +74,12 @@ test("aviso: solo documentos indexados no avisados, y la lista no se arrastra a 
   assert.deepEqual(unirAvisados(av, 11, ["D2"]).ids, ["D2"]);
 });
 
+test("aviso: el ejemplo no tiene PDF original y nunca se avisa", () => {
+  const docs = [{ ...doc("D1"), es_ejemplo: true }, doc("D2")];
+  assert.deepEqual(idsParaAviso(docs, null, 10), ["D2"]);
+  assert.deepEqual(idsParaAviso([docs[0]], null, 10), []);
+});
+
 test("la huella del usuario no guarda el correo y distingue cuentas", () => {
   const h = huellaUsuario("auditor@banco.test");
   assert.match(h, /^[0-9a-f]{8}$/);

@@ -54,8 +54,8 @@ function Fila({ doc, editable, onCambio, onError, acc }: {
           {doc.tipo_sugerido && doc.tipo && <small className="sugerido"> sugerido</small>}
         </td>
         <td>
-          <span className={`estado estado-${doc.estado}`}>{ESTADOS[doc.estado] ?? doc.estado}</span>
-          {doc.estado === "listo" && (
+          <span className={`estado estado-${doc.estado}`}>{doc.es_ejemplo && doc.estado === "listo" ? "Indexado" : (ESTADOS[doc.estado] ?? doc.estado)}</span>
+          {doc.estado === "listo" && !doc.es_ejemplo && (          // el ejemplo no viene de un PDF: no hay nada que explicar (D-53)
             <button className="enlace ayuda-btn" aria-expanded={ayuda} aria-controls={`ayuda-${doc.id}`} aria-label="¿Qué significa Indexado?" onClick={() => setAyuda(!ayuda)}>?</button>
           )}
           {ayuda && <small id={`ayuda-${doc.id}`} className="ayuda-estado">La aplicación conserva los datos y el contenido buscable, no el archivo PDF original.</small>}

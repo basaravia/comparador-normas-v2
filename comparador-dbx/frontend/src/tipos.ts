@@ -25,6 +25,7 @@ export interface DocumentoOut {
   metadatos: Metadatos;
   estado: EstadoDoc;
   advertencias: string[];
+  es_ejemplo?: boolean;
   error: ErrorNegocio | null;
 }
 

@@ -29,10 +29,10 @@ export function evaluarLote<T extends { name: string }>(archivos: T[], libres: n
 /** Lo que el navegador recuerda de los documentos ya avisados, ligado a la sesión del servidor en que se avisó. */
 export interface Avisados { iniciada_ts: number; ids: string[] }
 
-/** Documentos indexados que aún no se han avisado en este navegador (para esta sesión del servidor). */
+/** Documentos indexados que aún no se han avisado en este navegador (para esta sesión del servidor). El ejemplo no tiene PDF original y nunca se avisa. */
 export function idsParaAviso(docs: DocumentoOut[], avisados: Avisados | null, iniciada_ts: number): string[] {
   const ya = new Set(avisados && avisados.iniciada_ts === iniciada_ts ? avisados.ids : []);
-  return docs.filter((d) => d.estado === "listo" && !ya.has(d.id)).map((d) => d.id);
+  return docs.filter((d) => d.estado === "listo" && !d.es_ejemplo && !ya.has(d.id)).map((d) => d.id);
 }
 
 export function unirAvisados(previo: Avisados | null, iniciada_ts: number, ids: string[]): Avisados {
