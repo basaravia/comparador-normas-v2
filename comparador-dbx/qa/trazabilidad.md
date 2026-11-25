@@ -148,3 +148,19 @@ Mutación manual (copia en el scratchpad, no en el repo): 18 mutantes de `servic
 Defectos: **QA-S22-01 (BAJA)**: `subir` hace `carpeta.mkdir` fuera del bloqueo; si «Borrar todo» ya borró la carpeta de la sesión sale `FileNotFoundError` (500 genérico) en vez de 410 (`servicio.py:95`). Prueba xfail estricta `tests/test_tope_paginas_huecos.py::test_borrar_todo_justo_antes_de_guardar_el_pdf_responde_410_no_500`.
 Observaciones: `cargar_ejemplo` no aplica `MAX_PAGES_SESION` (no usa Docling; sus 65 págs sí cuentan para las subidas siguientes). El 413 por cuerpo y el 422 por archivo grande llevan el mismo código `ERR-ING-002` con estado distinto.
 Integración: `test_procesar_un_pdf_real_con_docling_borra_el_pdf` pasa (19,5 s, Docling real); las pruebas con el LLM fallan por entorno (`GROQ_API_KEY` ausente, `ERR-CFG-001`); embeddings Ollama responden. No se corrieron L3/extracción/E2E: `llama-server` huérfano al 210 % de CPU.
+
+## Pasada: subida del extractor, `docling==2.145.0` + `pillow==13.0.0` (rama `feat/sesion-usuario-pdf-efimero`, sin commit, 25 nov 2026)
+
+Requisitos: RF-05, RF-06, RF-07 (extracción y seccionado), RNF-02 (cola, caché, hilos), docs/14 #22 (CVE). Sin cambio de código ni de pruebas.
+
+| Criterio | Evidencia | Estado |
+|---|---|---|
+| Suite sin integración | `964 passed, 1 skipped, 20 deselected, 2 xfailed`; cobertura 95 % (`docling_extractor.py` 94 %, `docling_worker.py` 100 % con `main()` excluido) | verificado |
+| L2: capítulo III con Docling real 2.145 (CPU) | `tests/test_integracion_extraccion.py`: `4 passed in 32.07s` (8 artículos, 8/8 rutas, progreso, caché) | verificado |
+| L2: LA/FT 99/99 y rutas 98/99 | misma prueba, con los 590 bloques de `/tmp/claude-1000/extraccion-l2/lafit.json` (extracción real hecha por el desarrollador; la prueba **no** re-ejecuta Docling) | verificado |
+| Figuras con Docling real (`PictureItem` + `doc.pages[].size`) | prueba ad hoc (PDF de 1 página con imagen de 600x400): salió `{"tipo": "figura", "texto": "Figura en la página 1 (su contenido no se analiza)"}`; ninguna prueba versionada ejecuta esta ruta con Docling real | parcial |
+| Pila sin CVE | `pip-audit -r requirements.txt`: `No known vulnerabilities found`; `docling` 2.145.0, `docling-slim` 2.145.0, `docling-core` 2.107.1, `pillow` 13.0.0 | verificado |
+
+Comparación con la 2.134 (solo recuentos documentados en `implementacion/README.md`; no se conserva el JSON anterior): 590 bloques (366 lista, 128 párrafo, 88 encabezado, 8 tabla; 60 págs) frente a 591 (60 págs, notebook 02) y 596 de texto (55 págs, Pi): -1 y -6. Encabezados: los 88 con `nivel` 1, como lo documentado para la 2.134. 324 bloques con `marcador`; 33 de 34 listas de las págs. 29-31 lo traen (igual que antes). Tablas: 8, sin `pagina_fin`. Sin bloques de tipo figura en la LA/FT. Tiempo: 310 s con CPU y 1 hilo, no comparable con 511 s de la Pi.
+Pruebas dependientes de la versión: `HeadingHierarchyOptions` y `generate_parsed_pages` no se usan en el código ni en pruebas (solo notas del README; ambos nombres siguen existiendo en 2.145); las pruebas de `test_docling_extractor.py` usan un trabajador de prueba con el mismo protocolo, por eso no detectan cambios de la API de Docling: lo cubren las 4 de integración (entorno mínimo del hijo, `DOCLING_DEVICE`, tandas, tablas, listas con `marcador`).
+Observaciones: (1) la GPU de 4 GB compartida con Ollama da OOM; para las integraciones usar `DOCLING_DEVICE=cpu`; (2) sin medir la RAM del hijo (queda para Databricks, P-28); (3) sin probar PDF escaneado ni tablas complejas ni la comparación completa con el LLM.
