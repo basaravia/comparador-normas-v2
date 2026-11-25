@@ -60,6 +60,11 @@ Ver [`config/defaults.env`](../config/defaults.env).
 
 Van en `config/defaults.env` y no entran al panel Ajustes (RF-19).
 
+### Colores de las marcas del papel de trabajo (docs/10, docs/14 #12)
+| Variable | Valor inicial | Nota |
+|---|---|---|
+| `COLOR_MARCA_A`, `_L`, `_R`, `_X`, `_P` | `C6EFCE`, `FFEB9C`, `F8CBAD`, `E7E6E6`, `DDEBF7` `[CALIBRAR]` | relleno suave de cada marca en el Excel (verde, ámbar, rojo, gris, azul). 6 dígitos hexadecimales **sin `#`**; un valor inválido detiene el arranque con un mensaje que nombra la variable. Junto con `COLOR_PRIMARIO` y `COLOR_FONDO` se sustituyen por los del brand kit del banco |
+
 ### Marca e identidad visual (docs/14 #40)
 Todas opcionales; vacías = cabecera «⚖ Comparador Normativo» sin logos. Los logos los copia el servicio de destino; **no se versionan** (`marca/LEEME.md` explica las medidas).
 

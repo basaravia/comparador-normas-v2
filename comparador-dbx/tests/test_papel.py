@@ -123,7 +123,7 @@ def test_color_suave_por_marca_y_centrada(libro):
     ws = libro[1]["Papel de trabajo"]
     for r, marca in zip(range(H + 1, H + 7), "ALRXPA"):
         c = ws.cell(row=r, column=4)
-        assert c.value == marca and c.fill.start_color.rgb.endswith(styles.COLOR_MARCA[marca])
+        assert c.value == marca and c.fill.start_color.rgb.endswith(styles.color_marca(marca))
         assert c.alignment.horizontal == "center"
 
 

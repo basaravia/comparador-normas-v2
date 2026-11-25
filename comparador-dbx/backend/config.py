@@ -50,6 +50,14 @@ def _url_marca(variable: str) -> str:
     return valor
 
 
+def _hex6(variable: str) -> str:
+    """Color de 6 dígitos hexadecimales sin `#` (el formato de openpyxl). Un valor inválido para el arranque con un mensaje que nombra la variable."""
+    valor = _env(variable)
+    if not re.fullmatch(r"[0-9A-Fa-f]{6}", valor):
+        raise ValueError(f"{variable} debe ser un color de 6 dígitos hexadecimales sin #, por ejemplo C6EFCE (valor recibido de {len(valor)} caracteres)")
+    return valor.upper()
+
+
 def _texto_marca(variable: str, maximo: int) -> str:
     return re.sub(r"[\x00-\x1f\x7f]", "", _env(variable))[:maximo]
 
@@ -136,6 +144,11 @@ class Settings:
     # Papel de trabajo
     COLOR_PRIMARIO: str = _env("COLOR_PRIMARIO")
     COLOR_FONDO: str = _env("COLOR_FONDO")
+    COLOR_MARCA_A: str = _hex6("COLOR_MARCA_A")      # relleno suave de cada marca en el papel de trabajo (docs/10, docs/14 #12)
+    COLOR_MARCA_L: str = _hex6("COLOR_MARCA_L")
+    COLOR_MARCA_R: str = _hex6("COLOR_MARCA_R")
+    COLOR_MARCA_X: str = _hex6("COLOR_MARCA_X")
+    COLOR_MARCA_P: str = _hex6("COLOR_MARCA_P")
 
     # Marca (docs/ux/identidad-visual-v1.md §6): todo opcional; los archivos de logo los aporta el servicio de destino, nunca el repo
     NOMBRE_PRODUCTO: str = _texto_marca("NOMBRE_PRODUCTO", 80)

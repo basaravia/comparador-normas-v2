@@ -16,8 +16,11 @@ PREFIJOS_FORMULA = ("=", "+", "-", "@", "\t", "\r")   # Excel los interpreta com
 ANCHOS_MATRIZ = [18, 45, 45, 10, 40, 28]              # docs/10: anchos orientativos
 MAX_ALTO = 409                                        # alto máximo de fila en Excel (puntos)
 
-# Colores suaves por marca (docs/10); el verde institucional viene de la configuración.
-COLOR_MARCA = {"A": "C6EFCE", "L": "FFEB9C", "R": "F8CBAD", "X": "E7E6E6", "P": "DDEBF7"}
+def color_marca(marca: str) -> str:
+    """Relleno suave de una marca (docs/10): viene de la configuración (`COLOR_MARCA_A`…`COLOR_MARCA_P`), igual que el verde institucional."""
+    return getattr(settings, f"COLOR_MARCA_{marca}")
+
+
 SIGNIFICADO_MARCA = {"A": "Sí cumple", "L": "Parcialmente", "R": "No cumple",
                      "X": "No aplica", "P": "Información obtenida de la normativa"}
 
@@ -97,7 +100,7 @@ def estilo_encabezado(celda) -> None:
 
 def estilo_marca(marca: str):
     def aplicar(celda) -> None:
-        celda.fill = relleno(COLOR_MARCA[marca])
+        celda.fill = relleno(color_marca(marca))
         celda.alignment = CENTRADO
         celda.font = Font(bold=True)
     return aplicar
