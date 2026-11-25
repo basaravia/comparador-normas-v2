@@ -168,7 +168,6 @@ export function ComparacionEnCurso({ job, resueltos, ahora, alVolver }: { job: J
           </>
         )}
         <p className="tiempos">Tiempo transcurrido: <strong>{duracion(transcurrido)}</strong>{est && <> · {est}</>}</p>
-        {activo && <p className="ayuda-linea">Cada par puede tardar varios minutos con el modelo local. Puedes dejar esta pestaña abierta o volver más tarde: el avance se conserva.</p>}
         {esp.activa && (
           <div className="banner banner-aviso">
             Esperando al servicio de IA (límite de uso del proveedor). Se reanuda en {faltan} s · intento {esp.intento} de {esp.max}.
@@ -180,13 +179,15 @@ export function ComparacionEnCurso({ job, resueltos, ahora, alVolver }: { job: J
             {textoCancelada(hechos)} <button className="secundario" onClick={alVolver}>Volver</button>
           </div>
         )}
-        <div className="filtros" role="group" aria-label="Filtrar pares resueltos" title="Conteo por par; las marcas A, L, R, X y P se calculan al final.">
-          {FILTROS.map((f) => (
-            <button key={f.id} className={filtro === f.id ? "activa" : ""} aria-pressed={filtro === f.id} onClick={() => { setFiltro(f.id); setPaginas(1); }}>
-              {f.etiqueta} ({conteos[f.id]})
-            </button>
-          ))}
-        </div>
+      </div>
+
+      {activo && <p className="ayuda-linea">Cada par puede tardar varios minutos con el modelo local. Puedes dejar esta pestaña abierta o volver más tarde: el avance se conserva.</p>}
+      <div className="filtros" role="group" aria-label="Filtrar pares resueltos" title="Conteo por par; las marcas A, L, R, X y P se calculan al final.">
+        {FILTROS.map((f) => (
+          <button key={f.id} className={filtro === f.id ? "activa" : ""} aria-pressed={filtro === f.id} onClick={() => { setFiltro(f.id); setPaginas(1); }}>
+            {f.etiqueta} ({conteos[f.id]})
+          </button>
+        ))}
       </div>
 
       <div className="visually-hidden" role="status" aria-live="polite">{anuncio}</div>

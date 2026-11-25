@@ -150,3 +150,16 @@ test("Resultados (P5): la vista activa no es verde sólido, el encabezado de la 
 test("Resultados a 720 px o menos pasa a tarjetas (sin scroll horizontal)", () => {
   assert.match(css, /@media \(max-width: 720px\)\s*\{[^@]*\.resultados,\s*\.resultados tbody,\s*\.resultados tr,\s*\.resultados td\s*\{\s*display:\s*block/);
 });
+
+test("cambios aprobados el 25 nov: texto de la norma plegado si hay fragmento, un solo botón expandir/contraer y resumen fijo compacto", () => {
+  const leer = (r: string) => readFileSync(new URL(r, import.meta.url), "utf-8");
+  assert.match(leer("../src/pages/Results.tsx"), /<details className="texto-completo" open=\{!f\.cita_norma\}>/);
+  assert.doesNotMatch(leer("../src/pages/Selector.tsx"), /Los PDF no se guardan en esta aplicación/);
+  const arbol = leer("../src/components/DualTree.tsx");
+  assert.equal((arbol.match(/Expandir todo/g) ?? []).length, 1);                                // un solo botón que alterna
+  const comparando = leer("../src/components/ComparacionEnCurso.tsx");
+  const inicio = comparando.indexOf('className="resumen-fijo"');
+  const fijo = comparando.slice(inicio, comparando.indexOf("\n      </div>\n", inicio));                 // hasta el cierre del bloque fijo (seis espacios de sangría)
+  assert.ok(!fijo.includes('className="filtros"') && !fijo.includes('className="ayuda-linea"'));  // la parte fija solo lleva el avance y «Cancelar»
+  assert.ok(comparando.includes('className="filtros"') && comparando.includes('className="ayuda-linea"'));
+});

@@ -87,7 +87,7 @@ export function Selector() {
     <div className="pagina ancha">
       <h2 id="encabezado-seleccion" tabIndex={-1}>Elige qué comparar</h2>
       <div className="franja-pdf" role="note">
-        <span>Los PDF no se guardan en esta aplicación. Conserva los originales.</span>
+        <span>Conserva los PDF originales.</span>
         <button className="enlace" onClick={verAviso}>Ver aviso</button>
         <button className="enlace" onClick={agregar}>Agregar documentos</button>
       </div>

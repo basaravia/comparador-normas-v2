@@ -88,7 +88,7 @@ Cada paso es independiente y reversible. Criterios medibles (se verifican con ca
 - Un nombre de archivo de 120 caracteres no produce scroll horizontal.
 - Todos los controles de fila miden ≥ 24 px; tabulación llega a «Quitar» sin trampas.
 
-**P3 · Selección (estructura aprobada intacta).** Solo: bordes de controles a `--borde-control`, paneles con sombra, pie fijo con sombra superior en lugar de filete de 2 px. **Ver §8 y §9**: la dirección v1.1 quita las sombras y la pasada de calma los filetes gruesos; el pie lleva una línea fina de 1 px. Pendiente del usuario: confirmar si quiere la sombra del pie.
+**P3 · Selección (estructura aprobada intacta).** Solo: bordes de controles a `--borde-control`, paneles con sombra, pie fijo con sombra superior en lugar de filete de 2 px. **Ver §8 y §9**: la dirección v1.1 quita las sombras y la pasada de calma los filetes gruesos; el pie lleva una línea fina de 1 px (aprobado por el usuario, 25 nov 2026).
 - La posición de árbol, vista, barra y pie no cambia respecto de `seleccion-indice-v1.svg`.
 - Casillas, buscador y «solo marcados» tienen límite visible ≥ 3:1.
 - El pie fijo no tapa la última fila al desplazarse (margen inferior ≥ altura del pie).
@@ -223,9 +223,9 @@ El usuario vio P1–P3 y las encontró visualmente cargadas; pidió revisar tend
 - Más aire: relleno de filas de tabla (12 px), de paneles (18 px), de filas de pares (10×14 px) y del contenedor.
 - Enlaces con subrayado fino y tenue que se refuerza al pasar el puntero.
 
-**Propuestas no aplicadas (pendientes de decisión del usuario)**
-- **Texto repetido**: «Los PDF no se guardan…» aparece en la nota de cuenta y otra vez en la banda de Selección. Quitar una es un cambio de textos (docs/05); se propone como decisión.
-- **Plegar filtros y acciones** (Expandir/Contraer todo, filtros-chips) en un menú: cambia comportamiento y DOM; se propone para P4/P5 con prueba de usuario.
+**Propuestas** (el 25 nov 2026 el usuario aprobó las tres primeras y dejó las dos últimas como ideas para V2; ver implementacion/README.md «Propuestas de la pasada de calma aprobadas»)
+- **Texto repetido** — *aplicado el 25 nov 2026*: «Los PDF no se guardan…» aparecía en la nota de cuenta y otra vez en la banda de Selección; la banda dice ahora solo «Conserva los PDF originales.».
+- **Plegar filtros y acciones** — *aplicado en parte el 25 nov 2026*: solo se unificaron «Expandir todo» y «Contraer todo» en un botón que alterna; los filtros-chips **no** se plegaron (siguen a la vista, ahora fuera de la parte fija de Comparando). Pendiente de confirmar con el usuario que el botón único cubre «plegar acciones». Además, compactar el resumen fijo de Comparando (177 px frente a 261) se aplicó como parte de la misma decisión.
 - **Paleta de comandos (Ctrl/Cmd+K)** y **vistas por rol**: son de producto, no de imagen; la fuente los justifica con «más de 10 funciones» y ejemplos de CRM.
 - **Datos de ejemplo en estados vacíos**: una fuente los recomienda; en una herramienta de auditoría podrían confundirse con datos reales.
 - El logo de prueba «BANCO DEMO» es un bloque verde sólido: es un archivo de prueba; el logo real lo define el banco.

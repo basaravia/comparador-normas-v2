@@ -17,7 +17,7 @@ Wireframe: `wireframes/comparacion-en-curso-v1.svg` (baja fidelidad; Penpot no s
 ## 2. Propuesta (una pantalla, tres zonas)
 Referencias: NN/g (percent-done para esperas largas, mostrar ítems completados, estimado como rango, ofrecer cancelar); NN/g sobre contenido que se actualiza (no mover la posición del lector, ofrecer «ir a lo último»); WCAG 2.2 criterio 2.2.2 (la información que se actualiza sola debe poder pausarse o controlarse) y 4.1.3 (avisos de estado sin mover el foco); patrón *feed* de ARIA APG (`aria-busy`, posición en el conjunto); AWS Audit Manager (estado de revisión por control, evidencia por control y bitácora; un ejemplo verificado de patrón GRC; TeamMate+ y AuditBoard no se pudieron verificar).
 
-**Zona A · Resumen fijo (sticky, ver 1–4 del SVG).** Una línea de fase («Paso 2 de 3 · Evaluando cada par»), barra **de pares** (no el % mezclado), contador, **un solo tiempo**, estimado, Cancelar y los filtros. Nada de lo que está aquí se repite abajo.
+**Zona A · Resumen fijo (sticky, ver 1–4 del SVG).** Una línea de fase («Paso 2 de 3 · Evaluando cada par»), barra **de pares** (no el % mezclado), contador, **un solo tiempo**, estimado, aviso de espera y Cancelar. Los filtros y la ayuda de una línea van **justo debajo**, fuera de la parte fija (ajuste del 25 nov 2026: 177 px en lugar de 261). Nada de lo que está aquí se repite abajo.
 **Zona B · Lista única de pares (5–9).** Una fila por par, mismo componente en todos los estados. Orden: **en análisis arriba** (borde verde, máx. `LLM_CONCURRENCY`), luego **resueltos, el más reciente primero**. Los pares en espera no son filas: son el contador.
 **Zona C · Pie:** una nota corta (ver §4).
 

@@ -563,6 +563,14 @@ Cuatro tarjetas del backlog técnico resueltas y una (S-20) probada y revertida;
 - **QA-S22-01 (BAJA, hallada por `qa-ia` en este lote)**: si «Borrar todo» borraba la carpeta de la sesión justo antes de guardar el PDF, la subida respondía 500 genérico; ahora 410 (`SesionPerdida`). Observaciones sin cambio: `cargar_ejemplo` no aplica `MAX_PAGES_SESION` (no usa Docling) pero sus páginas sí cuentan para las subidas siguientes; el 413 por cuerpo grande y el 422 por archivo grande comparten `ERR-ING-002` con distinto estado HTTP.
 - **Pruebas nuevas**: `tests/test_tope_paginas_sesion.py` (10), `tests/test_endurecimiento.py` (5), `tests/test_tope_paginas_huecos.py` (13, de `qa-ia`) y `tests/test_metadatos_auditor.py` (5). Mutación manual: anular el tope, la comprobación de sesión cerrada o cada endurecimiento hace fallar las pruebas correspondientes. Suite no-integración sin fallos conocidos: `test_el_hijo_recibe_un_entorno_minimo…` (antes fallaba por las variables `LC_*` del laptop) ahora admite el prefijo `HF_`/`LC_`, que el código deja pasar al hijo por diseño; cobertura de backend 94 %.
 
+## Propuestas de la pasada de calma aprobadas (25 nov 2026; docs/14 #40, `docs/ux/identidad-visual-v1.md` §9)
+El usuario aprobó el 25 nov 2026 las propuestas que quedaban pendientes. Aplicadas (cada una fijada en `identidad.test.ts`):
+- **Texto repetido**: la franja de Selección dice solo «Conserva los PDF originales.» con sus enlaces «Ver aviso» y «Agregar documentos»; que los PDF no se guardan ya lo dice la nota de cuenta, visible en todas las pantallas. Actualizados `docs/ux/aviso-pdf-no-guardado.md` y su wireframe.
+- **Barra de Selección**: «Expandir todo» y «Contraer todo» son un solo botón que alterna según haya ramas plegadas.
+- **Resumen fijo de Comparando compacto**: la parte fija lleva el avance, el tiempo y «Cancelar»; el texto de ayuda y los filtros se desplazan con la página. Medido con una comparación real: **177 px (23 % del alto de 768) frente a 261 px (34 %)**, «Cancelar» dentro de la parte fija y visible sin desplazar; `--alto-resumen` 185 px.
+- **Texto de la norma plegado** en Resultados (arriba, P5).
+Quedan como **ideas para V2** (producto, no imagen): paleta de comandos (Ctrl/Cmd+K) y vistas por rol. **No verificado**: el foco con una lista larga de pares tras el cambio del resumen; la agrupación de filtros fuera de la parte fija no se probó con muchos pares resueltos.
+
 ## Prueba de integración de «Cancelar» con el modelo real (25 nov 2026; tablero P-26)
 `tests/test_integracion_cancelar.py` (marca `integracion`): carga el ejemplo, lanza una comparación de 2 artículos × 4 secciones con el cliente real del stage, espera a que haya pares en análisis, cancela y comprueba que el trabajo pasa a `cancelado` en menos de 10 s, que `comp.entrada` queda en `None`, que no hay pares en curso ni espera de límite activa, y que 3 s después lo que el proveedor devuelva tarde no cambia `pares_hechos` ni los veredictos.
 - **Resultado** (modelo local `qwen3:4b-instruct-2507-q4_K_M` por Ollama): canceló en **0,10 s con 6 pares en vuelo**, 0 pares resueltos. Antes, a mano en el navegador, 1,6–1,9 s.
@@ -644,7 +652,7 @@ Criterio: `docs/ux/identidad-visual-v1.md` §3 P3. La estructura aprobada (árbo
 **Mediciones (Chromium, app local con el ejemplo cargado)**: `scroll-padding-bottom` calculado 96 px frente a un pie de 71 px; el último elemento enfocable de la página queda por encima del pie (pero esa página cabe casi entera en el visor: la prueba es débil); sin ℹ como carácter en ningún aviso. `npm test` 44 (2 nuevas).
 
 **Diferencias con la spec y límites conocidos**
-- §3 P3 pide «pie fijo con sombra superior en lugar de filete de 2 px»: el pie lleva una línea fina neutra de 1 px (no sombra ni filete grueso), porque la dirección visual v1.1 (§8) quita las sombras y la pasada de calma (§9) los filetes gruesos. **Pendiente del usuario/PO**: corregir el criterio o pedir la sombra.
+- §3 P3 pide «pie fijo con sombra superior en lugar de filete de 2 px»: el pie lleva una línea fina neutra de 1 px (no sombra ni filete grueso), porque la dirección visual v1.1 (§8) quita las sombras y la pasada de calma (§9) los filetes gruesos. **Aprobado por el usuario el 25 nov 2026** («está bien»): el criterio de §3 P3 queda actualizado en el doc de diseño.
 - «Casillas, buscador y «solo marcados» con límite ≥ 3:1»: buscador y chips usan `--borde-control` (medido); las casillas son las nativas del navegador y no se midieron.
 - «El pie no tapa la última fila»: se reservó el espacio de desplazamiento, pero no se probó con un documento largo que desborde el visor y tabulando con teclado.
 - La parte de P-37 para Comparando (resumen fijo superior que puede tapar el foco) sigue pendiente de P4.
@@ -677,7 +685,7 @@ Criterio: `docs/ux/identidad-visual-v1.md` §3 P5. Se vio por primera vez con **
 
 **Qué cambió**
 - **Citas lado a lado** (criterio §3 P5): «Fragmento clave de la norma» y «Respaldo en el manual» van en dos columnas (clases `citas` / `cita-col`, las de Comparando). El detalle quedó unos 220 px más corto en la comparación de prueba.
-- **Texto de la norma** en un `<details>` bajo su mismo título, **desplegado por ahora** (como antes). Plegarlo cuando ya hay fragmento clave (`open={!f.cita_norma}`, una línea en `Results.tsx`) repetiría menos en pantalla, pero cambia el contenido visible por defecto: **propuesta pendiente del visto bueno del usuario** (product-owner: no se aplica sin él; si se aprueba, anotarlo en docs/14 #40 y docs/05).
+- **Texto de la norma** en un `<details>` bajo su mismo título, **plegado cuando ya hay fragmento clave** (`open={!f.cita_norma}`) y abierto si no lo hay. Aprobado por el usuario el 25 nov 2026 (antes quedó desplegado a la espera de su visto bueno, por indicación del product-owner): el contenido sigue a un clic.
 - **Un solo verde sólido**: el conmutador «Ver por artículo / por control» activo pasa a tono suave con línea inferior; el único sólido es «Descargar papel de trabajo (.xlsx)».
 - **Encabezado de la tabla fijo** (criterio §3 P5): `position: sticky` y `overflow: visible` en la tabla (con `overflow` oculto no funciona).
 - Cajas de cita con hasta 24 rem de alto (antes 220 px cortaban la cita a media línea) y con `tabIndex={0}` para alcanzarlas con teclado cuando desplazan (WCAG 2.1.1).

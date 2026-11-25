@@ -126,8 +126,9 @@ function ArbolDoc({ a, sel, onSel, onVer, onQuitarMarcas }: {
       {a.avisos.map((av, i) => <div key={i} className="nota-aviso"><Icono nombre="info" /> {av}</div>)}
       <div className="arbol-barra" role="toolbar" aria-label={`Herramientas del índice de ${a.nombre}`}>
         <input type="search" placeholder="Buscar en el índice…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} aria-label="Buscar en el índice" />
-        <button className="enlace" onClick={() => setCerradas(new Set())}>Expandir todo</button>
-        <button className="enlace" onClick={() => setCerradas(new Set(ramas(a.nodos).map((n) => n.id)))}>Contraer todo</button>
+        <button className="enlace" onClick={() => setCerradas(cerradas.size === 0 ? new Set(ramas(a.nodos).map((n) => n.id)) : new Set())}>
+          {cerradas.size === 0 ? "Contraer todo" : "Expandir todo"}
+        </button>
         <label className="solo-marcados"><input type="checkbox" checked={soloMarcados} onChange={(e) => setSoloMarcados(e.target.checked)} /> Solo marcados</label>
         <span className="arbol-total" aria-live="polite">{marcados} de {total} marcados</span>
       </div>

@@ -13,7 +13,7 @@ Wireframe: `wireframes/aviso-pdf-no-guardado-v1.svg`. Nada implementado. Estado 
 - "Conserva tu PDF original y anota qué archivo es (nombre, versión y fecha). Lo necesitarás para respaldar tu papel de trabajo."
 - Lista de los documentos recién procesados (nombre · páginas).
 - Casilla: "No volver a mostrar en esta sesión". Botón: **Entendido, continuar**.
-- Franja en Selección: "Los PDF no se guardan en esta aplicación. Conserva los originales." + enlaces "Ver aviso" y "Agregar documentos".
+- Franja en Selección: "Conserva los PDF originales." (que los PDF no se guardan ya lo dice la nota de cuenta, visible en todas las pantallas; decisión del usuario, 25 nov 2026) + enlaces "Ver aviso" y "Agregar documentos".
 
 ## Cuándo aparece
 - Cada vez que un procesamiento termina en `listo` (con documentos nuevos), salvo que la casilla se marcó. Esa preferencia vive en `sessionStorage` (por pestaña/sesión, no persistente: coherente con regla 8, sin guardar nada en servidor). "Cargar ejemplo" también lo muestra (ejemplo = mismo comportamiento; PO decide si lo omite).

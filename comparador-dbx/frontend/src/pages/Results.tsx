@@ -15,7 +15,7 @@ function DetalleVia1({ f }: { f: FilaVia1 }) {
       <div className="citas">
         <div className="cita-col">
           {f.cita_norma && <><h4>Fragmento clave de la norma</h4><blockquote className="cita" tabIndex={0}>{f.cita_norma}</blockquote></>}
-          <details className="texto-completo" open> {/* desplegado por ahora; plegarlo cuando hay fragmento clave (open={!f.cita_norma}) espera el visto bueno del usuario */}
+          <details className="texto-completo" open={!f.cita_norma}>
             <summary>Texto de la norma</summary>
             <blockquote tabIndex={0}>{f.texto_articulo}</blockquote>
           </details>
