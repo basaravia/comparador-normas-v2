@@ -1,0 +1,7 @@
+# Modelo local para el respaldo del LLM (docs/14 #14). Crearlo una vez: ollama create comparador-qwen3-4b -f config/ollama/Modelfile.comparador
+# Ollama NO permite fijar el contexto por llamada en su API compatible con OpenAI (usa 4 096 y recorta el comienzo del prompt sin avisar): se fija aquí.
+# num_ctx debe coincidir con OLLAMA_NUM_CTX y num_predict con OLLAMA_RESERVA_SALIDA (config/defaults.env); lo comprueba tests/test_ollama_cuidados.py.
+FROM qwen3:4b-instruct-2507-q4_K_M
+PARAMETER num_ctx 8192
+PARAMETER num_predict 1500
+PARAMETER temperature 0

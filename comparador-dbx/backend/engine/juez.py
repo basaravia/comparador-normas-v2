@@ -14,7 +14,7 @@ from typing import Callable
 from backend.config import Settings, cargar_prompt, rellenar_prompt, settings
 from backend.core.errors import LLMOutputError, LLMUnavailableError
 from backend.engine.verificacion import verificar_fragmento
-from backend.llm.client import ModelClient, _limite_de_tasa, espera_sugerida  # noqa: F401  (se usan aquí y las pruebas las importan de este módulo)
+from backend.llm.client import CANCELADO_POR, ModelClient, TurnoCancelado, _limite_de_tasa, espera_sugerida  # noqa: F401  (se usan aquí y las pruebas las importan de este módulo)
 from backend.models import Par, Seccion, Veredicto
 
 log = logging.getLogger(__name__)
@@ -69,34 +69,40 @@ def juzgar_par(par: Par, articulo: Seccion, seccion: Seccion, nombres: dict[str,
     usuario = rellenar_prompt(plantilla, doc_norma=nombres.get(articulo.doc_id, articulo.doc_id), ruta_articulo=_ruta(articulo),
                               texto_articulo=articulo.texto_literal, doc_manual=nombres.get(seccion.doc_id, seccion.doc_id),
                               ruta_seccion=_ruta(seccion), texto_seccion=seccion.texto_literal)
-    intento, vueltas = 0, 0
-    while True:
-        intento += 1
-        try:
-            v: Veredicto = cliente.chat_json(sistema, usuario, Veredicto)
-            break
-        except LLMOutputError:
-            par.requiere_revision = True
-            log.warning("Par %s: el modelo no devolvió un JSON válido", par.id)
-            return par
-        except LLMUnavailableError as e:
-            if not _limite_de_tasa(e):
-                raise
-            sugerida = espera_sugerida(e)
-            tope = s.LLM_ESPERA_LIMITE_S * s.LLM_INTENTOS_LIMITE
-            if sugerida is not None and sugerida > tope:
-                raise                       # el proveedor pide esperar más de lo que esta app espera (p. ej. el límite diario, no el del minuto): seguir es inútil
-            if intento >= s.LLM_INTENTOS_LIMITE:
-                # El límite por minuto lo comparten todos los pares: a uno le puede tocar esperar más que a otros. Se aborta la comparación solo si
-                # nadie avanza (el proveedor no da paso) o si este par ya esperó demasiadas vueltas; si los demás progresan, espera su turno.
-                if vueltas >= s.LLM_VUELTAS_LIMITE or not obs.avance_reciente(s.LLM_ESPERA_LIMITE_S * s.LLM_INTENTOS_LIMITE):
+    token = CANCELADO_POR.set(obs.cancelado)          # un hilo que espera su turno del modelo local mira si se canceló y se retira
+    try:
+        intento, vueltas = 0, 0
+        while True:
+            intento += 1
+            try:
+                v: Veredicto = cliente.chat_json(sistema, usuario, Veredicto)
+                break
+            except LLMOutputError:
+                par.requiere_revision = True
+                log.warning("Par %s: el modelo no devolvió un JSON válido", par.id)
+                return par
+            except LLMUnavailableError as e:
+                if not _limite_de_tasa(e):
                     raise
-                intento, vueltas = 1, vueltas + 1
-            espera = min(max(math.ceil(sugerida) + 1, 2), tope) if sugerida is not None else s.LLM_ESPERA_LIMITE_S * intento
-            log.info("Par %s: límite de tasa del proveedor, espera %d s", par.id, espera)
-            obs.espera(par, espera, intento, s.LLM_INTENTOS_LIMITE)
-            _dormir(espera, obs)
-            obs.reanuda(par)
+                sugerida = espera_sugerida(e)
+                tope = s.LLM_ESPERA_LIMITE_S * s.LLM_INTENTOS_LIMITE
+                if sugerida is not None and sugerida > tope:
+                    raise                       # el proveedor pide esperar más de lo que esta app espera (p. ej. el límite diario, no el del minuto): seguir es inútil
+                if intento >= s.LLM_INTENTOS_LIMITE:
+                    # El límite por minuto lo comparten todos los pares: a uno le puede tocar esperar más que a otros. Se aborta la comparación solo si
+                    # nadie avanza (el proveedor no da paso) o si este par ya esperó demasiadas vueltas; si los demás progresan, espera su turno.
+                    if vueltas >= s.LLM_VUELTAS_LIMITE or not obs.avance_reciente(s.LLM_ESPERA_LIMITE_S * s.LLM_INTENTOS_LIMITE):
+                        raise
+                    intento, vueltas = 1, vueltas + 1
+                espera = min(max(math.ceil(sugerida) + 1, 2), tope) if sugerida is not None else s.LLM_ESPERA_LIMITE_S * intento
+                log.info("Par %s: límite de tasa del proveedor, espera %d s", par.id, espera)
+                obs.espera(par, espera, intento, s.LLM_INTENTOS_LIMITE)
+                _dormir(espera, obs)
+                obs.reanuda(par)
+    except TurnoCancelado:
+        raise Cancelado() from None
+    finally:
+        CANCELADO_POR.reset(token)
     cita_n, ok_n = _verificar_cita(v.cita_norma, articulo.texto_literal, s)
     cita_m, ok_m = _verificar_cita(v.cita_manual, seccion.texto_literal, s)
     par.veredicto = v.model_copy(update={"cita_norma": cita_n or "", "cita_manual": cita_m})
@@ -130,6 +136,32 @@ def _juzgar_contado(*args) -> Par:
 PERIODO_VIGIA_S = 0.5            # cada cuánto se mira si el auditor canceló
 
 
+class _ConAborto(Observador):
+    """El observador del trabajo más «la comparación terminó o se abortó»: los hilos que quedan (en cola del modelo local o dormidos por un límite de tasa) se retiran
+    sin llamar al modelo. Sin esto, si un par aborta la comparación por un fallo del proveedor, los demás seguirían llamando uno tras otro."""
+
+    def __init__(self, obs: Observador, abortado: threading.Event):
+        self._obs, self._abortado = obs, abortado
+
+    def empieza(self, par: Par) -> None:
+        self._obs.empieza(par)
+
+    def espera(self, par: Par, segundos: int, intento: int, maximo: int) -> None:
+        self._obs.espera(par, segundos, intento, maximo)
+
+    def reanuda(self, par: Par) -> None:
+        self._obs.reanuda(par)
+
+    def termina(self, par: Par, hechos: int, total: int) -> None:
+        self._obs.termina(par, hechos, total)
+
+    def avance_reciente(self, segundos: float) -> bool:
+        return self._obs.avance_reciente(segundos)
+
+    def cancelado(self) -> bool:
+        return self._abortado.is_set() or self._obs.cancelado()
+
+
 async def juzgar_pares(pares: list[Par], secciones: dict[str, Seccion], nombres: dict[str, str], cliente: ModelClient,
                        s: Settings = settings, progreso: Callable[[int, int], None] | None = None,
                        obs: Observador | None = None) -> list[Par]:
@@ -139,6 +171,8 @@ async def juzgar_pares(pares: list[Par], secciones: dict[str, Seccion], nombres:
     (un hilo no se puede interrumpir): corren en un pool propio que se suelta con `shutdown(wait=False)`, así `asyncio.run` no las espera.
     Esas llamadas terminan solas en segundo plano y su resultado se descarta."""
     obs = obs or Observador()
+    abortado = threading.Event()
+    obs_hilos = _ConAborto(obs, abortado)                 # lo que ven los hilos del pool; el bucle de asyncio sigue con `obs`
     sem, hechos, total = asyncio.Semaphore(s.LLM_CONCURRENCY), 0, len(pares)
     pool = ThreadPoolExecutor(max_workers=s.LLM_CONCURRENCY, thread_name_prefix="juez")
     loop = asyncio.get_running_loop()
@@ -151,7 +185,7 @@ async def juzgar_pares(pares: list[Par], secciones: dict[str, Seccion], nombres:
             if obs.cancelado():
                 raise Cancelado()
             obs.empieza(p)
-            await loop.run_in_executor(pool, _juzgar_contado, p, secciones[p.articulo_id], secciones[p.seccion_id], nombres, cliente, s, obs)
+            await loop.run_in_executor(pool, _juzgar_contado, p, secciones[p.articulo_id], secciones[p.seccion_id], nombres, cliente, s, obs_hilos)
         if obs.cancelado():                          # llegó tarde: el resultado se descarta
             raise Cancelado()
         hechos += 1
@@ -175,6 +209,7 @@ async def juzgar_pares(pares: list[Par], secciones: dict[str, Seccion], nombres:
             guardia.result()                         # lanza Cancelado
         trabajo.result()                             # lanza la primera excepción de un par, si hubo
     finally:
+        abortado.set()                                   # los hilos que sigan en cola o dormidos se retiran sin llamar al modelo
         for t in (trabajo, guardia, *tareas):
             t.cancel()
         pool.shutdown(wait=False, cancel_futures=True)      # sin esperar a los hilos en vuelo

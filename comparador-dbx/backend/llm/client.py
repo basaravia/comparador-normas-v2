@@ -9,6 +9,7 @@ Los dos textos fijos de este archivo (el del reintento de JSON y el del ping) so
 mensajes técnicos del cliente, no prompts del producto: esos viven en `backend/prompts/`.
 """
 from collections import Counter
+from contextvars import ContextVar
 from typing import Callable
 import json
 import os
@@ -24,7 +25,7 @@ from openai import AzureOpenAI, OpenAI
 from pydantic import BaseModel, ValidationError
 
 from backend.config import Settings, falta, redact, settings
-from backend.core.errors import LLMOutputError, ProviderConfigError, clasificar
+from backend.core.errors import LLMOutputError, LLMUnavailableError, ProviderConfigError, clasificar
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +35,14 @@ def _exigir(**variables: str) -> None:
     faltan = [nombre for nombre, valor in variables.items() if falta(valor)]
     if faltan:
         raise ProviderConfigError(f"Faltan variables de configuración: {', '.join(faltan)}")
+
+
+CANCELADO_POR: ContextVar[Callable[[], bool] | None] = ContextVar("cancelado_por", default=None)
+"""Quien llama (el juez) pone aquí su «¿se canceló?» para que un hilo que espera su turno del modelo local lo mire y se retire sin llamar al modelo (QA-O1)."""
+
+
+class TurnoCancelado(Exception):
+    """Se canceló mientras el hilo esperaba su turno del modelo local: no se le llama."""
 
 
 _UNIDAD_S = {"h": 3600.0, "m": 60.0, "s": 1.0, "ms": 0.001}
@@ -112,6 +121,10 @@ def crear_cliente(proveedor: str, s: Settings, embeddings: bool = False) -> tupl
         else:
             url, modelo = s.DMR_BASE_URL, (s.DMR_EMB_MODEL if embeddings else s.DMR_LLM_MODEL)
         _exigir(**{f"{proveedor.upper()}_{'EMB' if embeddings else 'LLM'}_MODEL": modelo})
+        if proveedor == "ollama" and urlparse(url).hostname not in ("localhost", "127.0.0.1", "::1"):
+            log.warning("OLLAMA_BASE_URL no es la máquina local: los textos de normas y manuales saldrán de ella")       # solo el aviso: puede ser una GPU propia en la red
+        if proveedor == "ollama" and not embeddings:
+            opciones = {"max_retries": 1, "timeout": s.OLLAMA_TIMEOUT_S}      # un modelo pequeño tarda: no se corta a los 120 s y se reintenta una sola vez (un timeout cuesta hasta 2 × OLLAMA_TIMEOUT_S)
         return OpenAI(base_url=url, api_key=proveedor, **opciones), modelo
 
     if proveedor == "foundry":
@@ -193,6 +206,7 @@ class ModelClient:
         self._caidos: dict[str, float] = {}                              # proveedor → hasta cuándo se salta (time.monotonic)
         self.usos: Counter[str] = Counter()                              # llamadas al LLM resueltas por proveedor (solo nombres y cuentas: el registro del trabajo)
         self._lock = threading.Lock()
+        self._cupos = {"ollama": threading.BoundedSemaphore(max(1, s.OLLAMA_CONCURRENCIA))}   # el LLM local atiende pocas llamadas a la vez: las demás esperan turno
 
     def llm(self) -> tuple[OpenAI, str]:
         if self._llm is None:
@@ -250,6 +264,33 @@ class ModelClient:
             return sugerida is not None and sugerida > self.s.LLM_ESPERA_LIMITE_S * self.s.LLM_INTENTOS_LIMITE
         return True
 
+    def _esta_caido(self, proveedor: str) -> bool:
+        with self._lock:
+            return self._caidos.get(proveedor, 0.0) > time.monotonic()
+
+    def _esperar_turno(self, cupo: threading.BoundedSemaphore) -> None:
+        """Espera el turno del modelo local mirando cada segundo si se canceló. El tope cubre TODA la cola, no una llamada: cada hilo de adelante puede tardar hasta
+        `OLLAMA_TIMEOUT_S` y con 6 hilos del juez el último espera cinco llamadas (QA-O4: un tope de una sola llamada abortaba la comparación con Ollama sano)."""
+        limite = time.monotonic() + self.s.OLLAMA_TIMEOUT_S * max(1, self.s.LLM_CONCURRENCY)
+        while not cupo.acquire(timeout=max(0.0, min(1.0, limite - time.monotonic()))):
+            cancelado = CANCELADO_POR.get()
+            if cancelado is not None and cancelado():
+                raise TurnoCancelado()
+            if time.monotonic() >= limite:
+                raise TimeoutError("se agotó la espera de turno del modelo local")
+        try:
+            cancelado = CANCELADO_POR.get()
+            if cancelado is not None and cancelado():              # canceló justo cuando le tocaba: tampoco se llama
+                raise TurnoCancelado()
+        except BaseException:
+            cupo.release()                                         # el turno ya se tomó: sea cancelación o un fallo al consultarla, no se pierde (QA-O5)
+            raise
+
+    def _cabe_en_ollama(self, mensajes: list[dict]) -> bool:
+        """¿El prompt cabe en el contexto del modelo local, con la respuesta incluida? Estimación: 3 caracteres por token (español, por lo alto). Si no cabe NO se
+        envía: Ollama recortaría el comienzo del prompt (la instrucción del juez) sin avisar y el veredicto sería de otra pregunta."""
+        return sum(len(m["content"]) for m in mensajes) / 3 + self.s.OLLAMA_RESERVA_SALIDA <= self.s.OLLAMA_NUM_CTX
+
     def _completar(self, mensajes: list[dict]) -> str:
         cadena = self._proveedores_llm()
         ahora = time.monotonic()
@@ -260,8 +301,23 @@ class ModelClient:
             parametros = {"model": modelo, "messages": enviar, "response_format": {"type": "json_object"}}
             if not (proveedor == "foundry" and self.s.FOUNDRY_OMIT_TEMPERATURE):
                 parametros["temperature"] = self.s.LLM_TEMPERATURE
+            if proveedor == "ollama" and not self._cabe_en_ollama(enviar):
+                log.warning("LLM «ollama» no recibe esta llamada: el texto no cabe en su contexto de %d tokens", self.s.OLLAMA_NUM_CTX)
+                if i < len(activos) - 1:
+                    continue                                   # no está caído: solo no sirve para este texto
+                # Ya no hay a quién más pedírselo: este par queda a revisión (como un JSON inválido, docs/09 §4) en vez de abortar toda la comparación (QA-O3).
+                raise LLMOutputError(f"El texto no cabe en el contexto del modelo local ({self.s.OLLAMA_NUM_CTX} tokens)")
+            cupo = self._cupos.get(proveedor)
+            con_turno = False
             try:
+                if cupo is not None:
+                    self._esperar_turno(cupo)
+                    con_turno = True
+                    if i < len(activos) - 1 and self._esta_caido(proveedor):      # mientras esperaba, otro hilo comprobó que este proveedor cayó: no se paga otro timeout (QA-O2)
+                        continue
                 r = cliente.chat.completions.create(**parametros)
+            except TurnoCancelado:
+                raise
             except Exception as e:
                 log.error("Fallo del LLM %s: %s", modelo, redact(str(e)))
                 err = clasificar(e)
@@ -274,6 +330,9 @@ class ModelClient:
                     with self._lock:
                         self._caidos.clear()                  # nada respondió: la próxima llamada vuelve a probar desde el principal
                 raise err from e
+            finally:
+                if con_turno:
+                    cupo.release()                              # DESPUÉS de marcar el proveedor como caído: el siguiente hilo en cola ya lo ve caído y no lo llama
             with self._lock:
                 self.usos[proveedor] += 1
             return r.choices[0].message.content or ""

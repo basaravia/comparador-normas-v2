@@ -73,6 +73,11 @@ class Settings:
     OLLAMA_BASE_URL: str = _env("OLLAMA_BASE_URL")
     OLLAMA_LLM_MODEL: str = _env("OLLAMA_LLM_MODEL")
     OLLAMA_EMB_MODEL: str = _env("OLLAMA_EMB_MODEL")
+    # Ollama como LLM (respaldo): modelo pequeño en una máquina con GPU de 4 GB, así que se cuidan el contexto, la concurrencia y la espera.
+    OLLAMA_NUM_CTX: int = int(_env("OLLAMA_NUM_CTX"))                # debe coincidir con `num_ctx` del Modelfile (config/ollama)
+    OLLAMA_RESERVA_SALIDA: int = int(_env("OLLAMA_RESERVA_SALIDA"))  # tokens que se reservan para la respuesta (= `num_predict` del Modelfile)
+    OLLAMA_CONCURRENCIA: int = int(_env("OLLAMA_CONCURRENCIA"))      # llamadas simultáneas al LLM local
+    OLLAMA_TIMEOUT_S: float = float(_env("OLLAMA_TIMEOUT_S"))
     DMR_BASE_URL: str = _env("DMR_BASE_URL")
     DMR_LLM_MODEL: str = _env("DMR_LLM_MODEL")
     DMR_EMB_MODEL: str = _env("DMR_EMB_MODEL")

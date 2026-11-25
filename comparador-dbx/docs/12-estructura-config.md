@@ -43,6 +43,7 @@ Todas con versión exacta en `frontend/package.json`.
 - **Producción:** `react` y `react-dom` (18.3.1).
 - **Compilación y tipos:** `vite`, `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom`.
 - **Pruebas de componentes** (decisión del usuario, 25 nov 2026, D-49; solo `devDependencies`): `vitest`, `@testing-library/react`, `@testing-library/dom` y `jsdom`. Se usa jsdom 29 y no la 31 porque la 31 exige Node ≥ 24.15. La lógica pura sigue con `node --test`, sin dependencias.
+- **Herramienta externa, no dependencia:** `playwright-core` solo lo usa `scripts/prueba_navegador.mjs` (prueba de navegador real con Brave o Chromium, perfil limpio); no está en `package.json` ni en el bundle: se toma el que ya tenga la máquina (`NODE_PATH`, p. ej. el de `npx playwright`).
 - Cualquier otra requiere justificación en el commit (CLAUDE.md regla 2) y pasar `npm audit`.
 
 ## Variables de configuración
