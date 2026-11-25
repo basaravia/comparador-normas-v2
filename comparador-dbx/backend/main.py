@@ -114,6 +114,7 @@ async def _inesperado(request: Request, e: Exception):
     return con_cabeceras(request, _json(500, ComparadorError.codigo, ComparadorError.mensaje_negocio))
 
 
+SIN_CACHE = {"Cache-Control": "no-cache"}       # el navegador revalida el index.html en cada carga (los bundles llevan hash en el nombre)
 TIPOS_LOGO = {".svg": "image/svg+xml", ".png": "image/png"}
 
 
@@ -136,5 +137,5 @@ if DIST.exists():
             return _json(404, "ERR-HTTP-404", "No encontramos lo que buscabas.")
         archivo = (DIST / ruta).resolve()
         if ruta and archivo.is_file() and DIST.resolve() in archivo.parents:
-            return FileResponse(archivo)
-        return FileResponse(DIST / "index.html")
+            return FileResponse(archivo, headers=SIN_CACHE if archivo.name == "index.html" else None)
+        return FileResponse(DIST / "index.html", headers=SIN_CACHE)       # sin esto el navegador reutilizaba un index.html viejo que apunta a bundles ya borrados tras desplegar

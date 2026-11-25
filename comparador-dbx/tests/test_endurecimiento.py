@@ -74,3 +74,13 @@ def test_una_subida_normal_no_se_corta(monkeypatch):
 def test_el_tope_de_subida_sale_de_la_configuracion(monkeypatch):
     ajustar(monkeypatch, MAX_DOCS_SESION=8, MAX_MB=20)
     assert main.tope_subida() == (8 * 20 + 1) * 1024 ** 2
+
+
+def test_el_index_no_se_cachea_para_no_apuntar_a_bundles_ya_borrados():
+    with TestClient(app) as c:
+        raiz, ruta_spa = c.get("/"), c.get("/una-ruta-de-la-spa")
+        assets = sorted((main.DIST / "assets").glob("*.js"))
+        js = c.get(f"/assets/{assets[0].name}")
+    assert raiz.status_code == 200 and raiz.headers["cache-control"] == "no-cache"
+    assert ruta_spa.status_code == 200 and ruta_spa.headers["cache-control"] == "no-cache"          # el comodín de la SPA devuelve el mismo index
+    assert js.status_code == 200 and js.headers.get("cache-control") != "no-cache"                 # los bundles llevan hash en el nombre: pueden cachearse
