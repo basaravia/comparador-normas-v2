@@ -65,8 +65,8 @@ def _texto_marca(variable: str, maximo: int) -> str:
 @dataclass(frozen=True)
 class Settings:
     # Modelos
-    LLM_PROVIDER: str = _env("LLM_PROVIDER")      # groq | foundry | ollama | dmr
-    EMB_PROVIDER: str = _env("EMB_PROVIDER")    # ollama | foundry | dmr
+    LLM_PROVIDER: str = _env("LLM_PROVIDER")      # groq | foundry | ollama | dmr | databricks
+    EMB_PROVIDER: str = _env("EMB_PROVIDER")    # ollama | foundry | dmr | databricks
     GROQ_API_KEY: str = field(default=_env("GROQ_API_KEY"), repr=False)
     GROQ_BASE_URL: str = _env("GROQ_BASE_URL")
     GROQ_LLM_MODEL: str = _env("GROQ_LLM_MODEL")
@@ -83,6 +83,20 @@ class Settings:
     FOUNDRY_AI_EMBED_DEPLOYMENT: str = _env("FOUNDRY_AI_EMBED_DEPLOYMENT")
     # Los modelos de razonamiento (GPT-5.x) solo aceptan la temperatura de fábrica.
     FOUNDRY_OMIT_TEMPERATURE: bool = _env("FOUNDRY_OMIT_TEMPERATURE").lower() == "true"
+    # Databricks (modelos del propio workspace). En una App la plataforma pone HOST y las credenciales del service principal; en local, HOST + TOKEN.
+    DATABRICKS_HOST: str = _env("DATABRICKS_HOST")
+    DATABRICKS_TOKEN: str = field(default=_env("DATABRICKS_TOKEN"), repr=False)          # solo desarrollo local (token personal u OAuth del CLI)
+    DATABRICKS_CLIENT_ID: str = _env("DATABRICKS_CLIENT_ID")
+    DATABRICKS_CLIENT_SECRET: str = field(default=_env("DATABRICKS_CLIENT_SECRET"), repr=False)
+    DATABRICKS_LLM_ENDPOINT: str = _env("DATABRICKS_LLM_ENDPOINT")
+    DATABRICKS_EMB_ENDPOINT: str = _env("DATABRICKS_EMB_ENDPOINT")
+    # Respaldo del LLM: si el principal cae (o pide esperar más de lo tolerable, p. ej. el límite diario), se pasa al siguiente, en este orden.
+    LLM_FALLBACK: str = _env("LLM_FALLBACK")                      # databricks,openrouter (vacío = sin respaldo)
+    LLM_FALLBACK_REINTENTO_S: int = int(_env("LLM_FALLBACK_REINTENTO_S"))
+    OPENROUTER_API_KEY: str = field(default=_env("OPENROUTER_API_KEY"), repr=False)
+    PERMITIR_OPENROUTER: bool = _env("PERMITIR_OPENROUTER").lower() == "true"          # sin esto, OpenRouter no se admite en el stage mvp (documentos reales)
+    OPENROUTER_BASE_URL: str = _env("OPENROUTER_BASE_URL")
+    OPENROUTER_LLM_MODEL: str = _env("OPENROUTER_LLM_MODEL")
     LLM_TEMPERATURE: float = float(_env("LLM_TEMPERATURE"))
     LLM_TIMEOUT_S: float = float(_env("LLM_TIMEOUT_S"))
 
@@ -113,6 +127,8 @@ class Settings:
     SUBCHUNK_TOKENS: int = int(_env("SUBCHUNK_TOKENS"))
     SUBCHUNK_OVERLAP: float = float(_env("SUBCHUNK_OVERLAP"))
     EMB_BATCH: int = int(_env("EMB_BATCH"))
+    EMB_REINTENTOS_LIMITE: int = int(_env("EMB_REINTENTOS_LIMITE"))
+    EMB_ESPERA_LIMITE_S: float = float(_env("EMB_ESPERA_LIMITE_S"))
 
     # Recuperación
     K_SUBCHUNKS: int = int(_env("K_SUBCHUNKS"))
@@ -125,6 +141,7 @@ class Settings:
     LLM_RETRIES: int = int(_env("LLM_RETRIES"))
     LLM_ESPERA_LIMITE_S: int = int(_env("LLM_ESPERA_LIMITE_S"))
     LLM_INTENTOS_LIMITE: int = int(_env("LLM_INTENTOS_LIMITE"))
+    LLM_VUELTAS_LIMITE: int = int(_env("LLM_VUELTAS_LIMITE"))
     CITATION_FUZZY_MIN: float = float(_env("CITATION_FUZZY_MIN"))
     CITATION_SHOW_MIN: float = float(_env("CITATION_SHOW_MIN"))
     MAX_FRAGMENTO_DIFUSO: int = int(_env("MAX_FRAGMENTO_DIFUSO"))
@@ -221,7 +238,7 @@ def manuales_locales() -> list[Path]:
 
 
 def es_secreto(nombre: str) -> bool:
-    return nombre.endswith(("_KEY", "_TOKEN"))  # GROQ_API_KEY, FOUNDRY_AI_TOKEN
+    return nombre.endswith(("_KEY", "_TOKEN", "_SECRET"))  # GROQ_API_KEY, FOUNDRY_AI_TOKEN, DATABRICKS_CLIENT_SECRET
 
 
 def falta(valor: str) -> bool:

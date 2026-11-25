@@ -413,12 +413,15 @@ class _ObsJob(Observador):
         self.lock = threading.Lock()
         self.en_curso: dict[str, ParEnCurso] = {}
         self.seq = 0
+        self.esperando: dict[str, EsperaLimite] = {}   # pares dormidos por un 429: el aviso sigue mientras quede alguno
+        self._ultimo_par = time.monotonic()  # último par resuelto (o el arranque): `avance_reciente` lo usa para no abortar si los demás progresan
         self.cerrado = False                 # el juicio terminó o se abandonó: un hilo que llega tarde ya no toca el job
 
     def cerrar(self) -> None:
         with self.lock:
             self.cerrado = True
             self.en_curso.clear()
+            self.esperando.clear()
             self.job.pares_en_curso, self.job.espera_limite = [], EsperaLimite()
 
     def _toca(self) -> None:
@@ -439,15 +442,21 @@ class _ObsJob(Observador):
         with self.lock:
             if self.cerrado:
                 return
-            self.job.espera_limite = EsperaLimite(activa=True, hasta_ts=time.time() + segundos, intento=intento, max=maximo)
+            self.esperando[par.id] = EsperaLimite(activa=True, hasta_ts=time.time() + segundos, intento=intento, max=maximo)
+            self.job.espera_limite = max(self.esperando.values(), key=lambda e: e.hasta_ts)      # se muestra la que termina más tarde
         self._toca()
 
     def reanuda(self, par: Par) -> None:
         with self.lock:
             if self.cerrado:
                 return
-            self.job.espera_limite = EsperaLimite()
+            self.esperando.pop(par.id, None)
+            self.job.espera_limite = max(self.esperando.values(), key=lambda e: e.hasta_ts) if self.esperando else EsperaLimite()
         self._toca()
+
+    def avance_reciente(self, segundos: float) -> bool:
+        with self.lock:
+            return time.monotonic() - self._ultimo_par < segundos
 
     def termina(self, par: Par, hechos: int, total: int) -> None:
         v = par.veredicto
@@ -457,6 +466,7 @@ class _ObsJob(Observador):
             if self.cerrado:
                 return
             self.en_curso.pop(par.id, None)
+            self._ultimo_par = time.monotonic()
             self.seq += 1
             vivo = VeredictoVivo(seq=self.seq, par_id=par.id, articulo=a.identificador, seccion=m.identificador, cobertura=cobertura,
                                  naturaleza=v.naturaleza_articulo if v else "", confianza=round(v.confianza, 2) if v else 0.0,
@@ -579,6 +589,7 @@ def comparar(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str], cl
     def correr() -> None:
         job.estado = "en_curso"
         t0 = time.perf_counter()
+        usos_antes = dict(getattr(cliente, "usos", {}))
         try:
             _ejecutar(sesion, comp, arts, secs, job, cliente, cfg)
             comp.out.estado, job.estado, job.progreso, job.etapa = "listo", "listo", 1.0, "Comparación lista"
@@ -592,6 +603,9 @@ def comparar(sesion: Sesion, articulo_ids: list[str], seccion_ids: list[str], cl
             job.mensaje = err.mensaje
         job.cancelable = False
         sesion.ultimo_uso = job.ultimo_evento_ts = time.time()   # uso de la sesión; y el reloj de la pantalla se congela al cerrar (cancelar incluido), no en el último par resuelto
+        usos = {p: n - usos_antes.get(p, 0) for p, n in getattr(cliente, "usos", {}).items() if n - usos_antes.get(p, 0) > 0}
+        if len(usos) > 1:                                     # hubo cambio de proveedor: queda dicho cuántas llamadas resolvió cada uno (solo nombres y cuentas)
+            log.info("LLM usado en la comparación (llamadas por proveedor): %s", usos)
         log.info("Comparación: %d artículos x %d secciones en %.0f s", len(arts), len(secs), time.perf_counter() - t0)
 
     _COMPARACION.submit(correr)
@@ -732,7 +746,7 @@ def cargar_ejemplo(sesion: Sesion) -> list[DocumentoOut]:
             viejo = d["doc_id"]
             secs = [Seccion.model_validate({**s, "doc_id": doc_id, "id": doc_id + s["id"][len(viejo):]}) for s in d["secciones"]]
             out = DocumentoOut(id=doc_id, nombre=d["nombre"], paginas=d["paginas"], tipo=d["tipo"], metadatos=Metadatos(**d.get("metadatos", {})), estado="listo",
-                               advertencias=[EJEMPLO])
+                               advertencias=[EJEMPLO], es_ejemplo=True)
             doc = Doc(out=out, secciones=secs, sha256=d.get("sha256", ""))
             doc.clasificacion = clasificar_secciones(secs)
             doc.avisos_arbol = _arbol_avisos(doc)

@@ -5,6 +5,7 @@ cuando algo no cuadra. Una cita verificada se reemplaza por el texto real del do
 """
 import asyncio
 import logging
+import math
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -13,7 +14,7 @@ from typing import Callable
 from backend.config import Settings, cargar_prompt, rellenar_prompt, settings
 from backend.core.errors import LLMOutputError, LLMUnavailableError
 from backend.engine.verificacion import verificar_fragmento
-from backend.llm.client import ModelClient
+from backend.llm.client import ModelClient, _limite_de_tasa, espera_sugerida  # noqa: F401  (se usan aquí y las pruebas las importan de este módulo)
 from backend.models import Par, Seccion, Veredicto
 
 log = logging.getLogger(__name__)
@@ -27,6 +28,10 @@ class Observador:
     def reanuda(self, par: Par) -> None: ...
     def termina(self, par: Par, hechos: int, total: int) -> None: ...
     def cancelado(self) -> bool:
+        return False
+
+    def avance_reciente(self, segundos: float) -> bool:
+        """¿Algún par se resolvió hace menos de `segundos`? Sin observador no se sabe: un par que agota sus intentos aborta como siempre."""
         return False
 
 
@@ -44,10 +49,6 @@ def _dormir(segundos: int, obs: Observador) -> None:
 
 def _ruta(s: Seccion) -> str:
     return " › ".join(s.ruta) or s.identificador
-
-
-def _limite_de_tasa(e: Exception) -> bool:
-    return "RateLimitError" in str(e) or "429" in str(e)
 
 
 def _verificar_cita(cita: str | None, texto: str, s: Settings) -> tuple[str | None, bool]:
@@ -68,7 +69,9 @@ def juzgar_par(par: Par, articulo: Seccion, seccion: Seccion, nombres: dict[str,
     usuario = rellenar_prompt(plantilla, doc_norma=nombres.get(articulo.doc_id, articulo.doc_id), ruta_articulo=_ruta(articulo),
                               texto_articulo=articulo.texto_literal, doc_manual=nombres.get(seccion.doc_id, seccion.doc_id),
                               ruta_seccion=_ruta(seccion), texto_seccion=seccion.texto_literal)
-    for intento in range(1, s.LLM_INTENTOS_LIMITE + 1):
+    intento, vueltas = 0, 0
+    while True:
+        intento += 1
         try:
             v: Veredicto = cliente.chat_json(sistema, usuario, Veredicto)
             break
@@ -77,14 +80,23 @@ def juzgar_par(par: Par, articulo: Seccion, seccion: Seccion, nombres: dict[str,
             log.warning("Par %s: el modelo no devolvió un JSON válido", par.id)
             return par
         except LLMUnavailableError as e:
-            if _limite_de_tasa(e) and intento < s.LLM_INTENTOS_LIMITE:
-                espera = s.LLM_ESPERA_LIMITE_S * intento
-                log.info("Par %s: límite de tasa del proveedor, espera %d s", par.id, espera)
-                obs.espera(par, espera, intento, s.LLM_INTENTOS_LIMITE)
-                _dormir(espera, obs)
-                obs.reanuda(par)
-                continue
-            raise
+            if not _limite_de_tasa(e):
+                raise
+            sugerida = espera_sugerida(e)
+            tope = s.LLM_ESPERA_LIMITE_S * s.LLM_INTENTOS_LIMITE
+            if sugerida is not None and sugerida > tope:
+                raise                       # el proveedor pide esperar más de lo que esta app espera (p. ej. el límite diario, no el del minuto): seguir es inútil
+            if intento >= s.LLM_INTENTOS_LIMITE:
+                # El límite por minuto lo comparten todos los pares: a uno le puede tocar esperar más que a otros. Se aborta la comparación solo si
+                # nadie avanza (el proveedor no da paso) o si este par ya esperó demasiadas vueltas; si los demás progresan, espera su turno.
+                if vueltas >= s.LLM_VUELTAS_LIMITE or not obs.avance_reciente(s.LLM_ESPERA_LIMITE_S * s.LLM_INTENTOS_LIMITE):
+                    raise
+                intento, vueltas = 1, vueltas + 1
+            espera = min(max(math.ceil(sugerida) + 1, 2), tope) if sugerida is not None else s.LLM_ESPERA_LIMITE_S * intento
+            log.info("Par %s: límite de tasa del proveedor, espera %d s", par.id, espera)
+            obs.espera(par, espera, intento, s.LLM_INTENTOS_LIMITE)
+            _dormir(espera, obs)
+            obs.reanuda(par)
     cita_n, ok_n = _verificar_cita(v.cita_norma, articulo.texto_literal, s)
     cita_m, ok_m = _verificar_cita(v.cita_manual, seccion.texto_literal, s)
     par.veredicto = v.model_copy(update={"cita_norma": cita_n or "", "cita_manual": cita_m})

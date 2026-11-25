@@ -8,10 +8,12 @@ import pytest
 
 from backend.core import sesiones
 from backend.engine import servicio
+from backend.engine.juez import llamadas_vivas
 
 pytestmark = pytest.mark.integracion
 
 TOPE_CANCELAR_S = 10          # con llamadas en vuelo se midió 1,6–1,9 s; el margen cubre una máquina cargada
+ESPERA_HUERFANAS_S = 240      # máximo que se espera a que terminen las llamadas que quedaron huérfanas tras cancelar
 ESPERA_EN_VUELO_S = 180       # tiempo máximo hasta que haya al menos un par en análisis (recuperación + primera llamada)
 
 
@@ -53,3 +55,8 @@ def test_cancelar_con_llamadas_reales_en_vuelo_responde_en_segundos_y_no_publica
         print(f"\ncancelado en {tardo:.2f} s con {en_vuelo} par(es) en vuelo; pares resueltos antes de cancelar: {hechos}")
     finally:
         sesiones.reiniciar(s.id)
+        # Las llamadas huérfanas siguen en el proveedor hasta terminar (V-17) y el tope ERR-CMP-008 rechaza otra comparación mientras haya LLM_CONCURRENCY vivas:
+        # con un modelo de razonamiento tardan decenas de segundos. Se espera a que terminen para no dejarle esa carga a la prueba siguiente.
+        t0 = time.time()
+        while llamadas_vivas() > 0 and time.time() - t0 < ESPERA_HUERFANAS_S:
+            time.sleep(0.5)

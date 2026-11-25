@@ -1,0 +1,21 @@
+# Databricks Apps en Databricks Free (docs/16): los modelos son los del propio workspace, no Foundry.
+# El `command` no pasa por shell, así que no lleva --port; uvicorn toma UVICORN_HOST/UVICORN_PORT del entorno. Un solo worker (CLAUDE.md regla 6).
+command: ["uvicorn", "backend.main:app", "--workers", "1"]
+env:
+  - name: STAGE
+    value: "mvp"
+  - name: LLM_PROVIDER
+    value: "databricks"
+  - name: EMB_PROVIDER
+    value: "databricks"
+  # Apagada hasta comprobar en el navegador lo de docs/16 (S-21): mientras tanto la sesión sigue por cookie.
+  # El endpoint de embeddings de Databricks Free rechaza lotes grandes (con 32 textos o más responde 429, QPS); con 16 va sin rechazos (medido el 25 nov 2026).
+  - name: EMB_BATCH
+    value: "16"
+  # Umbral de similitud calibrado para qwen3-embedding de Databricks (P-03, golden set ARLAFT, 75 pares): 0,40 da recall 72,0 % (bge-m3 a 0,50: 74,7 %); a 0,50 baja a 65,3 %.
+  - name: SIM_THRESHOLD
+    value: "0.40"
+  - name: TRUST_PROXY_IDENTITY
+    value: "false"
+  - name: LIMPIAR_TMP_AL_ARRANCAR
+    value: "true"

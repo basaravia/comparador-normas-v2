@@ -68,7 +68,7 @@ Reglas de forma para no depender del color: cada marca conserva su letra; en lis
 | `--radio` | 8px (más 6, 10, 12, 14, 16, 20 sueltos) | `--r-s:6px` controles, `--r-m:8px` tarjetas, `--r-l:12px` diálogo/dropzone, `--r-pill:999px` chips y pasos |
 | Espaciado | valores sueltos (3, 6, 8, 10, 12, 14, 16, 18, 24, 36, 40) | `--e1:4px --e2:8px --e3:12px --e4:16px --e5:24px --e6:32px`; usarlos al reordenar |
 | Sombra | ninguna (solo `box-shadow` en filtro activo) | `--sombra:0 1px 2px rgba(31,42,36,.08)` en tarjetas y pie fijo; sin sombras grandes |
-| Tipografía | `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`; 1,45 de interlineado | igual (fuentes del sistema, sin descargas). Escala: 12/13/14 (base 16)/18/20 px; títulos 600; `tabular-nums` en cifras |
+| Tipografía | `"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`; 1,45 de interlineado | igual. **IBM Plex Sans alojada en el repositorio** (400, 600 y 700, `.woff2`, licencia OFL; decisión del usuario, 25 nov 2026, D-64) con la pila del sistema como respaldo. Escala: 12/13/14 (base 16)/18/20 px; títulos 600; `tabular-nums` en cifras |
 | Objetivo táctil | filtros y filas 40 px; otros botones ~36–40 px; `.plegar` 24 px | mínimo 24 px en todo control; 40 px en filas y chips |
 | Movimiento | `latido`, transición de barra; ya hay `prefers-reduced-motion` | mantener; sumar cualquier transición nueva a ese bloque |
 
@@ -77,11 +77,11 @@ Cada paso es independiente y reversible. Criterios medibles (se verifican con ca
 
 **P1 · Tokens + cabecera + Ajustes (esfuerzo M).** Cabecera blanca de 56 px con borde inferior de 1 px `--borde` y filete verde de 3 px (como hoy; desde v1.1/§9 es una línea fina neutra de 1 px), zona de marca a la izquierda (§4), pasos en el centro, Ajustes y «Servicio disponible» a la derecha. Ajustes: tarjetas `.ajuste` con la nueva sombra y espaciado 12/24.
 - Todos los pares de §2 cumplen 4,5:1 (texto) o 3:1 (componente) medidos con la fórmula WCAG.
-- La cabecera no cambia de altura entre pasos y no hace más de 2 líneas a 320 px de ancho.
+- La cabecera no cambia de altura entre pasos. A 320 px de ancho ocupa 3 filas (decisión del usuario, 25 nov 2026: se acepta; antes se pedían ≤ 2).
 - Foco visible en Carga, Selección, Resultados, Ajustes y Servicio: anillo ≥ 2 px, visible sobre el paso activo verde.
 - Con `prefers-reduced-motion` no hay animaciones.
 - Sin logos configurados la cabecera se ve igual que hoy (§4).
-- **Diferencia declarada en la implementación (24 nov 2026, pendiente de decisión del usuario):** a 320 px la cabecera ocupa 3 filas (117 px sin logos, 119 con ellos), no ≤ 2: los tres pasos caben en una fila, pero marca, Ajustes y «Servicio disponible» no caben juntos. Forzar 2 filas obliga a ocultar el estado del servicio; el `product-owner` recomienda aceptar la diferencia.
+- **Diferencia declarada en la implementación (24 nov 2026; el usuario la aceptó el 25 nov 2026, D-62):** a 320 px la cabecera ocupa 3 filas (117 px sin logos, 119 con ellos), no ≤ 2: los tres pasos caben en una fila, pero marca, Ajustes y «Servicio disponible» no caben juntos. Forzar 2 filas obliga a ocultar el estado del servicio; el `product-owner` recomienda aceptar la diferencia.
 
 **P2 · Carga.** Dropzone con borde punteado verde, `--r-l`, más aire vertical; la tabla de documentos con encabezado `--marca-claro` y filas de 40 px; estados `.estado` con texto `--texto`.
 - El botón primario es el único elemento verde sólido en la pantalla.
@@ -136,7 +136,7 @@ Cómo se configura (sin dependencias ni logos en el repo):
 - Comportamiento, API, esquemas, flujo de 3 pasos, atajos.
 - Marcas A/L/R/X/P: letras, palabras y significado; el rojo sigue reservado a brecha y error.
 - Excel (formato, encabezado verde `COLOR_PRIMARIO`).
-- Dependencias, fuentes (del sistema) e iconos (caracteres existentes).
+- Dependencias e iconos (caracteres existentes). La única fuente propia es IBM Plex Sans, alojada en el repo desde el 25 nov 2026 (D-64).
 
 ## 6. Cómo sustituir la identidad (requisito del usuario: todo paramétrico)
 Esta sección **sustituye** la opción A de §4: los logos se configuran por variables (opción B, requiere backend S). Hoy `estilos.css` tiene colores literales fuera de `:root` (#fff6dd, #fdeceb, #eceff0, #e3e9e6, #e4eefa, #fff1cf, #8a5d00, #6b4700, #9c2a22, #9fcdb4, #f1f4f2, #fafcfb, `rgba(46,125,50,…)`, `#2e7d32`); en la implementación pasan a tokens.
@@ -150,7 +150,7 @@ Esta sección **sustituye** la opción A de §4: los logos se configuran por var
 | Estados | `--A`, `--L`, `--R`, `--X`, `--P` y sus letras `--sobre-A`…`--sobre-P` |
 | Avisos tintados | `--aviso-fondo`/`--aviso-texto`, `--error-fondo`/`--error-texto`, `--info-fondo`/`--info-texto`, `--neutro-fondo` (reemplazan los literales listados arriba) |
 | Forma | `--r-s`, `--r-m`, `--r-l`, `--r-pill`, `--sombra`, `--e1`…`--e6`, `--alto-cabecera` |
-| Tipografía | `--fuente` (pila del sistema por defecto; el banco puede nombrar la suya **si ya está instalada**, sin descargas), `--tam-base`, `--peso-titulo` |
+| Tipografía | `--fuente` (IBM Plex Sans, alojada en `frontend/src/fuentes/`, con la pila del sistema como respaldo; el banco puede nombrar la suya **si ya está instalada**, o alojar sus `.woff2` y cambiar los `@font-face`), `--tam-base`, `--peso-titulo` |
 | Logos | `--logo-org-max-w:200px`, `--logo-org-max-h:40px`, `--logo-prod-max:32px`, `--logo-pie-max-w:160px` |
 
 El valor por defecto de `--marca` sigue viniendo de `COLOR_PRIMARIO` (`config/defaults.env`); si el backend lo entrega en la configuración pública, la interfaz lo asigna a `--marca` al arrancar (misma ruta que los logos). Los demás tokens se editan en el bloque.
@@ -202,7 +202,7 @@ Tras ver P1 implementada, el usuario pidió usar la skill `ui-ux-pro-max` y **co
 Pendiente de la skill para P3–P5:
 1. «Focus Not Obscured» (guía 100): `scroll-padding` para que el pie fijo de Selección y el resumen fijo de Comparando no tapen el elemento enfocado.
 2. ~~Iconos SVG en lugar de ⚙ ⚖ ⚠ ✓ ▸ ▾~~ **Hecho (24 nov)**: `frontend/src/components/Icono.tsx`, 10 iconos propios en SVG (24×24, trazo redondeado, `currentColor`; escalas, ajustes, subir, check, equis, aviso, abajo, derecha, cargando, mitad). Se dibujaron en casa: Phosphor (MIT) está en los datos de la skill solo como nombres, sin trazados, y descargar Flaticon u otra biblioteca no era posible ni conveniente (atribución por icono). Una prueba impide que vuelvan los caracteres como iconos; la única excepción es el título de la pestaña.
-3. Tipografía «Financial Trust» (IBM Plex Sans) o «Corporate Trust» (Lexend y Source Sans 3): exige alojar los `.woff2` en el repo por la CSP; no aplicado, sigue la pila del sistema.
+3. Tipografía «Financial Trust» (IBM Plex Sans): **aplicada el 25 nov 2026** (decisión del usuario, D-64): `.woff2` en `frontend/src/fuentes/` (CSP `default-src 'self'`), licencia SIL OFL 1.1. «Corporate Trust» (Lexend y Source Sans 3): no aplicada.
 4. Objetivo táctil: la guía 22 aclara que los 44 px son de móvil; en web rige WCAG 2.5.8 (24 px), que ya se cumple.
 
 El wireframe `wireframes/identidad-cabecera-v1.svg` es de v1 (esquinas de 8 px) y no se actualizó.

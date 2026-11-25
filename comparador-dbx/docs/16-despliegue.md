@@ -3,6 +3,8 @@
 La app es un solo contenedor: FastAPI (`backend/main:app`, un worker) que sirve `frontend/dist`. Estado en memoria; el Excel descargado es la persistencia.
 
 ## Antes de desplegar
+Elige variante: **Foundry** (`app.yaml`, pasos 2 y 3) o **Databricks Free** (`app.free.yaml`, sección «Despliegue en Databricks Free»).
+
 1. **Interfaz compilada:** `cd frontend && npm install && npm run build` (el `dist/` ya viene versionado; recompilar solo si cambia el código del frontend).
 2. **Azure AI Foundry:** edita `app.yaml` y cambia los `REEMPLAZAR-…` por el endpoint, la versión de API y los nombres de los deployments del LLM y de embeddings. **No pegues el token en el archivo**: el repo es público.
 3. **Token como secreto:** en la consola de Databricks crea un secreto (scope + clave) con el token de Foundry y agrégalo a la App como recurso con la clave `foundry-token` (el `valueFrom` de `app.yaml`).
@@ -18,6 +20,16 @@ El código está directo en el notebook; los parámetros son widgets: `app`, `se
 - `deploy_and_wait` (`SNAPSHOT`) despliega y el notebook imprime la URL.
 
 La App instala `requirements.txt` sola. Docling descarga sus modelos la primera vez (necesita salida a internet del contenedor); si la extracción en vivo no es estable, usa **Cargar ejemplo** (no ejecuta Docling).
+
+## Despliegue en Databricks Free (modelos del workspace)
+Free no incluye Foundry y el plan gratuito de Groq (200 000 tokens por día) no alcanza para una comparación completa. Esta variante usa los modelos que sirve el propio workspace, sin gasto, con `LLM_PROVIDER=databricks` y `EMB_PROVIDER=databricks`: LLM `databricks-gpt-oss-120b` y embeddings `databricks-qwen3-embedding-0-6b` (`DATABRICKS_LLM_ENDPOINT` y `DATABRICKS_EMB_ENDPOINT` en `config/defaults.env`).
+- **`app.free.yaml`** no lleva secretos: la plataforma inyecta `DATABRICKS_HOST`, `DATABRICKS_CLIENT_ID` y `DATABRICKS_CLIENT_SECRET` (el service principal de la App pide su token OAuth y lo renueva solo). Databricks Apps solo despliega un archivo llamado `app.yaml` en la raíz del código: al subir, `app.free.yaml` se copia como `app.yaml`. Deja `TRUST_PROXY_IDENTITY=false` hasta la comprobación de S-21.
+- **Recursos de la App:** dos `serving_endpoint` con permiso `CAN_QUERY` (los dos modelos de arriba); no lleva el recurso `foundry-token`. Ejemplo para crearla: `databricks apps create --json '{"name":"comparador-normativo","resources":[{"name":"llm","serving_endpoint":{"name":"databricks-gpt-oss-120b","permission":"CAN_QUERY"}},{"name":"embeddings","serving_endpoint":{"name":"databricks-qwen3-embedding-0-6b","permission":"CAN_QUERY"}}]}'`; luego `databricks workspace import-dir` del código (con `app.free.yaml` renombrado) y `databricks apps deploy --source-code-path`. La app debe estar con el cómputo activo antes de desplegar.
+- **En local** con esos mismos modelos: `LLM_PROVIDER=databricks`, `EMB_PROVIDER=databricks`, `DATABRICKS_HOST` y `DATABRICKS_TOKEN` (token personal u OAuth del CLI, solo en `config/.env` o en el entorno; nunca en el repo).
+- **Respaldo del LLM:** `LLM_FALLBACK=databricks,openrouter` (en `config/stages/sandbox.env`) hace que, si Groq cae o llega a su límite diario, la misma llamada pase a Databricks y, de última, a OpenRouter (`OPENROUTER_API_KEY` en `config/.env`, nunca en el repo; modelo gratuito por defecto `google/gemma-4-31b-it:free`). Cada respaldo sin configurar se omite con un aviso.
+- **Lotes de embeddings:** el endpoint de embeddings del workspace Free rechaza lotes grandes con 429 (REQUEST_LIMIT_EXCEEDED, por consultas por segundo): con 32 textos o más no responde y con 16 va sin rechazos (≈ 2 llamadas por segundo). `app.free.yaml` fija `EMB_BATCH=16` (el valor por defecto es 64). El cliente además espera y reintenta ante un 429 (`EMB_REINTENTOS_LIMITE`, `EMB_ESPERA_LIMITE_S`).
+- **Particularidad:** este servicio exige la palabra «json» en el último mensaje del usuario cuando se pide formato JSON; el cliente la añade solo.
+- **Medido con modelos reales (25 nov 2026):** comparación del ejemplo de punta a punta, 80 pares en 415 s, 0 errores, 0 respuestas 429; Excel generado. `SIM_THRESHOLD` se calibró para `qwen3-embedding` (P-03, golden set ARLAFT de 75 pares, la ley completa contra `MANUAL-ARLAFT-V14`): recall@candidatos **65,3 % a 0,50**, **72,0 % a 0,40** y 73,3 % a 0,30 (con `bge-m3` a 0,50: 74,7 %); a 0,40 hay 1 167 pares a juzgar (654 a 0,50; 1 338 a 0,30). `app.free.yaml` fija **0,40** (docs/14 #1).
 
 ## Comprobaciones
 - `GET <url>/api/health` → `{"estado":"ok","llm":true}` (hace un ping real al LLM y a embeddings; se cachea 60 s).

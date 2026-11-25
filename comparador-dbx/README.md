@@ -31,3 +31,6 @@ Origen: `../../comparador-normativas-ec-v1` (clon de `basaravia/comparador-norma
 | `backend/retrieval/chunker.py` | `chunking.py` (`chunk_articulo`, `_segmentar`, `_empaquetar`, `estimar_tokens`) | Sin pandas ni LangChain: opera sobre `Seccion` y devuelve `SubChunk`. Conserva el corte por párrafos, numerales y literales, el solape y la estimación de tokens por palabras (1,35 tokens/palabra). Presupuesto y solape salen de `settings`; el prefijo de contexto va en `texto_a_embeber`, no en el texto literal |
 | `backend/retrieval/index.py` | `search_engine.py` (solo la idea: `IndexFlatIP` sobre vectores L2-normalizados, un sub-chunk por fila que apunta a su padre) | Sin pandas, sin guardar a disco, sin reranker ni búsqueda léxica. Dos `IndexFlatIP` de FAISS, caché de embeddings por SHA-256 y subíndice filtrado por selección (docs/08); embeddings por `ModelClient.embed` |
 | `backend/engine/candidatos.py`, `pares.py` | — (módulos nuevos, docs/09 §1-§2) | La v6 no tiene doble vía; se escribieron según la spec |
+
+## Créditos y licencias
+- **IBM Plex Sans** (© 2017 IBM Corp., nombre reservado «Plex»), licencia SIL Open Font License 1.1: los `.woff2` y el texto de la licencia están en `frontend/src/fuentes/`.

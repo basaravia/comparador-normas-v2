@@ -19,6 +19,7 @@ Wireframe: `wireframes/aviso-pdf-no-guardado-v1.svg`. Nada implementado. Estado 
 - Cada vez que un procesamiento termina en `listo` (con documentos nuevos), salvo que la casilla se marcó. Esa preferencia vive en `sessionStorage` (por pestaña/sesión, no persistente: coherente con regla 8, sin guardar nada en servidor). "Cargar ejemplo" también lo muestra (ejemplo = mismo comportamiento; PO decide si lo omite).
 - No aparece en "Continuar a la selección" sin documentos nuevos. "Ver aviso" lo reabre siempre.
 - Franja: siempre visible mientras haya documentos indexados; no se puede ocultar en el MVP.
+- **Excepción: el ejemplo** (decisión del usuario, 25 nov 2026, D-53). Los documentos de «Cargar ejemplo» no vienen de un PDF y no hay archivo que conservar: no disparan el aviso, la franja no muestra «Conserva los PDF originales» ni «Ver aviso» si solo hay documentos de ejemplo (sigue «Agregar documentos»), y su estado se lee «Indexado» sin «· PDF no guardado» ni el botón «?» que explica lo del PDF original. El servidor los marca con `es_ejemplo` en `DocumentoOut`.
 
 ## Foco, teclado, ARIA
 - `<dialog>`/`role="dialog" aria-modal="true"`, `aria-labelledby` = título, `aria-describedby` = cuerpo. (`alertdialog` no: no es un error destructivo.)

@@ -31,6 +31,7 @@ class DocumentoOut(BaseModel):
     metadatos: Metadatos = Metadatos()
     estado: Literal["cargado", "en_cola", "extrayendo", "seccionando", "indexando", "listo", "error"] = "cargado"
     advertencias: list[str] = []
+    es_ejemplo: bool = False               # documento precargado de samples/: no viene de un PDF, así que no aplica el aviso «el PDF no queda guardado»
     error: Optional[ErrorNegocio] = None
 
 

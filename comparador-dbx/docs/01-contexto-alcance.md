@@ -6,7 +6,7 @@ En el entorno bancario, auditoría verifica manualmente si los manuales internos
 Ejemplo: un artículo de la Ley Orgánica de Protección de Datos consagra el derecho del cliente a no ser expuesto en su imagen; el manual implementa una capa automatizada y validada que despersonaliza la imagen para que nunca se persista ni se filtre. Lenguaje distinto, misma obligación.
 
 ## Objetivo del MVP
-Entregar el **viernes 2 de octubre de 2026** una Databricks App funcional donde un auditor, sin asistencia técnica:
+Entregar una Databricks App funcional donde un auditor, sin asistencia técnica (la demo se presentó el viernes 2 de octubre de 2026; el MVP se está refinando desde entonces):
 1. carga normativas y manuales,
 2. elige qué secciones comparar contra cuáles,
 3. ejecuta un análisis de doble vía,

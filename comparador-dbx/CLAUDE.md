@@ -3,13 +3,13 @@
 Lee este archivo completo al inicio de cada sesión. La especificación vive en `docs/`; empieza por `docs/00-INDEX.md`.
 
 ## Qué estamos construyendo
-Una Databricks App que compara normativas regulatorias (Superintendencia de Bancos, protección de datos, etc.) contra manuales de control interno de un banco, en **doble vía**, y genera un **papel de trabajo de auditoría en Excel** con el formato del banco. La opera un **auditor no técnico**. Demo del MVP: **viernes 2 de octubre de 2026**.
+Una Databricks App que compara normativas regulatorias (Superintendencia de Bancos, protección de datos, etc.) contra manuales de control interno de un banco, en **doble vía**, y genera un **papel de trabajo de auditoría en Excel** con el formato del banco. La opera un **auditor no técnico**. La demo del MVP se presentó (el viernes 2 de octubre de 2026); ahora se refina el MVP.
 
 ## Reglas no negociables
 1. **Reutilizar antes que crear.** El repo de referencia (`../../comparador-normativas-ec-v1`, rama `feature/v6-react-fastapi`, solo su `backend/`) ya tiene módulos probados de: extracción con Docling, chunking, vectorización y cliente de modelos (Groq / Foundry). Localízalos y adáptalos. Registra en `README.md` qué archivo de origen se reutilizó en cada módulo nuevo.
 2. **No añadir dependencias** fuera de `docs/12-estructura-config.md` sin una línea de justificación en el commit.
 3. **El modelo produce campos, el código produce formato.** El LLM solo devuelve JSON validado con Pydantic. Umbrales, preselecciones, agregación de marcas y armado del Excel son Python determinista.
-4. **Modelos reales, nunca simulados.** El LLM, los embeddings (según el stage: DMR en dev, Groq + Ollama `bge-m3` en sandbox, Foundry en mvp) y el índice FAISS se usan reales en notebooks y pruebas de integración. Nada de dobles ni respuestas falsas para el LLM o la recuperación.
+4. **Modelos reales, nunca simulados.** El LLM, los embeddings (según el stage: DMR en dev, Groq + Ollama `bge-m3` en sandbox, Foundry en mvp; en el despliegue en Databricks Free, los modelos del propio workspace con `LLM_PROVIDER=databricks`; el LLM puede tener respaldo con `LLM_FALLBACK`) y el índice FAISS se usan reales en notebooks y pruebas de integración. Nada de dobles ni respuestas falsas para el LLM o la recuperación.
 5. **Texto literal siempre.** El texto de normas y manuales nunca se parafrasea ni se genera. Toda cita del juez se verifica en Python contra el texto fuente (`docs/09-motor-doble-via.md` §4).
 6. **Un solo proceso uvicorn (`--workers 1`).** El estado vive en memoria; varios workers rompen la sesión.
 7. **Extracción con Docling en cola de un solo worker**, nunca en paralelo. `do_ocr=False`. El cómputo es Medium (~6 GB RAM) y Docling ya saturó la CPU en pruebas.
@@ -54,6 +54,7 @@ Una Databricks App que compara normativas regulatorias (Superintendencia de Banc
 uvicorn backend.main:app --reload --port 8000
 # frontend
 cd frontend && npm install && npm run dev      # desarrollo
+cd frontend && npm test                         # lógica pura (node --test) + componentes (vitest + testing-library)
 cd frontend && npm run build                   # genera frontend/dist para desplegar
 # pruebas (desde comparador-dbx/)
 pytest -m "not integracion" --cov=backend   # unitarias + coverage (umbral 80 %)

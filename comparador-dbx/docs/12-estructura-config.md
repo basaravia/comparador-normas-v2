@@ -16,7 +16,7 @@ comparador-dbx/
 │   ├── retrieval/               # chunker.py (repo), embeddings.py (repo), index.py, tabla.py (tabla de recuperación), exclusion.py (secciones no comparables), seleccion.py
 │   ├── engine/                  # candidates.py, pairs.py, judge.py, citations.py, aggregate.py, conclusion.py
 │   ├── output/                  # workpaper.py, annex.py, styles.py
-│   ├── llm/                     # client.py (repo): Groq | Ollama | Docker Model Runner | Foundry por configuración
+│   ├── llm/                     # client.py (repo): Groq | Ollama | Docker Model Runner | Foundry | Databricks | OpenRouter (solo respaldo del LLM) por configuración
 │   ├── prompts/                 # clasificador.md, juez.md, conclusion.md
 │   └── models/schemas.py        # Documento, Seccion, SubChunk, Par, Veredicto, MetadatosLLM (Seccion sin cambios; SeccionExcluida vive en output/workpaper.py)
 ├── frontend/
@@ -34,9 +34,16 @@ comparador-dbx/
 Los módulos marcados `(repo)` se toman del repositorio existente.
 
 ## Dependencias permitidas (backend)
-`fastapi`, `uvicorn`, `python-multipart`, `pydantic>=2`, `pymupdf`, `docling` (2.145.0: la 2.55.1 de la v1 tenía 59 CVE, docs/14 #22; la 2.145 es la primera que admite `pillow>=13`), `faiss-cpu`, `numpy`, `pandas`, `openpyxl`, `openai` (un solo SDK para Groq, Ollama, Docker Model Runner y Foundry, que exponen API compatible con OpenAI), `python-dotenv`, `pytest`, `httpx`.
+`fastapi`, `uvicorn`, `python-multipart`, `pydantic>=2`, `pymupdf`, `docling` (2.145.0: la 2.55.1 de la v1 tenía 59 CVE, docs/14 #22; la 2.145 es la primera que admite `pillow>=13`), `faiss-cpu`, `numpy`, `pandas`, `openpyxl`, `openai` (un solo SDK para Groq, Ollama, Docker Model Runner, Foundry y los modelos de Databricks, que exponen API compatible con OpenAI; `httpx` ya viene con él), `python-dotenv`, `pytest`, `httpx`.
 Solo para desarrollo: `jupyter` (notebooks de la fase L), `pytest-cov` (coverage) y `ragas` (evaluación de IA, en `requirements-eval.txt` y entorno propio: exige `openai<2` y la app usa `openai` 3.x; sin telemetría). `deepeval` se descartó porque `deepeval 4.2.8` exige `click<8.4` y choca con `transformers 5.x`.
 Cualquier otra requiere justificación.
+
+## Dependencias permitidas (frontend)
+Todas con versión exacta en `frontend/package.json`.
+- **Producción:** `react` y `react-dom` (18.3.1).
+- **Compilación y tipos:** `vite`, `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom`.
+- **Pruebas de componentes** (decisión del usuario, 25 nov 2026, D-49; solo `devDependencies`): `vitest`, `@testing-library/react`, `@testing-library/dom` y `jsdom`. Se usa jsdom 29 y no la 31 porque la 31 exige Node ≥ 24.15. La lógica pura sigue con `node --test`, sin dependencias.
+- Cualquier otra requiere justificación en el commit (CLAUDE.md regla 2) y pasar `npm audit`.
 
 ## Variables de configuración
 Ver [`config/defaults.env`](../config/defaults.env).
@@ -50,7 +57,7 @@ Ver [`config/defaults.env`](../config/defaults.env).
 | `TRUST_PROXY_IDENTITY` | `false` | `false` (pasa a `true` solo tras la comprobación S-21 de [16](16-despliegue.md)) | liga la sesión al correo de `x-forwarded-email`; exige `DATABRICKS_APP_NAME` (la inyecta Databricks Apps); ver [16](16-despliegue.md) |
 | `LIMPIAR_TMP_AL_ARRANCAR` | `false` | `true` | borra al iniciar las carpetas `comparador_*` huérfanas de `/tmp` |
 
-`app.yaml` es el mismo para todos los stages (hoy `STAGE=mvp`); en dev y sandbox valen los de `defaults.env`.
+`app.yaml` es el mismo para todos los stages (hoy `STAGE=mvp`, Foundry); en dev y sandbox valen los de `defaults.env`. `app.free.yaml` es la variante para Databricks Free (modelos del workspace, sin Foundry): ver [16](16-despliegue.md).
 
 ### Comparación en curso (docs/14 #39)
 | Variable | Valor inicial | Nota |

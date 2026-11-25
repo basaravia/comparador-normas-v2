@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import re
+import resource
 import signal
 import subprocess  # nosec B404
 import sys
@@ -154,6 +155,13 @@ def _matar(proc, senal) -> None:
         pass
 
 
+def pico_memoria_hijos_mb() -> float:
+    """Mayor memoria residente (MB) que alcanzó un subproceso ya terminado de este proceso: es el pico del lector de PDF (P-28). Es un máximo
+    acumulado desde que arrancó el proceso, no de una sola extracción. En Linux `ru_maxrss` viene en KB y en macOS en bytes."""
+    maximo = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+    return maximo / (1024 * 1024 if sys.platform == "darwin" else 1024)
+
+
 def _ejecutar(ruta: Path, progreso) -> list[dict]:
     s = settings
     log.info("Docling: extrayendo %s (dispositivo %s, %d hilos)", ruta.name, s.DOCLING_DEVICE, s.DOCLING_THREADS)
@@ -228,5 +236,6 @@ def _ejecutar(ruta: Path, progreso) -> list[dict]:
         raise ExtraccionError("Docling no encontró texto en el documento.", "ERR-EXT-003",
                               "No encontramos texto en este documento.")
     figuras = [{"texto": f"Figura en la página {f['pagina']} (su contenido no se analiza)", "pagina": f["pagina"], "tipo": "figura"} for f in figuras]
-    log.info("Docling: %d bloques en %.0f s (%d figuras avisadas)", len(bloques), time.perf_counter() - t0, len(figuras))
+    log.info("Docling: %d bloques en %.0f s (%d figuras avisadas; pico de memoria del lector %.0f MB)", len(bloques), time.perf_counter() - t0, len(figuras),
+             pico_memoria_hijos_mb())
     return limpiar_bloques(bloques) + figuras
