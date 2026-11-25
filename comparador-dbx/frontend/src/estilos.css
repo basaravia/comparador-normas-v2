@@ -119,8 +119,8 @@ select, input:not([type=checkbox]), textarea { font: inherit; padding: 6px 8px; 
 .resumen-marca.activa { border-color: var(--marca); box-shadow: 0 0 0 2px var(--marca-claro); } .resumen-marca .n { font-size: 1.4rem; font-weight: 700; } .resumen-marca .et { font-size: .75rem; color: var(--texto-suave); max-width: 110px; }
 .resumen-extra { margin-left: auto; font-size: .9rem; } .revision { color: var(--R); }
 .conmutador, .filtros { display: flex; gap: 6px; margin: 12px 0; flex-wrap: wrap; }
-.conmutador button { padding: 8px 14px; border: 1px solid var(--marca); background: var(--superficie); color: var(--marca); border-radius: var(--r-m); }
-.conmutador button.activa { background: var(--marca); color: var(--sobre-marca); }
+.conmutador button { padding: 8px 14px; border: 1px solid var(--borde-control); background: var(--superficie); color: var(--texto); border-radius: var(--r-m); }
+.conmutador button.activa { background: var(--marca-claro); border-color: var(--marca); color: var(--marca-osc); font-weight: 600; box-shadow: inset 0 -2px 0 var(--marca); }   /* la acción principal (descargar) es el único verde sólido */
 .filtros button { padding: 4px 12px; border: 1px solid var(--borde-control); background: var(--superficie); border-radius: var(--r-pill); } .filtros button.activa { background: var(--marca-claro); border-color: var(--marca); font-weight: 600; }
 .resultados tbody tr:not(.fila-detalle) { cursor: pointer; } .resultados tr.abierta td { background: var(--marca-claro); }
 .comentario { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -256,4 +256,21 @@ select, input:not([type=checkbox]), textarea { font: inherit; padding: 6px 8px; 
   .docs td { border-top: 0; padding: var(--e1) var(--e3); } .docs tbody tr:not(.fila-nota):not(.fila-meta) { border-top: 1px solid var(--borde); padding: var(--e2) 0; }
   .docs td:nth-child(3) { white-space: normal; } .docs .acciones { white-space: normal; }
   .docs select { width: 100%; }
+}
+
+/* Resultados (P5): encabezado de la tabla siempre a la vista y detalle con las citas lado a lado */
+.resultados.tabla { overflow: visible; }
+.resultados thead th { position: sticky; top: 0; z-index: 2; }
+.resultados thead th:first-child { border-top-left-radius: var(--r-m); } .resultados thead th:last-child { border-top-right-radius: var(--r-m); }
+.texto-completo { margin-top: var(--e3); } .texto-completo > summary { cursor: pointer; font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--texto-suave); padding: var(--e1) 0; }
+.texto-completo[open] > summary { margin-bottom: var(--e1); }
+.resumen-extra { color: var(--texto-suave); }
+.detalle .cita-col blockquote { max-height: 24rem; }   /* la cita clave se lee entera; si desplaza, tiene foco de teclado */
+
+/* Resultados a 720 px o menos: cada fila en una tarjeta, sin scroll horizontal (como Carga) */
+@media (max-width: 720px) {
+  .resultados thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }   /* los encabezados siguen disponibles para lectores de pantalla */
+  .resultados, .resultados tbody, .resultados tr, .resultados td { display: block; }
+  .resultados td { border-top: 0; padding: var(--e1) var(--e3); }
+  .resultados tbody tr:not(.fila-detalle) { border-top: 1px solid var(--borde-suave); padding: var(--e2) 0; }
 }

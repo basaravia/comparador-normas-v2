@@ -12,11 +12,19 @@ function DetalleVia1({ f }: { f: FilaVia1 }) {
   return (
     <div className="detalle">
       {f.requiere_revision && <div className="nota-aviso"><Icono nombre="aviso" /> Este resultado quedó marcado para revisión: valídalo antes de usarlo.</div>}
-      <h4>Texto de la norma</h4>
-      <blockquote>{f.texto_articulo}</blockquote>
-      {f.cita_norma && <><h4>Fragmento clave de la norma</h4><blockquote className="cita">{f.cita_norma}</blockquote></>}
-      <h4>Respaldo en el manual {f.seccion_respaldo && <small>· {f.seccion_respaldo}</small>}</h4>
-      {f.cita_manual ? <blockquote className="cita">{f.cita_manual}</blockquote> : <p className="vacio-texto">No encontramos un fragmento del manual que respalde este artículo.</p>}
+      <div className="citas">
+        <div className="cita-col">
+          {f.cita_norma && <><h4>Fragmento clave de la norma</h4><blockquote className="cita" tabIndex={0}>{f.cita_norma}</blockquote></>}
+          <details className="texto-completo" open> {/* desplegado por ahora; plegarlo cuando hay fragmento clave (open={!f.cita_norma}) espera el visto bueno del usuario */}
+            <summary>Texto de la norma</summary>
+            <blockquote tabIndex={0}>{f.texto_articulo}</blockquote>
+          </details>
+        </div>
+        <div className="cita-col">
+          <h4>Respaldo en el manual {f.seccion_respaldo && <small>· {f.seccion_respaldo}</small>}</h4>
+          {f.cita_manual ? <blockquote className="cita" tabIndex={0}>{f.cita_manual}</blockquote> : <p className="vacio-texto">No encontramos un fragmento del manual que respalde este artículo.</p>}
+        </div>
+      </div>
       {f.comentario && <><h4>Comentario</h4><p>{f.comentario}</p></>}
       {f.elementos_faltantes.length > 0 && (
         <><h4>Elementos que faltan</h4><ul>{f.elementos_faltantes.map((x, i) => <li key={i}>{x}</li>)}</ul></>

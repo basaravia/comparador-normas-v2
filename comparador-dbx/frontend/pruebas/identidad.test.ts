@@ -136,3 +136,17 @@ test("Comparando (P4): la página reserva el alto del resumen fijo para que no t
   assert.match(tsx, /setProperty\("--alto-resumen"/);
   assert.match(tsx, /removeProperty\("--alto-resumen"\)/);                          // al salir de la pantalla se libera
 });
+
+test("Resultados (P5): la vista activa no es verde sólido, el encabezado de la tabla es fijo y las citas del detalle van lado a lado", () => {
+  assert.match(css, /\.conmutador button\.activa\s*\{[^}]*background:\s*var\(--marca-claro\)/);
+  assert.doesNotMatch(css, /\.conmutador button\.activa\s*\{[^}]*background:\s*var\(--marca\)\s*;/);
+  assert.match(css, /\.resultados thead th\s*\{[^}]*position:\s*sticky/);
+  assert.match(css, /\.resultados\.tabla\s*\{[^}]*overflow:\s*visible/);                       // con overflow oculto el encabezado fijo no funciona
+  const tsx = readFileSync(new URL("../src/pages/Results.tsx", import.meta.url), "utf-8");
+  assert.match(tsx, /className="citas"/);
+  assert.equal((tsx.match(/<blockquote[^>]*tabIndex=\{0\}/g) ?? []).length, 3);                    // cada caja que puede desplazar se alcanza con teclado
+});
+
+test("Resultados a 720 px o menos pasa a tarjetas (sin scroll horizontal)", () => {
+  assert.match(css, /@media \(max-width: 720px\)\s*\{[^@]*\.resultados,\s*\.resultados tbody,\s*\.resultados tr,\s*\.resultados td\s*\{\s*display:\s*block/);
+});

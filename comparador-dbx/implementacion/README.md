@@ -651,6 +651,25 @@ Criterio: `docs/ux/identidad-visual-v1.md` §3 P4 (estructura de `comparacion-en
 - §3 P4: «Cancelar comparación sigue visible sin desplazarse en 1366×768»: se cumple al abrir la pantalla; el resumen ocupa 261 px de 768 (34 % del alto) y es lo que más pesa visualmente. Compactarlo (sacar filtros y texto de ayuda de la parte fija) cambia el DOM y queda como **propuesta pendiente del usuario**.
 - «Filas sin saltos de lista al pasar de En análisis a resuelta» y «filtros ≥ 40 px, estado activo distinguible sin color»: no se vuelven a medir aquí (filtros de 40 px heredados de la pantalla anterior; no se vio una fila pasar a resuelta porque el modelo local tarda minutos por par).
 
+## Rediseño de imagen · P5 pantalla Resultados (24 nov 2026; docs/14 #40, tablero A-51)
+Criterio: `docs/ux/identidad-visual-v1.md` §3 P5. Se vio por primera vez con **datos reales**: una comparación de un par (Artículo 31 ↔ sección 5.2 de MOCK-DEMO-01) juzgada por el modelo local `qwen3:4b-instruct-2507-q4_K_M`, resultado R. Mejora de aspecto con un cambio pequeño de marcado en el detalle; sin cambios de textos, de marcas ni de la lógica de resultados.
+
+**Qué cambió**
+- **Citas lado a lado** (criterio §3 P5): «Fragmento clave de la norma» y «Respaldo en el manual» van en dos columnas (clases `citas` / `cita-col`, las de Comparando). El detalle quedó unos 220 px más corto en la comparación de prueba.
+- **Texto de la norma** en un `<details>` bajo su mismo título, **desplegado por ahora** (como antes). Plegarlo cuando ya hay fragmento clave (`open={!f.cita_norma}`, una línea en `Results.tsx`) repetiría menos en pantalla, pero cambia el contenido visible por defecto: **propuesta pendiente del visto bueno del usuario** (product-owner: no se aplica sin él; si se aprueba, anotarlo en docs/14 #40 y docs/05).
+- **Un solo verde sólido**: el conmutador «Ver por artículo / por control» activo pasa a tono suave con línea inferior; el único sólido es «Descargar papel de trabajo (.xlsx)».
+- **Encabezado de la tabla fijo** (criterio §3 P5): `position: sticky` y `overflow: visible` en la tabla (con `overflow` oculto no funciona).
+- Cajas de cita con hasta 24 rem de alto (antes 220 px cortaban la cita a media línea) y con `tabIndex={0}` para alcanzarlas con teclado cuando desplazan (WCAG 2.1.1).
+- **Servidor** (hallado al verificar): `index.html` se servía sin política de caché y el navegador reutilizaba uno viejo que apuntaba a bundles ya reemplazados; ahora `Cache-Control: no-cache` solo en el `index.html` (los bundles llevan hash). Prueba en `tests/test_endurecimiento.py`.
+
+**Mediciones (Chromium, comparación real de un par)**: a 1366 px un solo botón con fondo verde sólido, columnas de citas a 36 y 682 px, encabezado `sticky`, sin scroll horizontal; a 320 px sin scroll horizontal (tabla 281 de 305 px) y citas apiladas. **Con teclado real**: filtrar por R con Enter, tabular tres veces hasta «Ver detalle» y abrirlo con Espacio conserva la lista, el filtro activo (R) y el foco (el botón pasa a «Ocultar»). Rótulo «Propuesta generada automáticamente…» de la Conclusión: texto 7,6:1 sobre su fondo. No hay texto en rojo (solo la letra R sobre rojo). `npm test` 48 (2 nuevas en `identidad.test.ts`: P5 y tarjetas a 720 px). `frontend/dist` se versiona: los dos bundles anteriores se reemplazan en el commit.
+
+**No verificado / límites**
+- Con **una sola fila** el encabezado fijo no se puede apreciar desplazando; con muchas filas y el detalle abierto no se probó.
+- No se revisó la vía 2 («por control del manual») más allá del conmutador; su detalle no se rediseñó.
+- Sin medir de §3 P5: «las 5 marcas se distinguen en escala de grises» (cada tarjeta lleva letra y palabra, pero no se comprobó con filtro de grises) y el resumen con las 5 tarjetas llenas (la comparación de prueba solo dio una marca, R). La letra de L sobre ámbar (5,03:1) la cubre la prueba de contraste, no esta pantalla. **P5 queda en revisión, no cerrada**, mientras no se midan esos puntos con una comparación que dé varias marcas.
+- El modelo local es pequeño: la conclusión y la confianza (10 %) del ejemplo no son evidencia de calidad.
+
 ## L5 · Papel de trabajo (APROBADO por `qa-ia`)
 
 **Criterio (docs/13):** el Excel abre sin advertencias; los conteos de la Hoja 1 cuadran con la Hoja 2; cero llamadas al modelo al generarlo. **Cumplido en sandbox** (`05_papel.ipynb`, Groq real para el borrador), con la entrada de prueba de abajo. Falta que L4 entregue la marca real.
